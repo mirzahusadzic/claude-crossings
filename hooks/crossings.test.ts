@@ -477,9 +477,9 @@ test('a shell command that names a file of the archive is refused, however it sp
 
 test("the label pages, the cut pages, the door's own script and a word said elsewhere are left alone", async ($, on) => {
   const reached = tools(on)
-  const reads = ['/project/crossings/labels/2026-11-12.md', '/project/crossings/hand-over.md', '/project/crossings/cut-2.md',
+  const reads = ['/project/crossings/labels/2026-11-12.md', '/project/crossings/hand-over.md', '/project/crossings/abcdef01-cut-2.md',
     '/elsewhere/homes/made-up-tern-1a2b3c4d/labels/2026-11-12.md', '/project/notes/said/what-was-said.md',
-    '/project/crossings/said.md', '/project/my-crossings/said/x.md', '/project/crossings/labels/said/x.md', '/project/said/store.db']
+    '/project/my-crossings/said/x.md', '/project/said/store.db']
   for (const file_path of reads) expect(refused(await $.tool.call({ tool: 'Read', file_path }))).toBe(undefined)
   for (const command of ['python3 -I /plugins/crossing/crossing/door.py find "what was said" --cwd /project',
     'python3 crossing/door.py thread abcdef01 --cwd /project', 'grep -n said crossing/store.py', 'cat crossings/labels/2026-11-12.md']) {
@@ -489,6 +489,8 @@ test("the label pages, the cut pages, the door's own script and a word said else
 })
 
 const PERSONS = "This is the person's to run, from their own terminal or with the plugin's command (/crossings), so this call was not run."
+const REFUSED =
+  "What was said is reached through the door's tools (look, labels, find and thread), not by opening the archive's own files, so this call was not run."
 
 test("a shell command that runs the door with what is the person's alone is refused", async ($, on) => {
   const reached = tools(on)
@@ -548,13 +550,14 @@ test('a writing tool is refused on the label pages, what was struck, and the one
     }
   }
   expect(reached).toEqual([])
-  // Read, every one of them may be: a label page is read beside the work.
-  for (const file of WRITTEN_FILES) expect(refused(await $.tool.call({ tool: 'Read', file_path: `/project/crossings/${file}` }))).toBe(undefined)
+  // Read, every one of them may be but a words page: a label page is read beside the work.
+  const readable = WRITTEN_FILES.filter(file => !file.endsWith('.words.md'))
+  for (const file of readable) expect(refused(await $.tool.call({ tool: 'Read', file_path: `/project/crossings/${file}` }))).toBe(undefined)
   // A word of the same name that is no file of a home is left alone.
-  for (const file_path of ['/project/notes/mode', '/project/src/labels/x.md', '/project/my-crossings/copy', '/project/crossings/model.txt']) {
+  for (const file_path of ['/project/notes/mode', '/project/src/labels/x.md', '/project/my-crossings/copy']) {
     expect(refused(await $.tool.call({ tool: 'Write', file_path, content: '' }))).toBe(undefined)
   }
-  expect(reached.length).toBe(WRITTEN_FILES.length + 4)
+  expect(reached.length).toBe(readable.length + 3)
 })
 
 test('a shell command that writes those files is refused, and one that reads them runs', async ($, on) => {
@@ -668,7 +671,7 @@ test('every small file a hook or the door alone writes is kept from a session th
       expect(refused(await $.tool.call({ tool: 'Bash', command: `echo x > ${file_path}` }))).toBe(PERSONS)
     }
   }
-  // Read, and not written: every words page, the pages of the cuts and their sidecars, and the one-line settings.
+  // Not written: every words page, the pages of the cuts and their sidecars, and the one-line settings.
   const written = ['notes.words.md', 'abcdef01-cut-2.md', 'abcdef01-cut-2.json', 'retelling-length', 'retelling-share',
     'project', '.gitignore']
   for (const home of HOMES) {
@@ -681,14 +684,16 @@ test('every small file a hook or the door alone writes is kept from a session th
     }
   }
   expect(reached).toEqual([])
-  for (const file of written) expect(refused(await $.tool.call({ tool: 'Read', file_path: `/project/crossings/${file}` }))).toBe(undefined)
-  for (const file of written) expect(refused(await $.tool.call({ tool: 'Bash', command: `cat crossings/${file}` }))).toBe(undefined)
+  // Read, each of them may be but a words page, which holds what was said word for word.
+  const read = written.filter(file => !file.endsWith('.words.md'))
+  for (const file of read) expect(refused(await $.tool.call({ tool: 'Read', file_path: `/project/crossings/${file}` }))).toBe(undefined)
+  for (const file of read) expect(refused(await $.tool.call({ tool: 'Bash', command: `cat crossings/${file}` }))).toBe(undefined)
   for (const file of kept) expect(refused(await $.tool.call({ tool: 'Read', file_path: `/project/crossings/${file}` }))).toBe(undefined)
-  // A word of the same name that is no file of a home is left alone.
-  for (const file_path of ['/project/crossings/projects/x.md', '/project/notes/markers.jsonl', '/project/.gitignore', '/project/crossings/copy-stage']) {
+  // A word of the same name that is no file of a home is left alone, outside a home.
+  for (const file_path of ['/project/notes/markers.jsonl', '/project/.gitignore']) {
     expect(refused(await $.tool.call({ tool: 'Write', file_path, content: '' }))).toBe(undefined)
   }
-  expect(reached.length).toBe(written.length * 2 + kept.length + 4)
+  expect(reached.length).toBe(read.length * 2 + kept.length + 2)
 })
 
 test("a command's quotes and backslashes are taken out before its paths are looked at, as the shell takes them out", async ($, on) => {
@@ -719,4 +724,45 @@ test("the marks of the homes' indexes, beside the person's record, are kept from
     expect(refused(await $.tool.call({ tool: 'Write', file_path, content: '' }))).toBe(PERSONS)
   }
   expect(reached).toEqual([])
+})
+
+test("a words page is read through the door alone, as the archive's own files are, by any tool and any shell read", async ($, on) => {
+  const reached = tools(on)
+  for (const home of HOMES) {
+    for (const file_path of [`${home}/hand-over.words.md`, `${home}/notes.words.md`]) {
+      expect(refused(await $.tool.call({ tool: 'Read', file_path }))).toBe(REFUSED)
+      expect(refused(await $.tool.call({ tool: 'Grep', pattern: 'Tern', path: file_path }))).toBe(REFUSED)
+      expect(refused(await $.tool.call({ tool: 'Bash', command: `cat ${file_path}` }))).toBe(REFUSED)
+    }
+  }
+  for (const call of [{ tool: 'Glob', pattern: 'crossings/*.words.md' }, { tool: 'Grep', pattern: 'Tern', path: '/project/crossings', glob: '*.words.md' },
+    { tool: 'Bash', command: 'grep -n Tern crossings/hand-over.words.md | head -3' }]) {
+    expect(refused(await $.tool.call(call as any))).toBe(REFUSED)
+  }
+  expect(reached).toEqual([])
+})
+
+test('a path below a home is refused by whatever name its folder bears, but for the files a session may read there', async ($, on) => {
+  const reached = tools(on)
+  // A link a session made inside a home leads to said/ or to the home itself by another name.
+  for (const home of HOMES) {
+    for (const file of ['alias/x.jsonl', 'alias/said/x.jsonl', 'alias/store.db', 'labels/alias/x.jsonl', 'labels/said/x.md',
+      'said.md', 'cut-2.md', 'model.txt', 'projects/x.md', 'copy-stage', 'off.txt.new', 'hand-over.md.bak', 'labels/x.md/said']) {
+      expect(refused(await $.tool.call({ tool: 'Read', file_path: `${home}/${file}` }))).toBe(REFUSED)
+      // Written, one that lies below labels/ or begins as a file the door or a hook writes is refused as that file is.
+      const why = refused(await $.tool.call({ tool: 'Write', file_path: `${home}/${file}`, content: '' }))
+      expect([REFUSED, WRITTEN, PERSONS].includes(why)).toBe(true)
+    }
+  }
+  for (const command of ['cat crossings/alias/said/x.jsonl', 'ls crossings/alias', 'sqlite3 crossings/alias/store.db .dump',
+    'cp crossings/alias/x.jsonl /tmp/x', 'head ~/.claude/crossing/homes/made-up-tern-1a2b3c4d/alias/x.jsonl']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(REFUSED)
+  }
+  expect(reached).toEqual([])
+  // The home itself, and the files a session may read in it, are left alone.
+  for (const command of ['ls crossings', 'ls crossings/', 'ls crossings/labels/', 'cat crossings/labels/2026-11-12.md',
+    'cat crossings/hand-over.md crossings/abcdef01-cut-2.json', 'grep -c W crossings/struck.txt crossings/mode']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(undefined)
+  }
+  expect(reached.length).toBe(6)
 })

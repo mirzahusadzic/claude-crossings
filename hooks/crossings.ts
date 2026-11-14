@@ -244,13 +244,16 @@ const registerCommand = (on: Parameters<Register>[0]) => {
 // --- the archive's own files ------------------------------------------------------------------
 //
 // What was said is reached through the door's tools. Text a session reads can steer it to open
-// the archive around the door: a home's said/ folder, or its index (store.db). A call of the
-// session's that names either is refused, in one sentence that names the door's tools. The homes
-// are those outside a project (the folder CROSSING_HOMES names, else ~/.claude/crossing/homes),
-// the home on this computer (CROSSING_OURS, else ~/.claude/crossing/ours), a home named outright
-// (CROSSING_HOME), and a project's own crossings/ folder, wherever it stands. The label pages,
-// the pages of the cuts and the other plain files stay readable: the person reads those beside
-// the work, and so may the session.
+// the archive around the door: a home's said/ folder, its index (store.db), or a words page, which
+// gives what was said word for word. A call of the session's that names any of them is refused, in
+// one sentence that names the door's tools; and so is one that names any other path below a home
+// that is none of the files a session may read there (READABLE), whatever its folder is named, so
+// that a link made inside a home is no way round. The homes are those outside a project (the
+// folder CROSSING_HOMES names, else ~/.claude/crossing/homes), the home on this computer
+// (CROSSING_OURS, else ~/.claude/crossing/ours), a home named outright (CROSSING_HOME), and a
+// project's own crossings/ folder, wherever it stands. The label pages, the pages of the cuts and
+// the other plain files a session may read stay readable: the person reads those beside the work,
+// and so may the session.
 //
 // It is decided at every tool call, so it is decided by string checks on the call's input alone:
 // no process is started and no file is opened. A cheap check is no wall: a path it cannot see in
@@ -268,7 +271,7 @@ const registerCommand = (on: Parameters<Register>[0]) => {
 // and every words page, what was struck, the model behind a call, the ids noted as looking like a
 // key, the pages of the cuts, the one-line settings) are refused to a tool that writes a file, and to a
 // shell command that names one in any part of it that is not a plain read (a command of READS
-// with no `>` in it); reading them stays open. A shell command that runs the hand-over's words
+// with no `>` in it); reading them stays open, but for a words page. A shell command that runs the hand-over's words
 // script is the person's too. A command's quotes and backslashes are taken out before any of this. These too are string checks: against a session with a shell, the
 // wall is the person's own approval of the commands it runs.
 
@@ -328,6 +331,18 @@ const KEPT = String.raw`(?:(?:off|unsaid|models|welcomed|told|there|unattended|s
 // the pages of the cuts and their sidecars, the one-line settings, the project's name and the ignore file.
 const WRITTEN_BY_DOOR =
   String.raw`(?:labels${END}|hand-over\.md\b|[^/\s'"\x60]+\.words\.md\b|(?:struck|calling|flagged)\.txt\b|[^/\s'"\x60]+-cut-\d+\.(?:md|json)\b|(?:copy|switch|mode|carry|frame-size|retelling-length|retelling-share|project|\.gitignore)${END})`
+
+// Where a path below a home ends, for the files a session may read there: a mark of the shell's, a
+// quote, a space or the end, and never a separator, so that nothing reached through one of them is
+// taken for it.
+const STOP = String.raw`(?=$|[\s'"\x60;|&()<>{}\[\],])`
+// The files below a home a session may read, by the lists above: every file of KEPT, and every file of
+// WRITTEN_BY_DOOR but a words page, which holds what was said word for word; the label pages only as
+// the folder labels/ and its own pages, one step below it.
+const READABLE = String.raw`(?:${KEPT}|labels/?|labels/[^/\s'"\x60]+\.md|hand-over\.md|(?:struck|calling|flagged)\.txt|[^/\s'"\x60]+-cut-\d+\.(?:md|json)|(?:copy|switch|mode|carry|frame-size|retelling-length|retelling-share|project|\.gitignore))${STOP}`
+// Any other path below a home: whatever its folder is named, so that a link made inside a home (an
+// alias of said/, or of the home itself) is no way round the check on the archive's files.
+const BELOW = String.raw`(?!${READABLE})(?=[^\s'"\x60;|&()<>{}\[\],])`
 
 // The places of the archive's files, or of the home's kept files, as patterns over that text.
 const places = (homes: string, ours: string, outright: string, files = ARCHIVE): RegExp[] => {
@@ -404,6 +419,8 @@ const registerGuard = (on: Parameters<Register>[0]) => {
       const byDoor = places(homes, ours, outright, WRITTEN_BY_DOOR)
       if (command ? writesTo(command, home, byDoor) : byDoor.some(place => place.test(text))) return { deny: WRITTEN }
     }
+    // Read or written, a path below a home that is none of the files a session may read there.
+    if (places(homes, ours, outright, BELOW).some(place => place.test(text))) return { deny: REFUSED }
     return next(e)
   }).catch(($, e, next) => next(e)) // a fault here never stops the session's work
 }

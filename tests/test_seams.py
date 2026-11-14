@@ -901,6 +901,34 @@ def test_what_a_known_transcript_gained_while_off_is_kept_off_by_its_place_whate
     assert [p["id"] for p in cut["person"]["pointers"]] == ["10000001", "10000004"], cut["person"]
 
 
+# --- a link a session makes inside a home -------------------------------------------------------------------
+
+
+def test_a_home_with_a_link_made_inside_it_after_switching_on_is_refused_whole(tmp_path):
+    """A session with a shell makes another name for said/ inside a home it was switched on for: the
+    door and the hooks refuse the home whole, and write nothing through it or beside it."""
+    crossings, path = home(tmp_path)  # switched on, archived and built
+    project = str(crossings.parent)
+    (crossings / "alias").symlink_to(crossings / "said", target_is_directory=True)
+    kept = {page.name: page.read_bytes() for page in (crossings / "said").glob("*.jsonl")}
+    linked = "A file of this project's home is a link, so nothing was written.\n"
+    for argv in (("find", "Tern"), ("status",), ("thread", "aaaaaaaa"), ("strike", "aaaaaaaa")):
+        assert through(*argv, "--cwd", project) == (1, linked), argv
+    says(path, "99999999", "Said after the link was made.")
+    event = {"hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossing_door__find", "cwd": project}
+    done = ran(
+        "hook.py",
+        stdin=json.dumps({**event, "transcript_path": str(path), "session_id": path.stem}),
+        CLAUDE_CODE_ENTRYPOINT="cli",
+    )
+    assert (done.returncode, done.stdout, done.stderr) == (0, "", ""), done
+    assert {page.name: page.read_bytes() for page in (crossings / "said").glob("*.jsonl")} == kept
+    logged = (Path(os.environ["CLAUDE_PLUGIN_DATA"]) / "errors.log").read_text(encoding="utf-8")
+    assert f"a file of the home is a link: {crossings.resolve() / 'alias'}" in logged
+    assert words_script(str(path), str(crossings / "hand-over.md")).returncode == 1
+    assert not (crossings / "hand-over.words.md").exists()
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
