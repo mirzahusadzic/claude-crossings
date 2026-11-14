@@ -180,7 +180,7 @@ def test_the_second_cut_counts_only_what_came_after_the_first(tmp_path):
 def test_the_record_holds_counts_and_pointers_and_no_text_of_either_voice(tmp_path):
     (tmp_path / "crossings").mkdir()
     switched_on(tmp_path)
-    path = written(tmp_path, BEFORE + CUT)
+    path = written(tmp_path, BEFORE + CUT[:2])  # the cut written, and nothing said since: the hook is about it
     event = {
         "hook_event_name": "PostCompact",
         "transcript_path": str(path),

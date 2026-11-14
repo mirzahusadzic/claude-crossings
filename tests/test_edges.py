@@ -139,7 +139,7 @@ def test_the_cuts_on_record_are_shown_from_the_command_line(tmp_path):
 def test_a_project_without_the_folder_has_its_record_in_its_home_outside_it(tmp_path):
     plain = tmp_path / "plain"
     plain.mkdir()
-    whole = written(tmp_path, BEFORE + CUT)
+    whole = written(tmp_path, BEFORE + CUT[:2])  # the cut written, and nothing said since: the hook is about it
     event = {
         "hook_event_name": "PostCompact",
         "transcript_path": str(whole),

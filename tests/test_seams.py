@@ -292,6 +292,40 @@ def test_a_transcripts_model_with_a_line_break_writes_no_line_of_its_own(tmp_pat
     assert kept and "model" not in kept[0], kept
 
 
+# --- a summary that retells the one before --------------------------------------------------------------
+
+
+def test_two_cuts_whose_summaries_open_alike_are_two_cuts(tmp_path):
+    """The second cut's summary retells the first's, its first four hundred characters word for
+    word, and something was said between: two pages, and the first left as it was."""
+    project, home_, path = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    rows = [row("user", "aaaaaaaa", 1, "The first stretch has this message.")]
+    rows.append(row("assistant", "bbbbbbbb", 2, [{"type": "text", "text": "The first stretch has this reply."}]))
+    path.write_text("".join(json.dumps(each) + "\n" for each in rows), encoding="utf-8")
+    summary = "A summary that the next one retells, word for word, from its first sentence on. " * 8
+    event = {"hook_event_name": "PostCompact", "transcript_path": str(path), "cwd": str(project), "trigger": "auto"}
+    event.update(session_id=path.stem, compact_summary=summary)
+    with started_by("cli"):
+        assert hook.run(event) is None  # the first cut: its boundary is not written yet
+        first = (home_ / "abcdef01-cut-1.json").read_text(encoding="utf-8")
+        boundary = {"type": "system", "subtype": "compact_boundary", "compactMetadata": {"trigger": "auto"}}
+        told = {"type": "user", "isCompactSummary": True, "message": {"content": [{"type": "text", "text": summary}]}}
+        later = [row("user", "cccccccc", 3, "Said after the first cut."), row("user", "dddddddd", 4, "And this too.")]
+        with open(path, "a", encoding="utf-8") as handle:
+            handle.write("".join(json.dumps(each) + "\n" for each in [boundary, told, *later]))
+        again = summary[:400] + " And what was said since the first cut, told here at the end."
+        assert hook.run({**event, "compact_summary": again}) is None  # the second cut
+        assert hook.run({**event, "compact_summary": again}) is None  # and the same hook again, about it
+    assert sorted(each.name for each in home_.glob("abcdef01-cut-*.json")) == [
+        "abcdef01-cut-1.json",
+        "abcdef01-cut-2.json",
+    ]
+    assert (home_ / "abcdef01-cut-1.json").read_text(encoding="utf-8") == first
+    second = json.loads((home_ / "abcdef01-cut-2.json").read_text(encoding="utf-8"))
+    assert (second["cut"], second["span_starts_after"], second["person"]["messages"]) == (2, 4, 2), second
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

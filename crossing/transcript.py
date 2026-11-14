@@ -202,6 +202,11 @@ def last_written(path: Path) -> tuple[int, int, Cut]:
     return len(known), start, known[-1]
 
 
+def _spoken_after(path: Path, line: int) -> bool:
+    """Whether a row after this line of the transcript holds words of either voice."""
+    return any(number > line and (person(row) or session(row)) for number, row in rows(path))
+
+
 def locate(path: Path, summary: str | None = None) -> tuple[int, int, Cut]:
     """The cut a hook is being called about: its ordinal, the line its span starts after,
     and the cut.
@@ -209,13 +214,18 @@ def locate(path: Path, summary: str | None = None) -> tuple[int, int, Cut]:
     The harness calls SessionStart and then PostCompact before it writes the boundary, so at
     both moments the transcript does not hold the cut yet and the span runs to the end of the
     file. When a summary is handed over and the transcript already holds a cut with that
-    summary, that cut is the one.
+    summary, and nothing of either voice was said after that cut's summary, that cut is the one:
+    the hook is being called again about it. A summary is a later cut's where something was said
+    since, though it retell the one before word for word: that is the case the retelling line is
+    for, and the later cut is a cut of its own, with the next ordinal.
     """
     known = cuts(path)
     wanted = norm(summary or "")
     if wanted:
         for index in range(len(known) - 1, -1, -1):
             if known[index].summary and known[index].summary[:400] == wanted[:400]:
+                if _spoken_after(path, known[index].summary_line or known[index].line):
+                    break  # said since that cut: this summary is a new cut's
                 start = (known[index - 1].summary_line or known[index - 1].line) if index else 0
                 return index + 1, start, known[index]
     with open(path, "rb") as handle:  # every line, also one that is not a row

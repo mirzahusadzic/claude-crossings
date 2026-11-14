@@ -12,7 +12,7 @@ What Crossings does when the harness compacts a session: the count and its page,
 | the session starts again (`SessionStart`, source `compact`) | where the hook's input names no subagent, gives a session a person sits in the waking note, about this cut by its number, and, where the home carries the frame as context, the frame |
 | the harness hands over its summary (`PostCompact`) | counts the cut and writes its page; for a session a person sits in, brings the archive and the index up to date and renews the second copy where one is set; and shows the person one line where the summary mostly retells the one before; nothing at all where the hook's input names a subagent |
 
-The waking note names this cut by its number whichever of the two hooks the harness calls first. A hook that fails ends quietly, with exit status 0 and a line in the error log, and a failure inside the module leaves the cut to the harness.
+The waking note names this cut by its number whichever of the two hooks the harness calls first. A summary handed over that opens as one the transcript already holds is that cut again only where nothing of either voice was said after it; where something was, it is a later cut of its own, with the next number, though it retell the one before word for word. A hook that fails ends quietly, with exit status 0 and a line in the error log, and a failure inside the module leaves the cut to the harness.
 
 ---
 
