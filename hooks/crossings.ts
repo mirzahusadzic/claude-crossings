@@ -4,7 +4,7 @@ import type { Register } from 'claude-code'
 
 // --- the cut -------------------------------------------------------------------------------
 //
-// Crossing may answer a cut. Plain files in the project's home decide it:
+// Crossings may answer a cut. Plain files in the project's home decide it:
 //   switch   off: the cut is left to the harness
 //   mode     one word: native (the default), beside, or own
 //   carry    one word: message (the default) or note
@@ -18,7 +18,7 @@ import type { Register } from 'claude-code'
 // home itself: the door reads the home's words for it (`door.py words`), its hand-over page
 // (`door.py page`) and writes the trace of what a cut did (`door.py trace`), by the rule the
 // plugin's other hooks find the home by and through the one check that no file of a home is
-// a link. A project the door names no home for is one where Crossing was never switched on:
+// a link. A project the door names no home for is one where Crossings was never switched on:
 // its cuts are left to the harness, and nothing is read or written for it.
 
 type Mode = 'native' | 'beside' | 'own'
@@ -222,7 +222,7 @@ const registerCommand = (on: Parameters<Register>[0]) => {
       return shown(argv)
     }
     // Only a bare /crossings turns the switch over. A word it does not know changes nothing:
-    // a slip of the hand must not switch Crossing off.
+    // a slip of the hand must not switch Crossings off.
     if (said !== '' && said !== 'on' && said !== 'off' && said !== 'adopt') {
       return { text: `/crossings takes: on, off, adopt, status, look, find <words>, labels, frame. "${first}" is none of these; nothing was changed.` }
     }
@@ -340,7 +340,7 @@ const named = (e: Record<string, unknown>, home: string): string => {
   return text.replace(/\/{2,}/g, '/')
 }
 
-// The small files of a home a session is not to write or take away: the record of when Crossing
+// The small files of a home a session is not to write or take away: the record of when Crossings
 // was off, of where each transcript stood as it was switched off, and of what was said then, which model wrote each label, the files of session ids, how far
 // each transcript was read, the sentences said once, what was pulled, the lock, a copy's stage, and
 // the traces of the last cut and the last frame.
@@ -473,7 +473,7 @@ const WRITES = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit']
 
 const registerGuard = (on: Parameters<Register>[0]) => {
   on('tool.call', async ($, e, next) => {
-    if (e.tool.startsWith('mcp__plugin_crossing_door__')) return next(e)
+    if (e.tool.startsWith('mcp__plugin_crossings_door__')) return next(e)
     const given = e as unknown as Record<string, unknown>
     const home = trimmed((await $.env.get('HOME')) ?? '')
     const text = named(given, home)

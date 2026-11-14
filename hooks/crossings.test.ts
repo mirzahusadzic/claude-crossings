@@ -162,7 +162,7 @@ test('the home is the folder the door names, and nothing is read or written in t
   expect(seen.files[`${HOME}/last-cut.json`]).toContain('"did":"beside"')
 })
 
-test('where Crossing was never switched on, the cut is left to the harness and nothing is written', async ($, on) => {
+test('where Crossings was never switched on, the cut is left to the harness and nothing is written', async ($, on) => {
   // The project has no home. A crossings/ folder the door did not name decides nothing.
   const files = { '/project/crossings/mode': 'beside\n', '/project/crossings/carry': 'message\n' }
   const seen = world(on, { home: '', files })
@@ -402,7 +402,7 @@ test('a switch the door could not turn is said so, in what came back from it', a
   expect(await say($, 'on')).toBe('Nothing came back.')
 })
 
-test('status says whether Crossing is on and what the store holds', async ($, on) => {
+test('status says whether Crossings is on and what the store holds', async ($, on) => {
   const seen = world(on, { script: () => ({ exitCode: 0, stdout: 'The store holds 2 messages.\n', stderr: '' }) })
   await start($)
   expect(await say($, 'status')).toBe('Crossings is on for this project. The store holds 2 messages.')
@@ -414,7 +414,7 @@ test('status says whether Crossing is on and what the store holds', async ($, on
   expect(await say($, 'status')).toBe('Crossings is on for this project. The store holds 2 messages.')
 })
 
-test('status of a project where Crossing was never switched on says so and looks no further', async ($, on) => {
+test('status of a project where Crossings was never switched on says so and looks no further', async ($, on) => {
   const seen = world(on, { home: '' })
   await start($)
   expect(await say($, 'STATUS')).toBe('Crossings was never switched on for this project.')
@@ -569,7 +569,7 @@ test("a shell command or a write that names the person's record or a home's kept
     expect(refused(await $.tool.call(call as any))).toBe(PERSONS)
   }
   expect(reached).toEqual([])
-  // Read, the person's plain pages may be: a record of when Crossing was off holds no word that was said.
+  // Read, the person's plain pages may be: a record of when Crossings was off holds no word that was said.
   expect(refused(await $.tool.call({ tool: 'Read', file_path: '/project/crossings/off.txt' }))).toBe(undefined)
   expect(refused(await $.tool.call({ tool: 'Bash', command: 'cat notes/off.txt' }))).toBe(undefined)
   expect(reached).toEqual(['Read', 'Bash'])

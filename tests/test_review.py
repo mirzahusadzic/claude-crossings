@@ -4,7 +4,7 @@ a project's `crossings` that is a link, the frame and the hand-over kept from a 
 sits in, a frame that stays within its most, one folder by either spelling of its letters, a cut
 counted while the record of the spans is lost, keys taken from the pages under the lock, a strike
 and `layer` that hold the lock and put each file in its place whole, a clock set back while
-Crossing was off, labels that arrive with no mark, one lock for the person's record, ids of eight
+Crossings was off, labels that arrive with no mark, one lock for the person's record, ids of eight
 characters that two messages share, and a subagent's rows. No model, no network, and nothing of
 the person's: the Keychain is a stand-in.
 
@@ -318,7 +318,7 @@ def test_a_strike_and_layer_hold_the_homes_lock_and_put_each_file_in_its_place_w
     assert store.layered(crossings, "made-up-model") == (1, 2)
 
 
-# --- 11: a clock set back while Crossing is off ------------------------------------------------------------------
+# --- 11: a clock set back while Crossings is off ------------------------------------------------------------------
 
 
 def test_a_clock_set_back_while_crossing_is_off_keeps_all_that_was_said_then_off_the_record(tmp_path):

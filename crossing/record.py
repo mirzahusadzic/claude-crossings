@@ -334,7 +334,7 @@ def astray(cwd: Path) -> str | None:
     lies inside the project `cwd` stands in (its top: see `located`); or nothing. A repository can
     ship a settings file that sets a session's environment, and so a consent record or a home of
     its own making, named by one of these: such a setting is not followed, the project is one
-    where Crossing was never switched on, and the error log says so once a process. A relative
+    where Crossings was never switched on, and the error log says so once a process. A relative
     path is read from wherever a process happens to stand, so none is taken at all."""
     top = _top(cwd.resolve())
     for name in SETTINGS:

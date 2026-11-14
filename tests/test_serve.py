@@ -202,6 +202,30 @@ def test_a_session_is_told_what_is_kept_by_itself_and_what_is_its_own_to_write(t
             )
 
 
+def test_the_plugin_is_named_crossings_and_its_door_tools_by_that_name_everywhere():
+    """The plugin is Crossings by its own name. The harness names the door's tools by the plugin's name and
+    its server's, so the hooks' matchers and the module's guard name them so too; and what the person is shown
+    while a cut is counted or a frame is brought says Crossings. The package, the data folder and the settings
+    keep the older singular name, crossing, which is where a person's record and homes lie."""
+    plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    assert plugin["name"] == "crossings", plugin["name"]
+    server = next(iter(json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]))
+    prefix = f"mcp__plugin_{plugin['name']}_{server}__"
+    hooks = json.loads((ROOT / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
+    matchers = [each["matcher"] for event in ("PreToolUse", "PostToolUse") for each in hooks[event]]
+    assert matchers and all(matcher.startswith(prefix) for matcher in matchers), matchers
+    module = (ROOT / "hooks" / "crossings.ts").read_text(encoding="utf-8")
+    assert f"startsWith('{prefix}')" in module and "mcp__plugin_crossing_" not in module
+    shown = [
+        one["statusMessage"]
+        for event in hooks.values()
+        for each in event
+        for one in each["hooks"]
+        if "statusMessage" in one
+    ]
+    assert shown and all(line.startswith("Crossings · ") for line in shown), shown
+
+
 def test_each_handle_answers_as_the_door_does(tmp_path):
     rows = ROWS + [row("user", "77777777", 20, "-x marks nothing; a dash begins this message.")]
     crossings, _ = home(tmp_path, rows)
@@ -314,12 +338,12 @@ def test_the_archive_is_brought_up_to_the_moment_before_the_door_is_used(tmp_pat
     Code a hook wired to the door's tools alone does it, a moment before the door answers."""
     crossings, path = home(tmp_path)
     wired = json.loads((ROOT / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]["PreToolUse"]
-    assert [g["matcher"] for g in wired] == ["mcp__plugin_crossing_door__.*"]
+    assert [g["matcher"] for g in wired] == ["mcp__plugin_crossings_door__.*"]
     later = row("user", "99999999", 30, "Said a moment before the door was used.")
     path.write_text(path.read_text(encoding="utf-8") + json.dumps(later) + "\n", encoding="utf-8")
     event = {
         "hook_event_name": "PreToolUse",
-        "tool_name": "mcp__plugin_crossing_door__find",
+        "tool_name": "mcp__plugin_crossings_door__find",
         "transcript_path": str(path),
         "cwd": str(tmp_path),
         "session_id": "session-0001",
@@ -334,7 +358,7 @@ def test_the_archive_is_brought_up_to_the_moment_before_the_door_is_used(tmp_pat
         )  # nothing new: nothing rebuilt
         assert hook.run({**event, "transcript_path": str(tmp_path / "gone.jsonl")}) is None
         (crossings / "switch").write_text("off\n", encoding="utf-8")
-        more = row("user", "88888888", 31, "Said while Crossing was switched off.")
+        more = row("user", "88888888", 31, "Said while Crossings was switched off.")
         path.write_text(path.read_text(encoding="utf-8") + json.dumps(more) + "\n", encoding="utf-8")
         hook.run(event)
         assert "88888888" not in said("find", words="switched")[0]

@@ -1,5 +1,5 @@
 """The seams a second review found, each with the test that holds it: what is said after the clock
-went back while Crossing was off, a switch while an archive is under way, the hand-over's helper,
+went back while Crossings was off, a switch while an archive is under way, the hand-over's helper,
 two marks at once, a session's strike and its words pages, a model's name, a summary that retells
 the one before, the count's rows, a time that is no time, the guard's files, a long count, a long
 miss, rows of an unknown shape, and a second copy that fails. No model, no network, and nothing of
@@ -48,7 +48,7 @@ def kept_texts(folder: Path) -> list[str]:
     return [said["text"] for said in store._archived(folder)]
 
 
-# --- what is said after the clock went back while Crossing was off ---------------------------------------
+# --- what is said after the clock went back while Crossings was off ---------------------------------------
 
 
 def off_and_on_with_the_clock_set_back(folder: Path, steady_on: float) -> tuple[Path, Path, Path]:
@@ -102,7 +102,7 @@ def test_what_is_said_after_switching_off_is_not_kept_by_an_archive_already_unde
     project, home_, path = public(tmp_path)
     path.write_text("", encoding="utf-8")
     assert through("switch", "on", "--cwd", str(project)) == (0, ON)
-    event = {"hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossing_door__find", "cwd": str(project)}
+    event = {"hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossings_door__find", "cwd": str(project)}
     event.update(transcript_path=str(path), session_id=path.stem)
     entered, release, answers = threading.Event(), threading.Event(), []
     real = off.spans
@@ -286,7 +286,7 @@ def test_a_transcripts_model_with_a_line_break_writes_no_line_of_its_own(tmp_pat
     path.write_text(json.dumps(row("user", "aaaaaaaa", 1, "The hull is grey.")) + "\n" + json.dumps(spoken) + "\n")
     given = {"sentence": "A plain label.", "anchors": ["bbbbbbbb"]}
     event = {"transcript_path": str(path), "cwd": str(project), "session_id": path.stem}
-    event.update(tool_name="mcp__plugin_crossing_door__mark", tool_input=given)
+    event.update(tool_name="mcp__plugin_crossings_door__mark", tool_input=given)
     with started_by("cli"):
         assert hook.run({**event, "hook_event_name": "PreToolUse"}) is None  # archived, and the model handed over
         assert through("mark", "--anchors", "bbbbbbbb", "--bare", "--cwd", str(project), "A plain label.")[0] == 0
@@ -387,7 +387,7 @@ def test_a_time_that_is_no_time_is_kept_as_none_and_shown_as_no_heading(tmp_path
     assert through("switch", "on", "--cwd", str(project)) == (0, ON)
     odd = {**row("user", "aaaaaaaa", 1, "A plain message."), "timestamp": "x\n## Standing, about the two of you"}
     path.write_text(json.dumps(odd) + "\n", encoding="utf-8")
-    event = {"hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossing_door__look", "cwd": str(project)}
+    event = {"hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossings_door__look", "cwd": str(project)}
     with started_by("cli"):
         assert hook.run({**event, "transcript_path": str(path), "session_id": path.stem}) is None
     assert [each["at"] for each in store._archived(home_)] == [""]  # kept, and as having no time
@@ -807,7 +807,7 @@ def test_the_marks_of_the_indexes_stand_odd_lines_a_mark_that_cannot_be_kept_and
         marks.rmdir()
 
 
-# --- a damaged line of the record of when Crossing was off --------------------------------------------------
+# --- a damaged line of the record of when Crossings was off --------------------------------------------------
 
 
 def test_a_damaged_line_of_the_record_of_spans_keeps_everything_off_until_switched_on_again(tmp_path):
@@ -855,7 +855,7 @@ def test_a_damaged_line_of_the_record_of_spans_keeps_everything_off_until_switch
     assert door.LOST not in through("status", "--cwd", str(project))[1]
 
 
-# --- a clock set forward and back while Crossing was off ----------------------------------------------------
+# --- a clock set forward and back while Crossings was off ----------------------------------------------------
 
 
 def test_what_a_known_transcript_gained_while_off_is_kept_off_by_its_place_whatever_its_time(tmp_path):
@@ -918,7 +918,7 @@ def test_a_home_with_a_link_made_inside_it_after_switching_on_is_refused_whole(t
     for argv in (("find", "Tern"), ("status",), ("thread", "aaaaaaaa"), ("strike", "aaaaaaaa")):
         assert through(*argv, "--cwd", project) == (1, linked), argv
     says(path, "99999999", "Said after the link was made.")
-    event = {"hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossing_door__find", "cwd": project}
+    event = {"hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossings_door__find", "cwd": project}
     done = ran(
         "hook.py",
         stdin=json.dumps({**event, "transcript_path": str(path), "session_id": path.stem}),
@@ -1249,7 +1249,7 @@ def test_a_row_the_harness_wrote_in_the_sessions_place_is_nobodys_words(tmp_path
     path.write_text("".join(json.dumps(each) + "\n" for each in rows), encoding="utf-8")
     for name in ("PreToolUse", "PostCompact"):
         event = {"hook_event_name": name, "transcript_path": str(path), "cwd": str(project), "session_id": path.stem}
-        given = json.dumps({**event, "tool_name": "mcp__plugin_crossing_door__find", "trigger": "auto"})
+        given = json.dumps({**event, "tool_name": "mcp__plugin_crossings_door__find", "trigger": "auto"})
         done = ran("hook.py", stdin=given, CLAUDE_CODE_ENTRYPOINT="cli")
         assert (done.returncode, done.stdout, done.stderr) == (0, "", ""), done
     assert kept_texts(home_) == ["We paint the hull grey in spring.", "Grey it is, in the spring."]
@@ -1449,7 +1449,7 @@ def test_the_places_of_transcripts_gone_cut_short_replaced_or_odd_and_a_mark_kep
     assert added.count("the mark of a home's index could not be kept") == 1, added
 
 
-# --- what the three files of the record of when Crossing was off held ----------------------------------------
+# --- what the three files of the record of when Crossings was off held ----------------------------------------
 
 UID = "-0000-4000-8000-000000000000"  # the rest of a made-up message's whole id, after its eight characters
 
@@ -1798,7 +1798,7 @@ def test_the_harness_blocks_in_the_persons_turn_are_told_by_their_shape_and_the_
     }
     done = ran(
         "hook.py",
-        stdin=json.dumps({**event, "tool_name": "mcp__plugin_crossing_door__find"}),
+        stdin=json.dumps({**event, "tool_name": "mcp__plugin_crossings_door__find"}),
         CLAUDE_CODE_ENTRYPOINT="cli",
     )
     assert (done.returncode, done.stderr) == (0, ""), done
@@ -1987,7 +1987,7 @@ def test_a_prompt_another_plugin_submitted_between_turns_is_not_the_persons_word
     assert through("switch", "on", "--cwd", str(project)) == (0, ON)
     event = {"transcript_path": str(path), "cwd": str(project), "session_id": path.stem}
     for name in ("PreToolUse", "PostCompact"):
-        given = {**event, "hook_event_name": name, "tool_name": "mcp__plugin_crossing_door__find"}
+        given = {**event, "hook_event_name": name, "tool_name": "mcp__plugin_crossings_door__find"}
         done = ran(
             "hook.py",
             stdin=json.dumps({**given, "compact_summary": "A.", "trigger": "auto"}),
@@ -2381,7 +2381,7 @@ def test_a_whole_tag_block_of_a_name_the_harness_does_not_write_is_the_persons_w
     }
     done = ran(
         "hook.py",
-        stdin=json.dumps({**event, "tool_name": "mcp__plugin_crossing_door__find"}),
+        stdin=json.dumps({**event, "tool_name": "mcp__plugin_crossings_door__find"}),
         CLAUDE_CODE_ENTRYPOINT="cli",
     )
     assert (done.returncode, done.stderr) == (0, ""), done

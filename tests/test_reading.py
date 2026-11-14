@@ -322,7 +322,7 @@ def test_ten_new_messages_in_a_store_of_thousands_read_no_page_of_the_archive_wh
         handle.write(lines([{**said(n), "timestamp": f"2026-11-11T10:00:0{n % 10}.000Z"} for n in range(5000, 5010)]))
     event = {
         "hook_event_name": "PreToolUse",
-        "tool_name": "mcp__plugin_crossing_door__find",
+        "tool_name": "mcp__plugin_crossings_door__find",
         "transcript_path": str(path),
         "cwd": str(crossings.parent),
         "session_id": "abcdef01-0101",
@@ -342,7 +342,7 @@ def test_ten_new_messages_in_a_store_of_thousands_read_no_page_of_the_archive_wh
 def test_a_hook_call_with_the_log_on_does_not_open_the_transcript(tmp_path):
     path = tmp_path / "abcdef01-0202.jsonl"
     path.write_text(lines([said(n, n) for n in range(30)]), encoding="utf-8")
-    never = tmp_path / "never"  # a project where Crossing was never switched on
+    never = tmp_path / "never"  # a project where Crossings was never switched on
     never.mkdir()
     opened, real_open, real_io_open = [], builtins.open, io.open
 
@@ -357,7 +357,7 @@ def test_a_hook_call_with_the_log_on_does_not_open_the_transcript(tmp_path):
         event = {
             "hook_event_name": name,
             "source": "startup",
-            "tool_name": "mcp__plugin_crossing_door__find",
+            "tool_name": "mcp__plugin_crossings_door__find",
             "transcript_path": str(path),
             "cwd": str(never),
             "session_id": "abcdef01-0202",

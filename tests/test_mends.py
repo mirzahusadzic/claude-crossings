@@ -46,7 +46,7 @@ def page_of(crossings: Path) -> str:
 def test_the_words_page_holds_nothing_struck_nothing_said_off_the_record_and_nothing_unattended(tmp_path):
     crossings, path = home(tmp_path)
     assert through("strike", A, "--cwd", str(crossings.parent))[0] == 0
-    # D was said at 09:04, inside a span when Crossing was off; E was held by a session no person sat in.
+    # D was said at 09:04, inside a span when Crossings was off; E was held by a session no person sat in.
     (crossings / "off.txt").write_text(
         off.HEAD + "2026-11-11T09:03:30.000000+00:00 2026-11-11T09:04:30.000000+00:00\n", encoding="utf-8"
     )

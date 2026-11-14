@@ -1,4 +1,4 @@
-"""Five guards: the home on this computer is offered only where Crossing is switched on; a setting
+"""Five guards: the home on this computer is offered only where Crossings is switched on; a setting
 that names a place inside the project is not followed; a home that came with a repository is
 not switched on with no word said; a session no person sits in is not archived; and what the
 plugin makes is its owner's alone. No model, no network.
@@ -33,7 +33,7 @@ UUIDS = sorted(f"{uid}-0000-4000-8000-000000000000" for uid in (A, B, D, E))  # 
 
 
 def repository(folder: Path, name: str) -> Path:
-    """A project as a repository: a folder that holds `.git`, and nothing of Crossing's."""
+    """A project as a repository: a folder that holds `.git`, and nothing of Crossings's."""
     project = folder / name
     (project / ".git").mkdir(parents=True)
     return project
@@ -64,7 +64,7 @@ def archived(folder: Path) -> list[str]:
     )
 
 
-# --- C1: the home on this computer is offered only where Crossing is switched on --------------------------
+# --- C1: the home on this computer is offered only where Crossings is switched on --------------------------
 
 
 def test_the_home_on_this_computer_answers_no_project_that_was_never_switched_on(tmp_path):
@@ -178,7 +178,8 @@ def test_a_consent_record_a_repository_ships_and_names_by_a_setting_is_not_follo
         assert said("look") == (astray("CROSSING_SWITCHED").strip(), True)
         event = {"transcript_path": str(path), "cwd": str(project), "session_id": "abcdef01-6666"}
         assert (
-            hook.run({**event, "hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossing_door__look"}) is None
+            hook.run({**event, "hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossings_door__look"})
+            is None
         )
         assert hook.run({**event, "hook_event_name": "SessionEnd"}) is None
         assert hook.carried({**event, "hook_event_name": "SessionStart", "source": "startup"}) is None
@@ -320,7 +321,7 @@ def test_a_session_no_person_sits_in_is_archived_at_no_hook(tmp_path):
         with set_to(CROSSING_WAIT="1", CLAUDE_PROJECT_DIR=str(project)), own_folder(house), started_by(entrypoint):
             for name, more in (
                 ("SessionStart", {"source": "startup"}),
-                ("PreToolUse", {"tool_name": "mcp__plugin_crossing_door__find"}),  # before a door call
+                ("PreToolUse", {"tool_name": "mcp__plugin_crossings_door__find"}),  # before a door call
                 ("PostCompact", {"trigger": "auto", "compact_summary": "A summary."}),
                 ("SessionStart", {"source": "compact"}),
                 ("SessionEnd", {}),
@@ -378,7 +379,8 @@ def test_a_session_a_person_sits_in_is_still_archived_at_every_hook(tmp_path):
     event = {"transcript_path": str(path), "cwd": str(project), "session_id": "personal-0004"}
     with set_to(CROSSING_WAIT="1", CLAUDE_PROJECT_DIR=str(project)), started_by("cli"):
         assert (
-            hook.run({**event, "hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossing_door__find"}) is None
+            hook.run({**event, "hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossings_door__find"})
+            is None
         )
         assert archived(crossings) == UUIDS
         more = row("user", "56565656", 32, "One more.")

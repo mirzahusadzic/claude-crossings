@@ -1,6 +1,6 @@
 """The welcome: a session that meets a store which is on and holds no label is told, once, what is
 kept by itself and what is its own to write. It is told as it starts, by the hook at a session's
-start; and a session already running as the person switches Crossing on is told through their
+start; and a session already running as the person switches Crossings on is told through their
 command, which asks the door. No hook runs at every prompt for it. No model, no network.
 
 Run with pytest, or without it:  python3 tests/test_welcome.py
@@ -109,7 +109,7 @@ def test_after_a_cut_the_welcome_comes_beside_the_waking_note(tmp_path):
 
 
 def test_a_session_running_when_crossing_is_switched_on_is_welcomed_through_the_persons_command(tmp_path):
-    """The person's command switches Crossing on through the door, then asks it for the welcome
+    """The person's command switches Crossings on through the door, then asks it for the welcome
     (hooks/crossings.ts), which goes to the session as context after the command's answer."""
     project = tmp_path / "later"
     project.mkdir()

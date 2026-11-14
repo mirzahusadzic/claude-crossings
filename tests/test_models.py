@@ -200,11 +200,11 @@ def test_a_label_marked_through_the_server_is_signed_by_the_hook_after_the_call(
     label the door's answer names, with the sentence that was sent, once."""
     crossings, north, south = two_sessions(tmp_path)
     wired = json.loads((ROOT / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]["PostToolUse"]
-    assert [g["matcher"] for g in wired] == ["mcp__plugin_crossing_door__(mark|leave)"]
+    assert [g["matcher"] for g in wired] == ["mcp__plugin_crossings_door__(mark|leave)"]
     sentence = "The fenders  are to be  replaced."
     event = {
         "hook_event_name": "PostToolUse",
-        "tool_name": "mcp__plugin_crossing_door__mark",
+        "tool_name": "mcp__plugin_crossings_door__mark",
         "transcript_path": str(south),
         "cwd": str(tmp_path),
         "session_id": "southern-0002",
@@ -244,7 +244,7 @@ def test_a_label_marked_through_the_server_is_signed_by_the_hook_after_the_call(
         assert hook.run(
             {
                 **done,
-                "tool_name": "mcp__plugin_crossing_door__leave",
+                "tool_name": "mcp__plugin_crossings_door__leave",
                 "tool_input": {"sentence": "Look at the fenders first."},
                 "tool_response": [{"type": "text", "text": "marked N1"}],
             }

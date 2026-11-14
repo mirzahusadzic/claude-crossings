@@ -181,7 +181,7 @@ def here(cwd: Path) -> Path:
 
 
 def switched() -> Path:
-    """The person's own record of the projects they switched Crossing on in: a file in their
+    """The person's own record of the projects they switched Crossings on in: a file in their
     own folder, outside every project, so that no repository can hold it. CROSSING_SWITCHED
     names another, for a test."""
     return Path(os.environ.get("CROSSING_SWITCHED") or record.own() / ".claude" / "crossing" / "switched")
@@ -221,7 +221,7 @@ def consented() -> set[tuple[str, str]]:
 
 
 def consent(cwd: Path) -> None:
-    """Keep in the person's record that they switched Crossing on in the project `cwd` stands
+    """Keep in the person's record that they switched Crossings on in the project `cwd` stands
     in, for the home it has (see `place`: a home named outright by CROSSING_HOME too). `switch
     on` is the one act that calls this."""
     folder, _ = place(cwd)
@@ -248,7 +248,7 @@ def _recording():
         _let_go(switched().with_name(switched().name + ".lock"), held)
 
 
-# The person's record also keeps, for a home that has a record of when Crossing was off, how many
+# The person's record also keeps, for a home that has a record of when Crossings was off, how many
 # lines that record had when the switch last wrote it: a line {"home": ..., "spans": N} beside the
 # project's own, which names no project and so switches nothing on. Beside it, as an optional field
 # (`held`), it keeps what the three files of that record held then: how many spans `off.txt` held,
@@ -265,7 +265,7 @@ def _recording():
 
 
 def spanned(folder: Path) -> int:
-    """How many lines the home's record of when Crossing was off had when the switch last wrote
+    """How many lines the home's record of when Crossings was off had when the switch last wrote
     it, as the person's record keeps it; nought where it keeps none."""
     found = _spans_line(folder)
     count = found.get("spans")
@@ -292,7 +292,7 @@ def steadied(folder: Path) -> float | None:
 
 
 def _held(folder: Path) -> dict | None:
-    """What the three files of the home's record of when Crossing was off held as the switch last
+    """What the three files of the home's record of when Crossings was off held as the switch last
     wrote it (see `_spans_kept`): spans, ids and places, each a count; nothing where the person's
     record keeps none, as a line an earlier make wrote keeps none."""
     found = _spans_line(folder).get("held")
@@ -314,7 +314,7 @@ def _sealed_line(folder: Path) -> dict:
 
 
 def _sealed(items: list[str]) -> str:
-    """A digest of what a file of the record of when Crossing was off holds, in its order."""
+    """A digest of what a file of the record of when Crossings was off holds, in its order."""
     return hashlib.sha256("\n".join(items).encode("utf-8", "surrogateescape")).hexdigest()
 
 
@@ -326,7 +326,7 @@ def _held_items(folder: Path, lines: list[str]) -> dict[str, list[str]]:
 
 
 def _spans_kept(folder: Path, steady: float | None = None) -> None:
-    """Keep in the person's record how many lines the home's record of when Crossing was off has
+    """Keep in the person's record how many lines the home's record of when Crossings was off has
     now, and what its three files hold now (`held`: the spans of `off.txt`, the ids of `unsaid.txt`
     and the places of `off-places.jsonl`); and, as the switch turns it off, the steady clock's
     reading at that moment (`steady`, see off.closed). The switch calls this once it has written
@@ -377,7 +377,7 @@ def _spans_kept(folder: Path, steady: float | None = None) -> None:
 
 
 def lost(folder: Path) -> bool:
-    """Whether what the home's record of when Crossing was off held can no longer be told: any of
+    """Whether what the home's record of when Crossings was off held can no longer be told: any of
     its three files holds fewer than the person's record keeps it held when the switch last wrote it
     (see `_held`): fewer spans in `off.txt`, fewer ids in `unsaid.txt`, fewer places in
     `off-places.jsonl`, one of them missing where it held any; or as many, of which those it held
@@ -385,7 +385,7 @@ def lost(folder: Path) -> bool:
     read; or `off.txt` holds a line that is no span since the switch last kept everything before
     that moment off (see off.untold). Where the record keeps only how many lines `off.txt` had (a
     line an earlier make wrote, see `spanned`), fewer lines are what is missed. Nothing is then
-    archived for it, nor counted, nor given on a words page, until the person switches Crossing on
+    archived for it, nor counted, nor given on a words page, until the person switches Crossings on
     again. A file that is not there because nothing was ever kept in it is no loss."""
     was, held = spanned(folder), _held(folder)
     try:
@@ -414,10 +414,10 @@ def lost(folder: Path) -> bool:
 
 
 def kept(cwd: Path) -> Path | None:
-    """The home of the project `cwd` stands in, where the person switched Crossing on there; or
+    """The home of the project `cwd` stands in, where the person switched Crossings on there; or
     nothing. A home is believed only where the person's record names it for this project: a
     folder a repository ships, or one put in a home's place since, is no home, and the project is
-    one where Crossing was never switched on. A project's own `crossings` that is a link is no
+    one where Crossings was never switched on. A project's own `crossings` that is a link is no
     home either, wherever it leads and whatever the record names (see `linked`). A home named
     outright (CROSSING_HOME) is believed by the same rule: only where the record holds a line for
     this project that names it, which `switch on` writes while that setting stands. Another
@@ -433,8 +433,8 @@ def kept(cwd: Path) -> Path | None:
 
 def offered(cwd: Path) -> Path | None:
     """The home on this computer (see `ours`), as the project `cwd` stands in may reach it: only
-    where the person switched Crossing on there and its switch is on. Any other project is one
-    where Crossing was never switched on, and the home that is the whole computer's is no more
+    where the person switched Crossings on there and its switch is on. Any other project is one
+    where Crossings was never switched on, and the home that is the whole computer's is no more
     open to it than its own."""
     folder = kept(cwd)
     return ours() if folder is not None and active(folder) else None
@@ -442,7 +442,7 @@ def offered(cwd: Path) -> Path | None:
 
 def ours() -> Path:
     """The home on this computer that belongs to the person and the session, reached only from a
-    project where Crossing is switched on and on (see `offered`)."""
+    project where Crossings is switched on and on (see `offered`)."""
     return Path(os.environ.get("CROSSING_OURS") or record.own() / ".claude" / "crossing" / "ours")
 
 
@@ -462,8 +462,8 @@ def word(folder: Path, name: str) -> str:
 
 
 def active(folder: Path) -> bool:
-    """Whether Crossing keeps anything in this home: the folder is there, and its switch does
-    not say off. A project whose home was never made is one where Crossing was never switched
+    """Whether Crossings keeps anything in this home: the folder is there, and its switch does
+    not say off. A project whose home was never made is one where Crossings was never switched
     on; nothing is kept for it, and no folder is made by looking."""
     return folder.is_dir() and word(folder, "switch") != "off"
 
@@ -744,7 +744,7 @@ def _said_ids(name: str, start: int, end: int) -> list[str]:
 
 
 def _unsaid_by_id(folder: Path, placed: list[str]) -> None:
-    """As a home whose record of when Crossing was off was lost is switched on (see `lost`): keep in
+    """As a home whose record of when Crossings was off was lost is switched on (see `lost`): keep in
     unsaid.txt the id of every message, of either voice, that a transcript the archive knows holds up
     to its last whole line now and the archive does not hold, whatever time it bears. A transcript
     is known by its marker (one a session no person sat in has as well) and by `placed`, the paths
@@ -849,7 +849,7 @@ def _is_struck(row: dict, gone: set[str]) -> bool:
 
 def kept_out_ids(folder: Path) -> set[str]:
     """The ids, by their first eight characters, of the messages this home keeps out of all it
-    gives by id: struck, said while Crossing was off (`unsaid.txt`), and held by a session no
+    gives by id: struck, said while Crossings was off (`unsaid.txt`), and held by a session no
     person sat in (`unattended.txt`). A hand-over's words page that names one is not given."""
     named = struck(folder) | off.unsaid(folder) | unheld(folder)
     return {each[:8] for each in named if re.match(r"[0-9a-f]{8}(?![0-9a-f])", each)}
@@ -1223,7 +1223,7 @@ def archive(path: Path, folder: Path, whole: bool = False, taken: bool = False) 
     finds inside a span are kept in the home's `unsaid.txt` (see off.UNSAID), and no row whose id
     is there is ever archived, whether `off.txt` is there or not. Where the person's record says
     `off.txt`, `unsaid.txt` or `off-places.jsonl` held more than it holds now, or one of them cannot
-    be read (see `lost`), nothing is archived at all, until the person switches Crossing on again.
+    be read (see `lost`), nothing is archived at all, until the person switches Crossings on again.
 
     The archive's page is named by the transcript's, as a session is: a name that cannot name a
     file is refused (record.ident). One archive at a time is made in a home (see `_locked`): one
@@ -3014,7 +3014,7 @@ def look(folder: Path, newest: int = 8) -> dict:
             for shown in [off.shown(span)]
         ],
         "flagged": _flagged(folder, db),  # for the person's own look alone: the door's server is not told it
-        "lost": lost(folder),  # the record of when Crossing was off cannot be told: nothing is archived
+        "lost": lost(folder),  # the record of when Crossings was off cannot be told: nothing is archived
     }
     left = db.execute("select id, text from label where kind = 'next' order by n desc limit 1").fetchone()
     if left is not None:

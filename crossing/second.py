@@ -113,7 +113,7 @@ def keychain() -> str:
                 "-w",
                 made,
                 "-j",
-                "The passphrase of Crossing's encrypted second copy",
+                "The passphrase of the encrypted second copy of Crossings",
             ],
             capture_output=True,
         )
@@ -222,7 +222,7 @@ def make(folder: Path, dest: Path, name: str, top: Path | None = None) -> dict:
                 "-format",
                 "UDZO",
                 "-volname",
-                f"Crossing {name}",
+                f"Crossings {name}",
                 "-srcfolder",
                 str(stage),
                 "-ov",

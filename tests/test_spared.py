@@ -45,7 +45,7 @@ def after(path: Path, tool: str, answer: str, **given) -> dict:
     """The hook after a call of the door's mark or leave, as the harness hands it over."""
     return {
         "hook_event_name": "PostToolUse",
-        "tool_name": f"mcp__plugin_crossing_door__{tool}",
+        "tool_name": f"mcp__plugin_crossings_door__{tool}",
         "transcript_path": str(path),
         "cwd": str(path.parent),
         "session_id": "session-0001",

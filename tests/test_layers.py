@@ -383,7 +383,7 @@ def test_the_door_and_its_server_refuse_a_reframing_by_the_model_that_is_there(t
     given = {"sentence": CARE, "anchors": ["R3"], "kind": "relation"}
     event = {
         "hook_event_name": "PreToolUse",
-        "tool_name": "mcp__plugin_crossing_door__mark",
+        "tool_name": "mcp__plugin_crossings_door__mark",
         "tool_input": given,
         "transcript_path": str(south),
         "cwd": project,
@@ -406,7 +406,7 @@ def test_the_door_and_its_server_refuse_a_reframing_by_the_model_that_is_there(t
         # The hook before a subagent's call, or another handle's, or one with odd arguments, hands nothing.
         for odd in (
             {**event, "agent_id": "a1"},
-            {**event, "tool_name": "mcp__plugin_crossing_door__find"},
+            {**event, "tool_name": "mcp__plugin_crossings_door__find"},
             {**event, "tool_input": "odd"},
             {**event, "transcript_path": "", "session_id": "nobody00-1"},
         ):
@@ -605,7 +605,7 @@ def test_which_model_is_there_is_the_newer_of_what_the_hooks_were_told_and_what_
     # After a switch, a label the session marks is signed by the model there now, though it has not spoken yet.
     page = {
         "hook_event_name": "PostToolUse",
-        "tool_name": "mcp__plugin_crossing_door__mark",
+        "tool_name": "mcp__plugin_crossings_door__mark",
         "transcript_path": str(north),
         "cwd": str(crossings.parent),
         "session_id": "northern-0001",

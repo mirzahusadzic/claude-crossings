@@ -8,12 +8,12 @@ what was said is to be reached through the door because that is the easiest way,
 here points a hand at the file system. The server answers from the home of the project it was
 started for (`CLAUDE_PROJECT_DIR`, else the directory it runs in), or from the folder
 `CROSSING_HOME` names, as a harness without projects would set it. Where that project has no
-home the person switched on, Crossing was never switched on there: every handle says so in
+home the person switched on, Crossings was never switched on there: every handle says so in
 one sentence and makes nothing, and so does every handle asked of the home on this computer
-(`home: ours`): it is offered only to a project where Crossing is switched on and on. Where a
+(`home: ours`): it is offered only to a project where Crossings is switched on and on. Where a
 setting of the plugin's names a place inside the project, a handle says that in one sentence
 and nothing is followed. Where a file of the home is a link, a handle says that in one
-sentence, and nothing is written. Switching Crossing on is the person's to do, and no handle
+sentence, and nothing is written. Switching Crossings on is the person's to do, and no handle
 here does it. A session no person sits in (see record.attended) is answered in one sentence by
 every handle, and nothing is read for it.
 
@@ -231,7 +231,7 @@ UNATTENDED = "The door is for sessions a person sits in, and this one is not, so
 
 def call(name: str, given: dict) -> tuple[str, bool]:
     """A handle's answer as text, and whether it is a failure. A refused label is an answer;
-    a project where Crossing was never switched on is a failure, said before anything is read,
+    a project where Crossings was never switched on is a failure, said before anything is read,
     and so is the home on this computer asked of from such a project, or from one switched off.
 
     A session no person sits in is answered in one sentence, and nothing is read: the server

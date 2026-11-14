@@ -119,7 +119,7 @@ def test_a_crossings_folder_a_repository_ships_switches_nothing_on(tmp_path):
     event = {"transcript_path": str(path), "cwd": str(project), "session_id": "abcdef01-6666"}
     with set_to(CROSSING_WAIT="1", CLAUDE_PROJECT_DIR=str(project)), started_by("cli"):
         for name, more in (
-            ("PreToolUse", {"tool_name": "mcp__plugin_crossing_door__find"}),
+            ("PreToolUse", {"tool_name": "mcp__plugin_crossings_door__find"}),
             ("SessionEnd", {}),
             ("SessionStart", {"source": "startup"}),  # where a session is welcomed
             ("PostCompact", {"trigger": "manual", "compact_summary": "A summary."}),

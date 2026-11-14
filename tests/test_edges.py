@@ -166,7 +166,7 @@ def test_a_project_without_the_folder_has_its_record_in_its_home_outside_it(tmp_
 
 def test_a_record_makes_no_home(tmp_path):
     """A cut is counted into a home that is there. Were the record to make the folder it was
-    handed, a project where Crossing was never switched on would get a home by being counted."""
+    handed, a project where Crossings was never switched on would get a home by being counted."""
     whole = written(tmp_path, BEFORE + CUT)
     try:
         record.write(count.count(whole), tmp_path / "no-home", "abcdef01-1111", whole)
@@ -267,7 +267,7 @@ def test_a_hook_with_nothing_to_say_says_nothing_and_a_failure_never_reaches_the
 
 
 def test_no_test_marks_a_session_in_the_real_home(tmp_path):
-    """A session Crossing is on in is marked by an empty file in the person's home. A test's
+    """A session Crossings is on in is marked by an empty file in the person's home. A test's
     made-up session must never be marked there, whether the hook runs here or as its own process."""
     event = {
         "hook_event_name": "SessionStart",

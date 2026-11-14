@@ -8,7 +8,7 @@
           {
             "type": "command",
             "timeout": 30,
-            "statusMessage": "crossing \u00b7 counting the cut",
+            "statusMessage": "Crossings \u00b7 counting the cut",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\""
           }
         ]
@@ -31,7 +31,7 @@
           {
             "type": "command",
             "timeout": 30,
-            "statusMessage": "crossing \u00b7 bringing the frame across",
+            "statusMessage": "Crossings \u00b7 bringing the frame across",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" frame"
           }
         ]
@@ -50,7 +50,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "mcp__plugin_crossing_door__.*",
+        "matcher": "mcp__plugin_crossings_door__.*",
         "hooks": [
           {
             "type": "command",
@@ -62,7 +62,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "mcp__plugin_crossing_door__(mark|leave)",
+        "matcher": "mcp__plugin_crossings_door__(mark|leave)",
         "hooks": [
           {
             "type": "command",

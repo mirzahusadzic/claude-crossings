@@ -31,7 +31,7 @@ from test_store import ROWS, A, B, D, E, in_person, row, started_by, sweep  # no
 
 from crossing import count, door, frame, hook, off, second, store  # noqa: E402
 
-FIND = "mcp__plugin_crossing_door__find"
+FIND = "mcp__plugin_crossings_door__find"
 
 
 def stamp() -> str:

@@ -10,7 +10,7 @@ writes what was said there, word for word, into `<hand-over>.words.md` beside it
 file is made again from the record whenever it is needed; the record is never changed.
 Only what the person wrote and what the session answered is copied, through the same
 reader as everywhere else in this plugin, and only what the home beside the page still
-keeps: no message struck, nothing said while Crossing was off (by its spans and by the ids
+keeps: no message struck, nothing said while Crossings was off (by its spans and by the ids
 noted then), and nothing a session no person sat in held. Where the home's record of when it
 was off cannot be read, or what it held cannot be told (missing, holding fewer spans, ids or places
 than it did or one changed for another, or with a line that is no span: see store.lost), no message
@@ -94,7 +94,7 @@ def _words(
 def kept_out(folder: Path, path: Path, rows: list) -> set[str]:
     """The ids, by their first eight characters, of the rows of this transcript that the home
     `folder` keeps out of everything it gives: struck (by the message's id, its whole id or its
-    session), said inside a span when Crossing was off (by the spans of `off.txt` and the ids
+    session), said inside a span when Crossings was off (by the spans of `off.txt` and the ids
     in `unsaid.txt`), held by a session no person sat in (`unattended.txt`), or whose id is no
     name. Where the record of the spans cannot be read, or what it held cannot be told (see
     store.lost), every row is kept out."""

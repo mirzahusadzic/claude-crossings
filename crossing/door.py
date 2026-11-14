@@ -25,7 +25,7 @@
                                            that it is on again and the welcome, each where it is due
 
 Every verb takes --cwd DIR (the project; default: here) and --home here|ours. The home on this
-computer (ours) is offered only to a project where Crossing is switched on and on; from any
+computer (ours) is offered only to a project where Crossings is switched on and on; from any
 other, every verb says what it says of a project never switched on. With --transcript PATH the
 archive is first brought up to date from that transcript: handed by its path, it is the
 person's own act, and taken whole. With --session ID it is too, where a person sits in the
@@ -47,9 +47,9 @@ hand at the file system. Nothing comes back without its place: an id, a voice, a
 labels that rest there. No model is called.
 
 A project's home is its own `crossings/` folder, or, where it has none, a folder outside it
-that `switch on` makes. Either is believed only once the person has switched Crossing on in
+that `switch on` makes. Either is believed only once the person has switched Crossings on in
 that project, which `switch on` keeps in a record of the person's own, outside every project.
-Until then Crossing was never switched on there: every other verb says so in a sentence, with
+Until then Crossings was never switched on there: every other verb says so in a sentence, with
 exit status 1, and makes nothing. A home that is there already and holds any file but a
 `.gitignore`, which this record has no line for, is not switched on by `switch on`: it says what
 is there, and `switch adopt` takes it. Switching on and adopting make the index anew from the
@@ -544,7 +544,7 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         print(strayed(stray))
         return 1
     # The home on this computer is no project's: it has no switch of its own, and is offered only
-    # where the person switched Crossing on in this project, and it is on.
+    # where the person switched Crossings on in this project, and it is on.
     ours = args.home == "ours"
     folder = store.offered(cwd) if ours else store.kept(cwd)
     if args.verb == "home":
@@ -923,7 +923,7 @@ def for_the_module(verb: str, folder: Path, on: bool, said: str) -> int:
     """What the hooks module reads of a home and writes into it, through the door, so that no
     file of a home is reached by any other way than `within`: the one-word files that decide a
     cut, as one JSON object; the hand-over page, with its words beside it where there are any;
-    and the trace of what a cut did, which is added only where Crossing is on."""
+    and the trace of what a cut did, which is added only where Crossings is on."""
     if verb == "words":
         print(json.dumps({name: store.word(folder, name) for name in ("switch", "mode", "carry")}))
         return 0

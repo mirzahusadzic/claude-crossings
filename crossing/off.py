@@ -1,6 +1,6 @@
 """Off the record: when the person's switch for a project was off, and what was said then.
 
-Each time the person switches Crossing off for a project, and each time they switch it on again,
+Each time the person switches Crossings off for a project, and each time they switch it on again,
 the moment is kept in one plain file of the home, `off.txt`: a line a span, its two moments in
 UTC, the last one with one moment alone while the project is off. Only the switch writes it
 (store.switch). Nothing said inside a span is ever kept, by any reading of any transcript: a

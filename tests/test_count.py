@@ -51,7 +51,7 @@ atexit.register(sweep, DATA)
 
 
 def switched_on(project: Path) -> None:
-    """The person's act of switching Crossing on in a project, as far as their record of it goes."""
+    """The person's act of switching Crossings on in a project, as far as their record of it goes."""
     store.consent(project)
 
 

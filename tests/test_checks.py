@@ -625,7 +625,7 @@ def test_a_store_db_that_is_no_database_is_read_as_none_and_made_again(tmp_path)
         hook.run(
             {
                 "hook_event_name": "PreToolUse",
-                "tool_name": "mcp__plugin_crossing_door__find",
+                "tool_name": "mcp__plugin_crossings_door__find",
                 "cwd": project,
                 "transcript_path": str(path),
                 "session_id": "session-0001",
@@ -691,7 +691,7 @@ def test_where_sqlite3_has_no_full_text_search_it_is_said_in_a_sentence_and_what
                 hook.run(
                     {
                         "hook_event_name": "PreToolUse",
-                        "tool_name": "mcp__plugin_crossing_door__find",
+                        "tool_name": "mcp__plugin_crossings_door__find",
                         "cwd": str(project),
                         "transcript_path": str(path),
                         "session_id": "session-0001",
@@ -815,7 +815,7 @@ def test_the_hook_before_a_mark_learns_the_model_without_reading_the_archive_who
         )
     event = {
         "hook_event_name": "PreToolUse",
-        "tool_name": "mcp__plugin_crossing_door__mark",
+        "tool_name": "mcp__plugin_crossings_door__mark",
         "transcript_path": str(path),
         "cwd": str(crossings.parent),
         "session_id": "abcdef01-0101",

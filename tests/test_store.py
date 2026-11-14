@@ -122,7 +122,7 @@ PAGE = f"""# a hand-over
 
 
 def switched_on(project: Path) -> None:
-    """The person's act of switching Crossing on in a project, as far as their record of it goes:
+    """The person's act of switching Crossings on in a project, as far as their record of it goes:
     the line that names the project and its home. The home's own files are left as they are."""
     store.consent(project)
 
@@ -372,7 +372,7 @@ def test_a_cut_and_the_end_of_a_session_both_bring_the_archive_up_to_date(tmp_pa
     hook.run({**event, "hook_event_name": "PostCompact", "trigger": "manual", "compact_summary": "A summary."})
     assert store.status(project / "crossings")["his"] == 3
     (project / "crossings" / "switch").write_text("off\n", encoding="utf-8")
-    more = row("user", "88888888", 41, "Said while Crossing was switched off.")
+    more = row("user", "88888888", 41, "Said while Crossings was switched off.")
     path.write_text(path.read_text(encoding="utf-8") + json.dumps(more) + "\n", encoding="utf-8")
     hook.run({**event, "hook_event_name": "SessionEnd"})
     assert store.build(project / "crossings")["his"] == 3  # switched off, nothing is kept
@@ -436,7 +436,7 @@ def test_a_cut_is_kept_in_the_project_though_the_shell_stood_elsewhere(tmp_path)
         assert store.status(project / "crossings")["his"] == 2
         assert [p.name for p in (project / "crossings").glob("*-cut-*.md")] == ["abcdef01-cut-1.md"]
         (project / "crossings" / "switch").write_text("off\n", encoding="utf-8")  # and the switch is the project's too
-        more = row("user", "66666666", 42, "Said while Crossing was switched off.")
+        more = row("user", "66666666", 42, "Said while Crossings was switched off.")
         path.write_text(path.read_text(encoding="utf-8") + json.dumps(more) + "\n", encoding="utf-8")
         hook.run({**event, "hook_event_name": "SessionEnd"})
         assert store.build(project / "crossings")["his"] == 2
@@ -757,7 +757,7 @@ def test_a_new_session_is_given_the_frame_in_words_true_for_it(tmp_path):
     assert str(tmp_path) not in text and not re.search(r"\bask(s|ed|ing)?\b", text, re.I)
     assert transcript.person({"type": "user", "message": {"content": [{"type": "text", "text": text}]}}) == []
     assert out["systemMessage"] == (
-        f"crossing · a frame was laid out for this new session: 2 labels, {len(text)} characters; "
+        f"Crossings · a frame was laid out for this new session: 2 labels, {len(text)} characters; "
         "the rest is behind the door"
     )
     assert json.loads((crossings / "last-carry.json").read_text(encoding="utf-8")) == {
@@ -780,7 +780,7 @@ def test_a_cuts_frame_is_what_it_was_before_new_sessions_were_given_one(tmp_path
             out = json.loads(hook.carried(event))
         assert out["hookSpecificOutput"]["additionalContext"] == CUT_FRAME, entrypoint
         assert out["systemMessage"] == (
-            f"crossing · a frame crossed with this cut: 2 labels, {len(CUT_FRAME)} characters; "
+            f"Crossings · a frame crossed with this cut: 2 labels, {len(CUT_FRAME)} characters; "
             "the rest is behind the door"
         )
         assert json.loads((crossings / "last-carry.json").read_text(encoding="utf-8"))["at"] == "the cut"
@@ -819,7 +819,7 @@ def test_a_new_session_is_given_a_frame_only_where_the_plain_files_ask_for_it(tm
         assert hook.carried(event) is not None
         (crossings / "switch").write_text("off\n", encoding="utf-8")
         assert hook.carried(event) is None  # the person's switch
-        never = tmp_path / "never"  # a project where Crossing was never switched on
+        never = tmp_path / "never"  # a project where Crossings was never switched on
         never.mkdir()
         assert hook.carried({**event, "cwd": str(never)}) is None and not store.here(never).exists()
 

@@ -474,7 +474,7 @@ def test_door_build_always_makes_it_whole_and_the_hooks_add(tmp_path):
     same_as_whole(project, crossings, ids(33))
     event = {
         "hook_event_name": "PreToolUse",
-        "tool_name": "mcp__plugin_crossing_door__find",
+        "tool_name": "mcp__plugin_crossings_door__find",
         "transcript_path": str(path),
         "cwd": str(project),
         "session_id": "abcdef01-0101",

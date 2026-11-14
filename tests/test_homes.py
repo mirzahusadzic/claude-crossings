@@ -1,6 +1,6 @@
 """Where a project's home lies, and the person's switch: a home outside the repository for a
 project with no crossings/ folder of its own, the one rule every piece finds it by, and a
-project where Crossing was never switched on, in which nothing is kept. No model, no network.
+project where Crossings was never switched on, in which nothing is kept. No model, no network.
 
 Run with pytest, or without it:  python3 tests/test_homes.py
 """
@@ -216,7 +216,7 @@ def test_an_empty_folder_of_the_projects_own_is_set_as_a_home_made_outside_and_b
             with set_to(CLAUDE_PROJECT_DIR=str(where)):
                 framed = json.loads(hook.carried(cut_in(where, transcript_path)))
             assert framed["hookSpecificOutput"]["additionalContext"].startswith(transcript.CARRIED), where
-            assert framed["systemMessage"].startswith("crossing · a frame crossed with this cut: "), where
+            assert framed["systemMessage"].startswith("Crossings · a frame crossed with this cut: "), where
     assert (outside / "mode").read_text(encoding="utf-8") == "beside\n"  # as the home made outside is set
 
 
@@ -311,7 +311,8 @@ def test_where_crossing_was_never_switched_on_no_hook_keeps_anything(tmp_path):
         assert hook.run(cut) is None  # no waking note
         assert hook.carried(cut) is None  # no frame
         assert (
-            hook.run({**event, "hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossing_door__find"}) is None
+            hook.run({**event, "hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossings_door__find"})
+            is None
         )
         assert hook.run(counted) is None
         assert hook.keep(path, project, wait=True) is None and hook.keep(path, project, wait=False) is None
@@ -409,7 +410,8 @@ def test_a_home_outside_holds_everything_a_projects_own_folder_would(tmp_path):
         assert store.status(outside)["his"] == 2
         more(path, "99999999", 30, "The mast is stepped in April.")
         assert (
-            hook.run({**event, "hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossing_door__find"}) is None
+            hook.run({**event, "hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossings_door__find"})
+            is None
         )
         assert "`99999999` the person" in said("find", words="mast")[0]  # the server finds the same home
         assert said("mark", sentence="The hull is painted grey in spring.", anchors=[D, E], whose="both") == (
@@ -477,14 +479,15 @@ def test_switched_off_a_home_is_read_and_nothing_is_added_to_it(tmp_path):
         assert through("switch", "off", "--cwd", str(project)) == (0, OFF)
         held, files = store.status(outside), inside(outside)
         time.sleep(0.005)  # said a moment after the switch was turned, by the transcript's own clock
-        stamped = row("user", "88888888", 41, "Said while Crossing was switched off.")
+        stamped = row("user", "88888888", 41, "Said while Crossings was switched off.")
         stamped["timestamp"] = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         path.write_text(path.read_text(encoding="utf-8") + json.dumps(stamped) + "\n", encoding="utf-8")
         time.sleep(0.005)
         cut = {**event, "hook_event_name": "SessionStart", "source": "compact"}
         assert hook.run(cut) is None and hook.carried(cut) is None
         assert (
-            hook.run({**event, "hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossing_door__find"}) is None
+            hook.run({**event, "hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossings_door__find"})
+            is None
         )
         assert (
             hook.run({**event, "hook_event_name": "PostCompact", "trigger": "auto", "compact_summary": "Another."})

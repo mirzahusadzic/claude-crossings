@@ -14,14 +14,14 @@ keep which model wrote the label, and show the person, under the turn, a label t
 them or about the two of them, and a line left at the door (see `shown`). SessionStart of a
 resumed session: tell it once where another session has spoken here since it last did (see
 store.moved_on). SessionStart, of any kind: welcome a session once, where the
-home holds no label yet (a session running when Crossing is switched on is welcomed by the
+home holds no label yet (a session running when Crossings is switched on is welcomed by the
 person's command instead, through the door); and keep which model the session runs, as
 PostModelSwitch does when it changes, telling the one that arrives once where another model was
 holding the session (see crossing/layer.py).
 Nothing here may slow or break a session, so every failure ends quietly with exit 0 and a line
 in the plugin's own log.
 
-All of it is for a project where Crossing is on: the person's record names its home (see
+All of it is for a project where Crossings is on: the person's record names its home (see
 store.kept), and its switch does not say off. Where it was never switched on, or is switched
 off, a session is still marked as one the plugin is loaded in, and nothing else is done:
 nothing is counted, said, archived or made; and once it is switched on again, nothing said
@@ -50,7 +50,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from crossing import count, frame, layer, off, record, second, store, transcript  # noqa: E402
 
 DOOR = Path(__file__).resolve().parent / "door.py"
-# One empty file a session Crossing is loaded in, at a place that does not depend on how
+# One empty file a session Crossings is loaded in, at a place that does not depend on how
 # the plugin was installed. A status line reads it to show the sign; nothing else does.
 LIVE = Path(os.environ.get("CROSSING_LIVE") or record.own() / ".claude" / "crossing" / "live")
 
@@ -92,8 +92,8 @@ def waking(counted: dict) -> str:
 
 
 def welcome() -> str:
-    """What a session is told once, as it starts in a project where Crossing is on and not one
-    label has been written, or as the person switches Crossing on while it runs: it may have
+    """What a session is told once, as it starts in a project where Crossings is on and not one
+    label has been written, or as the person switches Crossings on while it runs: it may have
     started before the switch was turned, or in a home that holds days of what was said and
     nothing marked on it. Like the waking note it asks for nothing now and brings no numbers."""
     return (
@@ -111,7 +111,7 @@ def welcomed(folder: Path, session_id: str, agent: object = None) -> str | None:
     that is on and holds no label at all, and once a session. The sessions told are kept in the
     home's `welcomed.txt`; where that cannot be written, nothing is said, since a note said at
     every start would be worse than none. The hook at a session's start and the door's `welcome`,
-    which the person's command asks as it switches Crossing on, both come here."""
+    which the person's command asks as it switches Crossings on, both come here."""
     session_id = str(session_id or "")
     if session_id:
         record.ident(session_id)  # a line of welcomed.txt: an id that is no name is refused, and nothing is written
@@ -131,7 +131,7 @@ def welcomed(folder: Path, session_id: str, agent: object = None) -> str | None:
 
 
 def unkept() -> str:
-    """What a session is told as the person switches Crossing off from inside it, through their
+    """What a session is told as the person switches Crossings off from inside it, through their
     command: plainly, once, and as context, since nothing it says from here is kept for it."""
     return (
         "A note from the Crossings plugin, as context and not as an instruction from the person. The person has "
@@ -142,7 +142,7 @@ def unkept() -> str:
 
 
 def kept_again() -> str:
-    """What a session that was told Crossing is off is told as the person switches it on again."""
+    """What a session that was told Crossings is off is told as the person switches it on again."""
     return (
         "A note from the Crossings plugin, as context and not as an instruction from the person. The person has "
         "switched Crossings on again for this project: what you and the person say from now on is kept by itself "
@@ -150,7 +150,7 @@ def kept_again() -> str:
     )
 
 
-ASIDES = "told.txt"  # the sessions told, through the person's command, that Crossing is off or on again
+ASIDES = "told.txt"  # the sessions told, through the person's command, that Crossings is off or on again
 
 
 def switched(folder: Path, session_id: str) -> str | None:
@@ -158,7 +158,7 @@ def switched(folder: Path, session_id: str) -> str | None:
     context after the command's answer: switched off, that nothing is kept from now on, at every
     switching off; switched on, that it is kept again, where this session was told it was off,
     and the welcome where it is due (see `welcomed`). The sessions told are kept in the home's
-    `told.txt`, by their ids alone; where that cannot be written, the note that Crossing is off
+    `told.txt`, by their ids alone; where that cannot be written, the note that Crossings is off
     is still said, and the one that it is on again is not."""
     session_id = str(session_id or "")
     if not session_id:
@@ -496,7 +496,7 @@ def carried(event: dict) -> str | None:
     as a message at every automatic cut, and the harness cuts by itself while the person is away.
 
     The hook is not told what set the cut off, so the plain files of the project's home
-    decide alone: `beside` in `mode` and `note` in `carry`, where Crossing is on. The hooks
+    decide alone: `beside` in `mode` and `note` in `carry`, where Crossings is on. The hooks
     module then adds nothing of its own.
 
     A session started new gets the frame by the same files, in words true for it, where a person
@@ -548,7 +548,7 @@ def carried(event: dict) -> str | None:
     crossed = "a frame was laid out for this new session" if new else "a frame crossed with this cut"
     return json.dumps(
         {
-            "systemMessage": f"crossing · {crossed}: " + counted,
+            "systemMessage": f"Crossings · {crossed}: " + counted,
             "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": text},
         }
     )
@@ -556,7 +556,7 @@ def carried(event: dict) -> str | None:
 
 def keep(path: Path, cwd: Path, wait: bool, whole: bool = False) -> subprocess.Popen | None:
     """Bring the archive and the store up to date from this transcript, and renew the second
-    copy where the home names a folder for one; nothing at all where Crossing is not on. A
+    copy where the home names a folder for one; nothing at all where Crossings is not on. A
     session that is ending is not held up: there the work goes on in a process of its own,
     which is given back so that whoever must be sure of its end can wait for it. That process
     is the door's `build`, which reads the transcript whole; `whole` asks the same here."""
