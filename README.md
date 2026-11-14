@@ -105,7 +105,7 @@ The tests write their own transcripts and use temporary homes alone; they need n
 ```sh
 python3 tests/test_store.py   # each test file runs on its own
 claude plugin test .          # the hooks module's tests
-sh scripts/coverage.sh        # branch coverage of crossing/; the floor is 99
+sh scripts/coverage.sh        # branch coverage of crossing/; the floor is 100
 claude plugin validate .
 python3 scripts/figure.py     # draws the figure above again, in both themes
 ```
