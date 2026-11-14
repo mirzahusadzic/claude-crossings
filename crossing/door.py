@@ -258,7 +258,8 @@ def show_find(out: dict, named: bool = False) -> str:
             for label in shown
         ]
         if len(shown) < len(out["labels"]):
-            lines.append(f"{len(out['labels']) - len(shown)} more labels hold one of these words.")
+            more = len(out["labels"]) - len(shown)
+            lines.append(f"{many(more, 'more label')} hold{'s' if more == 1 else ''} one of these words.")
     if out["said"]:
         lines += ["", "Said:"] + [
             f"- `{s['id']}` {voiced(s, named)}, {when(s['at'])}: {' '.join(store.clean(s['part']).split())}"
@@ -294,7 +295,7 @@ def show_look(out: dict, bare: bool = False, named: bool = False) -> str:
     said = sum(d["his"] + d["session"] for d in out["days"])
     lines = [
         f"The store in outline: {len(out['days'])} day{'s' if len(out['days']) != 1 else ''}, {said} messages, "
-        f"{len(out['standing']) + len(out['work'])} labels, {out['struck']} struck"
+        f"{many(out['labels'], 'label')}, {out['struck']} struck"
         + (f"; kept up to {when(out['last'])}." if out["last"] else "."),
         "",
         "Days:",
@@ -661,7 +662,7 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             f"The store{'' if args.bare else f' at {folder}'} holds {held['his']} messages of the person's and "
             f"{held['session']} of the "
             f"session's ({held['characters']} characters, {store.clean(held['from'])} to {store.clean(held['to'])}), "
-            f"{held['labels']} labels, "
+            f"{many(held['labels'], 'label')}, "
             f"and {held['struck']} struck."
             + (
                 " Of the labels: {cooled} cooled, {misaligned} misaligned, {unresolved} unresolved.".format(

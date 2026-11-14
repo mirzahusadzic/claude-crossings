@@ -10,7 +10,7 @@ The server is started by the plugin's `.mcp.json` as `python3 -I crossing/serve.
 
 | Tool | Gives |
 | --- | --- |
-| `look` | the room, with no word needed: the days and how many messages each voice has on each, the labels by kind, the labels that are misaligned or unresolved, the newest line left at the door, and the eight newest labels about the work that are not cooled |
+| `look` | the room, with no word needed: the days and how many messages each voice has on each, how many labels there are (the lines left at the door among them, as `status` counts them), the labels by kind, the labels that are misaligned or unresolved, the newest line left at the door, and the eight newest labels about the work that are not cooled |
 | `labels` | the labels themselves, newest first: with nothing named, those about the work and the lines at the door; or those of one kind (`relation`, `work`, `next`), of one day (a label's day is that of the newest message it rests on, and a stack's is also that of its own page), or named by key, a stack with every line beneath it |
 | `find` | the messages and labels that hold the words, all of them or, failing that, any; `voice` narrows it to the person's messages or the session's |
 | `thread` | a message by its id in its place: what stood before and after it (`around`, two by default and fifty at most), numbered in the order said, with the labels resting there |

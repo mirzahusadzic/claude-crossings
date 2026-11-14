@@ -2642,6 +2642,7 @@ def look(folder: Path, newest: int = 8) -> dict:
         ],
         "standing": [r[0] for r in db.execute("select id from label where kind = 'relation' order by n")],
         "work": [r[0] for r in db.execute("select id from label where kind = 'work' order by n")],
+        "labels": one("select count(*) from label"),  # every label, the lines left at the door too, as `status` counts
         "newest": [
             dict(r)
             for r in db.execute(

@@ -1211,6 +1211,39 @@ def test_a_row_the_harness_wrote_in_the_sessions_place_is_nobodys_words(tmp_path
     assert "Not logged in" not in words and "Grey it is" in words, words
 
 
+# --- how many labels, as status and look say it ---------------------------------------------------------------
+
+
+def test_status_and_look_count_the_labels_alike_and_one_label_is_one_label(tmp_path):
+    crossings, _ = home(tmp_path)  # R1 and W1 on its hand-over page
+    project = str(crossings.parent)
+    left = through("mark", "--kind", "next", "--anchors", "dddddddd", "--cwd", project, "Where the work stands.")
+    assert left[0] == 0, left
+    # A line left at the door is a label, shown apart by look: both count it.
+    assert ", 3 labels, and 0 struck." in through("status", "--cwd", project)[1]
+    assert through("look", "--cwd", project)[1].startswith(
+        "The store in outline: 1 day, 4 messages, 3 labels, 0 struck"
+    )
+    # One label is one label, wherever its number is said.
+    one = tmp_path / "one"
+    project_, home_, path = public(one)
+    path.write_text(json.dumps(row("user", "aaaaaaaa", 1, "The hull is grey.")) + "\n", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project_)) == (0, ON)
+    assert through("build", "--transcript", str(path), "--cwd", str(project_))[0] == 0
+    assert through("mark", "--anchors", "aaaaaaaa", "--cwd", str(project_), "The hull is grey.")[0] == 0
+    told = through("status", "--cwd", str(project_))[1]
+    assert ", 1 label, and 0 struck." in told and "1 labels" not in told, told
+    looked = through("look", "--cwd", str(project_))[1]
+    assert looked.startswith("The store in outline: 1 day, 1 messages, 1 label, 0 struck"), looked
+    framed = through("frame", "--cwd", str(project_))[1]
+    assert "and 1 label." in framed and "1 labels" not in framed, framed
+    # And of the labels that share a word but are not listed, one is one.
+    for n in range(2, 5):
+        assert through("mark", "--anchors", "aaaaaaaa", "--cwd", str(project_), f"The hull, label {n}.")[0] == 0
+    found = through("find", "hull mast", "--cwd", str(project_))[1]
+    assert "1 more label holds one of these words." in found, found
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

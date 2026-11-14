@@ -259,7 +259,8 @@ def compose(folder: Path, size: int | None = None, new: bool = False, model: str
 
     parts.append(
         f"The store holds {held['his']} messages of the person's and {held['session']} {closing}, "
-        f"from {store.clean(held['from'])} to {store.clean(held['to'])}, and {held['labels']} labels."
+        f"from {store.clean(held['from'])} to {store.clean(held['to'])}, and {held['labels']} "
+        f"label{'' if held['labels'] == 1 else 's'}."
     )
     db.close()
     return "\n\n".join(parts) + "\n"
