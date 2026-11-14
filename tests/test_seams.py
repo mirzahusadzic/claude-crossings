@@ -2387,6 +2387,74 @@ def test_a_whole_tag_block_of_a_name_the_harness_does_not_write_is_the_persons_w
     assert kept_texts(home_) == kept, kept_texts(home_)
 
 
+def test_a_span_id_or_place_changed_for_another_at_the_same_count_keeps_everything_off(tmp_path):
+    """A span of off.txt, an id of unsaid.txt or a place of off-places.jsonl changed for another of
+    the same form, so that each file holds as many as the person's record keeps: what it held can no
+    longer be told, as where one is gone. Nothing is archived and status says so, until the person
+    switches on again. An id a reading adds to unsaid.txt after the switch wrote it is no change."""
+    clock, was = {}, off.now
+    off.now = lambda: clock["now"]
+    try:
+        for n, kind in enumerate(("span", "id", "place", "an id added", None)):
+            project, home_, path = public(tmp_path / str(n))
+            path.write_text("", encoding="utf-8")
+            assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+            says(path, "10000001", "Said on the record before switching off.", at="2026-11-11T09:58:00.000Z")
+            assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+            clock["now"] = "2026-11-11T10:00:00.000000+00:00"
+            assert through("switch", "off", "--cwd", str(project))[0] == 0
+            says(path, "10000002", "Said while off, after the clock went forward.", at="2026-11-11T12:00:00.000Z")
+            if kind == "place":
+                lines_of_file(home_ / "off-places.jsonl", lambda line: line.replace('"offset": ', '"offset": 1'))
+            clock["now"] = "2026-11-11T10:30:00.000000+00:00"
+            state = "restored" if kind == "place" else "again"
+            assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED[state] + "\n"), kind
+            if kind == "place":
+                continue  # switched on with the record told lost, and so restored: everything before is off
+            says(path, "10000003", "Said on the record after switching on.", at="2026-11-11T10:31:00.000Z")
+            if kind == "span":  # the one span, closed, changed for another closed span
+                lines_of_file(
+                    home_ / off.FILE,
+                    lambda line: (
+                        "2000-01-01T00:00:00+00:00 2000-01-01T00:00:01+00:00" if line.startswith("2026") else line
+                    ),
+                )
+            elif kind == "id":
+                lines_of_file(home_ / off.UNSAID, lambda line: "20000002" + UID if line.startswith("1") else line)
+            elif kind == "an id added":
+                off.keep_unsaid(home_, ["30000003" + UID])
+            assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+            told = through("status", "--cwd", str(project))[1]
+            kept = kept_texts(home_)
+            if kind in ("span", "id"):
+                assert kept == ["Said on the record before switching off."], (kind, kept)
+                assert door.LOST in told, kind
+            else:
+                assert "Said on the record after switching on." in kept and door.LOST not in told, (kind, kept)
+                assert "Said while off, after the clock went forward." not in kept, kind
+    finally:
+        off.now = was
+
+
+def test_a_record_with_counts_and_no_digests_is_read_by_its_counts_alone(tmp_path):
+    """A line of the person's record written by the make before the digests (`held` and no `sealed`)
+    keeps reading as it did: a span changed for another at the same count is no loss by it, and one
+    taken away is; the next switch keeps the digests beside the counts."""
+    project, home_, _ = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert through("switch", "off", "--cwd", str(project))[0] == 0
+    assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["again"] + "\n")
+    switched = store.switched()
+    lines = [json.loads(line) for line in switched.read_text(encoding="utf-8").splitlines()]
+    assert all(set(each["sealed"]) == set(store.HELD) for each in lines if "held" in each)
+    switched.write_text("".join(json.dumps({k: v for k, v in each.items() if k != "sealed"}) + "\n" for each in lines))
+    changed = "2000-01-01T00:00:00+00:00 2000-01-01T00:00:01+00:00"
+    lines_of_file(home_ / off.FILE, lambda line: changed if line.startswith("2026") else line)
+    assert not store.lost(home_)
+    lines_of_file(home_ / off.FILE, lambda line: "" if line == changed else line)
+    assert store.lost(home_)
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

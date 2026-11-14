@@ -127,11 +127,12 @@ def untold(lines: list[str]) -> bool:
     return any(n > covered for n in passed)
 
 
-def counted(lines: list[str]) -> int:
-    """How many spans the lines hold: a line that is no span, a blank one or a comment is none of
-    them (see `_sorted`). The person's record keeps this count each time the switch writes the file
-    (see store.lost), so that a span's line blanked or turned into a comment is missed by it."""
-    return len(_sorted(lines)[0])
+def held_spans(lines: list[str]) -> list[str]:
+    """The spans the lines hold, each as the words of its line, in the file's order: a line that is
+    no span, a blank one or a comment is none of them (see `_sorted`). The person's record keeps how
+    many and a digest of them each time the switch writes the file (see store.lost), so that a
+    span's line blanked, turned into a comment or changed for another span is missed by it."""
+    return [" ".join(lines[n].split()) for n, _, _ in _sorted(lines)[0]]
 
 
 def spans(folder: Path) -> tuple[list[Span], int]:
@@ -229,16 +230,17 @@ def unsaid(folder: Path) -> set[str]:
     return {line.strip() for line in lines if line.strip() and not line.startswith("#")}
 
 
-def unsaid_held(folder: Path) -> int:
-    """How many ids UNSAID holds, each once, of the form `keep_unsaid` writes: a line blanked or
-    damaged is none of them. Nought where there is no file; a file that is there and cannot be read
-    is said so (OSError). The person's record keeps this count each time the switch writes the
-    record of the spans (see store.lost)."""
+def unsaid_ids(folder: Path) -> list[str]:
+    """The ids UNSAID holds, each once, of the form `keep_unsaid` writes (a line blanked or damaged is
+    none of them), in the file's order: a reading adds an id after them, and so those the switch last
+    kept stay first. None where there is no file; a file that is there and cannot be read is said so
+    (OSError). The person's record keeps how many and a digest of them each time the switch writes
+    the record of the spans (see store.lost)."""
     try:
         lines = lines_in(within(folder, UNSAID))
     except FileNotFoundError:
-        return 0
-    return len({line.strip() for line in lines if not line.startswith("#") and nameable(line.strip())})
+        return []
+    return list(dict.fromkeys(line.strip() for line in lines if not line.startswith("#") and nameable(line.strip())))
 
 
 def keep_unsaid(folder: Path, ids: list[str]) -> None:

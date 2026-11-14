@@ -255,8 +255,12 @@ def _recording():
 # fewer, or is missing where it held any, or cannot be read, was taken away, cut or damaged by
 # something other than the switch (a session, a checkout or a clean of a home inside a repository),
 # and what it said can no longer be told: nothing is archived for that home until the person
-# switches it on. So too where a line of `off.txt` is damaged, so that it is no span. A line written
-# by an earlier make has no `held`, and its count of lines is read as it always was.
+# switches it on. So too where a line of `off.txt` is damaged, so that it is no span. Beside the
+# counts, as an optional field (`sealed`), it keeps a digest of what each file held then, in its order:
+# a file whose first spans, ids or places are no longer those, though as many, had one changed for
+# another (a sync, a pull, another program), and is read as one that holds fewer. A line written by an
+# earlier make has no `held`, and its count of lines is read as it always was; one with `held` and no
+# `sealed` is read by its counts alone.
 
 
 def spanned(folder: Path) -> int:
@@ -299,6 +303,27 @@ def _held(folder: Path) -> dict | None:
 HELD = ("spans", "unsaid", "places")
 
 
+def _sealed_line(folder: Path) -> dict:
+    """The digests the person's record keeps of what the three files held as the switch last wrote
+    them (see `_spans_kept`), by name; none where it keeps none, as a line an earlier make wrote."""
+    found = _spans_line(folder).get("sealed")
+    if not isinstance(found, dict):
+        return {}
+    return {name: found[name] for name in HELD if isinstance(found.get(name), str)}
+
+
+def _sealed(items: list[str]) -> str:
+    """A digest of what a file of the record of when Crossing was off holds, in its order."""
+    return hashlib.sha256("\n".join(items).encode("utf-8", "surrogateescape")).hexdigest()
+
+
+def _held_items(folder: Path, lines: list[str]) -> dict[str, list[str]]:
+    """What the three files hold now, each in its order: the spans of `off.txt` (its `lines`), the
+    ids of `unsaid.txt` and the places of `off-places.jsonl`. One that is there and cannot be read
+    is said so (OSError)."""
+    return {"spans": off.held_spans(lines), "unsaid": off.unsaid_ids(folder), "places": _places_listed(folder)}
+
+
 def _spans_kept(folder: Path, steady: float | None = None) -> None:
     """Keep in the person's record how many lines the home's record of when Crossing was off has
     now, and what its three files hold now (`held`: the spans of `off.txt`, the ids of `unsaid.txt`
@@ -310,12 +335,14 @@ def _spans_kept(folder: Path, steady: float | None = None) -> None:
     home = spelled(folder)
     lines = lines_of(within(folder, off.FILE).read_text(encoding="utf-8", errors="surrogateescape"))
     count = len(lines)
-    held = {"spans": off.counted(lines)}
-    for name, holding in (("unsaid", off.unsaid_held), ("places", _places_held)):
+    items = {"spans": off.held_spans(lines)}
+    for name, listing in (("unsaid", off.unsaid_ids), ("places", _places_listed)):
         try:
-            held[name] = holding(folder)
+            items[name] = listing(folder)
         except OSError:  # a file that cannot be read now holds nothing that can be told: `lost` says so
-            held[name] = 0
+            items[name] = []
+    held = {name: len(items[name]) for name in HELD}
+    sealed = {name: _sealed(items[name]) for name in HELD}
     with _recording():
         kept = []
         for line in lines_of(switched().read_text(encoding="utf-8", errors="surrogateescape")):
@@ -333,7 +360,13 @@ def _spans_kept(folder: Path, steady: float | None = None) -> None:
                 kept.append(line)  # all but the count written before this one
         kept.append(
             json.dumps(
-                {"home": home, "spans": count, **({"steady": steady} if steady is not None else {}), "held": held},
+                {
+                    "home": home,
+                    "spans": count,
+                    **({"steady": steady} if steady is not None else {}),
+                    "held": held,
+                    "sealed": sealed,
+                },
                 ensure_ascii=False,
             )
         )
@@ -346,7 +379,8 @@ def lost(folder: Path) -> bool:
     """Whether what the home's record of when Crossing was off held can no longer be told: any of
     its three files holds fewer than the person's record keeps it held when the switch last wrote it
     (see `_held`): fewer spans in `off.txt`, fewer ids in `unsaid.txt`, fewer places in
-    `off-places.jsonl`, one of them missing where it held any; or one of them is there and cannot be
+    `off-places.jsonl`, one of them missing where it held any; or as many, of which those it held
+    then are no longer the same, in the same order (see `_sealed_line`); or one of them is there and cannot be
     read; or `off.txt` holds a line that is no span since the switch last kept everything before
     that moment off (see off.untold). Where the record keeps only how many lines `off.txt` had (a
     line an earlier make wrote, see `spanned`), fewer lines are what is missed. Nothing is then
@@ -366,10 +400,16 @@ def lost(folder: Path) -> bool:
     if held is None and len(lines) < was:
         return True
     try:
-        now = {"spans": off.counted(lines), "unsaid": off.unsaid_held(folder), "places": _places_held(folder)}
+        now = _held_items(folder, lines)
     except OSError:  # one of them is there and cannot be read
         return True
-    return held is not None and any(now[name] < held[name] for name in HELD)
+    if held is None:
+        return False
+    sealed = _sealed_line(folder)
+    return any(
+        len(now[name]) < held[name] or (name in sealed and _sealed(now[name][: held[name]]) != sealed[name])
+        for name in HELD
+    )
 
 
 def kept(cwd: Path) -> Path | None:
@@ -636,14 +676,16 @@ def _places(folder: Path) -> dict[str, dict]:
         return {}
 
 
-def _places_held(folder: Path) -> int:
-    """How many places PLACES holds (see `_places`): nought where there is no file; a file that is
-    there and cannot be read is said so (OSError). The person's record keeps this count each time
-    the switch writes the record of the spans (see `lost`)."""
+def _places_listed(folder: Path) -> list[str]:
+    """The places PLACES holds (see `_places`), each as one line of its path, offset and check, in the
+    file's order: none where there is no file; a file that is there and cannot be read is said so
+    (OSError). The person's record keeps how many and a digest of them each time the switch writes
+    the record of the spans (see `lost`)."""
     try:
-        return len(_places_in(folder))
+        found = _places_in(folder)
     except FileNotFoundError:
-        return 0
+        return []
+    return [json.dumps([path, at["offset"], at["check"]], ensure_ascii=False) for path, at in found.items()]
 
 
 def _places_in(folder: Path) -> dict[str, dict]:

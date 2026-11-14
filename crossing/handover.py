@@ -13,7 +13,8 @@ reader as everywhere else in this plugin, and only what the home beside the page
 keeps: no message struck, nothing said while Crossing was off (by its spans and by the ids
 noted then), and nothing a session no person sat in held. Where the home's record of when it
 was off cannot be read, or what it held cannot be told (missing, holding fewer spans, ids or places
-than it did, or with a line that is no span: see store.lost), no message is given. The page
+than it did or one changed for another, or with a line that is no span: see store.lost), no message
+is given. The page
 is written through `within`, for its owner alone, as every file of a home is; where a file of
 it is a link, nothing is written. It is the person's to run, as the door's own verbs are, and
 writes only into a home the door believes for its project: anywhere else it says so in one
