@@ -33,7 +33,7 @@ from test_off import says  # noqa: E402
 from test_serve import said  # noqa: E402
 from test_store import DATA, at_terminal, home, row, started_by  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import count, door, handover, hook, off, store  # noqa: E402
+from crossing import count, door, frame, handover, hook, layer, off, second, store  # noqa: E402
 
 # No test here reaches a disk image either: a stand-in for macOS's hdiutil comes first on the path,
 # beside the one for the Keychain, and refuses. A test of a disk image's own use puts its own first.
@@ -696,7 +696,84 @@ def test_a_line_of_models_txt_that_came_by_no_signing_is_named_once_and_one_sign
     assert "models.txt" not in through("status", "--bare", "--cwd", project)[1]
 
 
-# --- the marks of the indexes ----------------------------------------------------------------------------
+# --- the small paths of these mends -----------------------------------------------------------------------
+
+
+def test_a_long_hand_over_page_is_given_within_the_frames_bound(tmp_path):
+    crossings, _ = home(tmp_path)
+    rows = "".join(
+        f"| W{n} | {'A long sentence about the hull and the mast. ' * 8} | both | `dddddddd` |\n" for n in range(2, 80)
+    )
+    (crossings / "hand-over.md").write_text("| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n" + rows)
+    page = as_the_module("page", "--cwd", str(crossings.parent), CLAUDE_CODE_ENTRYPOINT="cli")
+    assert page.returncode == 0 and len(page.stdout) <= frame.MOST and page.stdout.startswith("- W2 (both): "), page
+
+
+def test_no_line_is_handed_over_for_a_model_that_is_no_key(tmp_path):
+    for model in ("", "two words", "line\nbreak", "<synthetic>"):
+        layer.hand(tmp_path, "mark", {"sentence": "A label."}, model)
+    assert not (tmp_path / "calling.txt").exists()
+    layer.hand(tmp_path, "mark", {"sentence": "A label."}, "made-up-model")
+    assert layer.handed(tmp_path, "mark", {"sentence": "A label."}) == "made-up-model"
+
+
+def test_a_keychain_or_a_disk_image_tool_that_is_not_there_is_said_in_one_sentence(tmp_path):
+    crossings, _ = a_home_with_a_copy(tmp_path)
+    nothing = tmp_path / "nothing"  # a path on which neither tool is found
+    nothing.mkdir()
+    done = as_the_module("copy", "--cwd", str(crossings.parent), PATH=str(nothing))
+    assert (done.returncode, done.stdout) == (
+        1,
+        "not copied: the Keychain could not be asked for the copy's passphrase\n",
+    )
+    keychain = tmp_path / "keychain" / "security"  # a Keychain that holds a passphrase, and no hdiutil at all
+    keychain.parent.mkdir()
+    keychain.write_text("#!/bin/sh\necho made-up-passphrase-for-a-test\n", encoding="utf-8")
+    keychain.chmod(0o755)
+    done = as_the_module("copy", "--cwd", str(crossings.parent), PATH=str(keychain.parent))
+    assert (done.returncode, done.stdout) == (1, "not copied: hdiutil could not make the encrypted image\n"), done
+    # A Keychain that answers the question and is gone as the passphrase is to be kept.
+    calls = []
+
+    def gone(argv, **kwargs):
+        calls.append(argv[1])
+        if argv[1] == "find-generic-password":
+            return types.SimpleNamespace(returncode=44, stdout="")
+        raise FileNotFoundError(2, "No such file or directory", argv[0])
+
+    was = second.subprocess.run
+    second.subprocess.run = gone
+    try:
+        second.keychain()
+        raise AssertionError("the passphrase was taken as kept")
+    except second.Failed as err:
+        assert str(err) == "the Keychain would not keep the copy's passphrase" and len(calls) == 2
+    finally:
+        second.subprocess.run = was
+
+
+def test_a_switch_that_cannot_have_the_homes_lock_says_so_and_writes_nothing(tmp_path):
+    crossings, _ = home(tmp_path)
+    held, waited = store._locked(crossings), store.WAIT
+    store.WAIT = 0.1
+    try:
+        code, out = through("switch", "off", "--cwd", str(crossings.parent))
+    finally:
+        store._unlocked(crossings, held)
+        store.WAIT = waited
+    assert code == 1 and out.startswith("The record of when Crossings was off could not be written"), out
+    assert not (crossings / "off.txt").exists() and store.active(crossings)
+
+
+def test_an_index_that_cannot_be_made_here_is_taken_away_at_switching_on(tmp_path):
+    crossings, _ = home(tmp_path)
+    was = store.searchable
+    store.searchable = lambda: False  # a python3 with no FTS5
+    try:
+        assert through("switch", "on", "--cwd", str(crossings.parent))[0] == 0
+    finally:
+        store.searchable = was
+    assert not (crossings / "store.db").exists()
 
 
 def test_the_marks_of_the_indexes_stand_odd_lines_a_mark_that_cannot_be_kept_and_an_index_with_none(tmp_path):
