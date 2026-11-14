@@ -74,6 +74,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -899,8 +900,9 @@ def handed_over(folder: Path) -> str:
     """The hand-over page as the module carries it where no frame can be made: never raw. Its label
     rows alone, read as every label page is read (store.labels), each in the frame's own form and
     cleaned (store.clean); and of its words page only the lines of the form crossing/handover.py
-    writes, cleaned, where it names nothing the home keeps out. The whole within frame.MOST; nothing
-    where the page holds no row."""
+    writes for a message one of those rows rests on, cleaned, where it names nothing the home keeps
+    out; the line of what the transcript did not hold is written again from the ids of it those
+    rows rest on. The whole within frame.MOST; nothing where the page holds no row."""
     gone = store.struck(folder)
     rows = [label for label in store.labels(folder) if label["page"] == "hand-over.md" and label["id"] not in gone]
     lines = [
@@ -908,12 +910,18 @@ def handed_over(folder: Path) -> str:
         f"[{store.rests({**label, 'beneath': [key for key, _ in label['beneath']]})}]"
         for label in rows
     ]
+    rested = {anchor.split("+")[0] for label in rows for anchor in label["anchors"]}  # the ids the rows name
     words = plain(folder, "hand-over.words.md")
     if words and any(each in words for each in store.kept_out_ids(folder)):
         words = ""  # a words page that names what was struck or kept off is not given: handover.py makes it again
-    said = [
-        store.clean(line) for line in words.split("\n") if store.WORDS.match(line) or line.startswith(store.MISSING)
-    ]
+    said = []
+    for line in words.split("\n"):
+        found = store.WORDS.match(line)
+        if found and found.group(1) in rested:
+            said.append(store.clean(line))
+        elif line.startswith(store.MISSING):
+            missing = [each for each in re.findall(r"`([0-9a-f]{8})`", line) if each in rested]
+            said += [store.MISSING + ", ".join(f"`{each}`" for each in missing) + "."] if missing else []
     out, used = [], 0
     for line in lines + ([""] + [WORDS_HEAD, ""] + said if said else []):
         if used + len(line) + 1 > frame.MOST:

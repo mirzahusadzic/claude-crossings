@@ -63,7 +63,7 @@ A home that `/crossings on` makes outside the project starts with `mode` set to 
 
 A frame carried as a message is handed to the harness as a user message in the cut's answer. It opens "A note from the Crossings plugin", and the plugin's reader never takes such a row for the person's words, nor one that opens with the older "A note from the Crossing plugin". Carried as a note, nothing is filed as a message.
 
-Where a message is to carry the frame and the door gives none, the home's `hand-over.md` goes instead, after a note that says what it is: its label rows alone, in the frame's own form and cleaned, with the lines of its words page that have the form the words script writes, the whole within the frame's 9,500 characters. A page with no label row carries nothing. Where there is neither, the cut is left as the harness made it. The module writes what it did into `last-cut.json`, and the frame hook into `last-carry.json`; neither is needed for the cut to go on.
+Where a message is to carry the frame and the door gives none, the home's `hand-over.md` goes instead, after a note that says what it is: its label rows alone, in the frame's own form and cleaned, with the lines of its words page that have the form the words script writes and give a message one of those rows rests on, the whole within the frame's 9,500 characters. A page with no label row carries nothing. Where there is neither, the cut is left as the harness made it. The module writes what it did into `last-cut.json`, and the frame hook into `last-carry.json`; neither is needed for the cut to go on.
 
 ---
 

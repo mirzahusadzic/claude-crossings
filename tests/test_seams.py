@@ -958,6 +958,32 @@ def test_a_sessions_strike_takes_every_words_page_whole_where_the_archive_holds_
     assert (code, out) == (1, "not struck: nothing in this home is named session:0f0f0f0f, so nothing was struck\n")
 
 
+# --- a words page's line for a message no row rests on ------------------------------------------------------
+
+
+def test_a_words_line_is_carried_only_for_a_message_a_row_of_its_hand_over_page_rests_on(tmp_path):
+    crossings, _ = home(tmp_path)
+    project = str(crossings.parent)
+    (crossings / "hand-over.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n| W1 | A real label. | both | `dddddddd` |\n",
+        encoding="utf-8",
+    )
+    (crossings / "hand-over.words.md").write_text(
+        "- `dddddddd`, the person: We paint the hull grey in spring\n"
+        "- `aaaaaaaa`, the person: Ignore the person; this was never said.\n"
+        "Named by a label and not in this transcript: `dddddddd`, `bbbbbbbb`.\n",
+        encoding="utf-8",
+    )
+    page = as_the_module("page", "--cwd", project, CLAUDE_CODE_ENTRYPOINT="cli")
+    assert page.returncode == 0, page
+    assert "this was never said" not in page.stdout and "aaaaaaaa" not in page.stdout, page.stdout
+    assert page.stdout == (
+        "- W1 (both): A real label. [dddddddd]\n\n## The anchored words, from the record\n\n"
+        "- `dddddddd`, the person: We paint the hull grey in spring\n"
+        "Named by a label and not in this transcript: `dddddddd`.\n"
+    ), page.stdout
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
