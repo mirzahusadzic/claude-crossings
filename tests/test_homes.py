@@ -139,6 +139,7 @@ def test_switching_on_makes_the_home_outside_and_says_which_project_it_belongs_t
     assert not outside.exists()
     assert through("switch", "on", "--cwd", str(project / "src")) == (0, ON)
     assert {p.name: p.read_text(encoding="utf-8") for p in outside.iterdir()} == {
+        "archive.lock": "",  # the home's lock, which the switch holds as it turns
         "switch": "on\n",
         "mode": "beside\n",
         "carry": "note\n",
@@ -172,7 +173,7 @@ def test_a_project_with_a_folder_of_its_own_keeps_it_and_is_switched_there(tmp_p
     assert through("switch", "toggle", "--cwd", str(project)) == (0, AGAIN)
     assert through("switch", "on", "--cwd", str(project)) == (0, ON)
     # no mode, no carry, no project file: it is set as it was, with the span the switching off opened and the on closed
-    assert inside(crossings) == sorted(before + ["off.txt", "switch"])
+    assert inside(crossings) == sorted({*before, "archive.lock", "off.txt", "switch"})  # and the lock the switch holds
     assert not record.outside(project.resolve()).exists()
     empty = tmp_path / "empty"  # a crossings/ folder with nothing in it is a home once the person switches it on
     (empty / "crossings").mkdir(parents=True)
@@ -180,6 +181,7 @@ def test_a_project_with_a_folder_of_its_own_keeps_it_and_is_switched_there(tmp_p
     assert store.active(store.kept(empty)) and through("switch", "toggle", "--cwd", str(empty)) == (0, OFF)
     assert not store.active(store.kept(empty)) and inside(empty) == [
         "crossings",
+        "crossings/archive.lock",
         "crossings/off.txt",
         "crossings/switch",
     ]
@@ -191,7 +193,7 @@ def test_a_home_named_outright_is_switched_like_any_other_and_names_no_project(t
         assert through("home") == (1, "") and through("status") == (1, NOT_ON + "\n")
         assert through("switch", "off") == (0, NEVER) and not named.exists()
         assert through("switch", "on") == (0, ON)
-        assert sorted(p.name for p in named.iterdir()) == ["carry", "mode", "switch"]
+        assert sorted(p.name for p in named.iterdir()) == ["archive.lock", "carry", "mode", "switch"]
         assert through("home") == (0, f"{named}\n")
         assert "holds 0 messages of the person's" in through("status")[1]
 

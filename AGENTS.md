@@ -55,7 +55,7 @@ Crossings is a small Claude Code plugin that keeps what was said in a project, w
 - The frame stays within `frame.MOST` characters, cutting the line at the door to the room left where it must, and names only the door's tools that exist. A label's sentence is at most `store.LONGEST` characters.
 - What is shown is cleaned by `store.clean` alone; the pages keep what was written.
 - A label that speaks for the person, a standing line, and a line left at the door are shown to the person when marked through the door; a label that came into the pages any other way is noted by a build and named once by the person's next `status`; nothing is blocked.
-- An archive, a mark, a strike and `layer` hold the home's lock (`store._locked`), and every file a strike or `layer` rewrites is written beside itself and put in its place; the person's record has one lock for its two writers (`store._recording`).
+- An archive, a mark, a strike, `layer` and the switch hold the home's lock (`store._locked`), and every file a strike or `layer` rewrites is written beside itself and put in its place; the person's record has one lock for its two writers (`store._recording`), taken after the home's and never before it.
 - An index added to is the database a whole build makes from the same files; where that cannot be trusted, it is made whole. `door.py build` always makes it whole.
 - The module opens no file of a home itself: it reads and writes a home through `door.py`.
 - Every folder the plugin makes is 0700 and every file 0600, except on Windows.

@@ -22,8 +22,8 @@ a folder outside it; or the one on this computer that is the person's and the se
   flagged.txt            the ids of messages of the person's that look like they hold a key or a
                          password, by id alone: the person's `status` and `look` say so until each
                          is struck. The message itself is kept: the archive keeps what was said.
-  archive.lock           held by one archive, mark, strike or layering at a time, from what it reads to
-                         the last file it writes.
+  archive.lock           held by one archive, mark, strike, layering or switch at a time, from what
+                         it reads to the last file it writes.
   labelled.txt,          every label the home has met, by key and digest; and those a build found that
   arrived.txt            came by no mark through the door, for the person's next `status`.
   collided.txt           ids of eight characters that two messages share, for the person's next `status`.
@@ -438,6 +438,21 @@ def switch(cwd: Path, to: str) -> str:
         within(folder, "carry").write_text("note\n", encoding="utf-8")
         if project is not None:
             within(folder, "project").write_text(f"{project}\n", encoding="utf-8")
+    # The span and the switch file are written with the home's lock held, as an archive reads them
+    # (see `archive`): an archive under way as the switch turns has read the spans as they now stand.
+    # One lock order for every act: the home's lock first, then the person's record's (`_recording`,
+    # which `consent` and `_spans_kept` take within it); nothing takes them the other way about.
+    held = _locked(folder)
+    if held is None:
+        raise OSError(f"the home was held by another act for {WAIT:.0f} seconds")
+    try:
+        return _switched(cwd, folder, on, believed)
+    finally:
+        _unlocked(folder, held)
+
+
+def _switched(cwd: Path, folder: Path, on: bool, believed: bool) -> str:
+    """`switch`, from its span on, with the home's lock held."""
     if not on:
         off.opened(folder)  # from this moment nothing said is kept
         _spans_kept(folder, steady=off.steady())
@@ -754,7 +769,8 @@ STALE = 120.0
 
 def _locked(folder: Path):
     """The home's lock, held; or nothing, where another process held it for WAIT seconds. Held by
-    an archive, a mark, a strike and `layered`, each from what it reads to the last file it writes."""
+    an archive, a mark, a strike, `layered` and the switch, each from what it reads to the last file
+    it writes. It is taken before the person's record's lock (`_recording`), never after it."""
     return _held_at(within(folder, LOCK))
 
 
@@ -908,12 +924,6 @@ def archive(path: Path, folder: Path, whole: bool = False, taken: bool = False) 
 
     A message of the person's that looks like it holds a key or a password (see SECRETS) is kept
     as any other, and its id, and nothing of it, is noted in `flagged.txt`."""
-    if lost(folder):  # what the record of the spans held cannot be told: nothing is kept
-        return 0
-    try:
-        kept_off, _ = off.spans(folder)
-    except OSError:
-        return 0
     session = record.ident(path.stem[:8])
     folder.mkdir(parents=True, exist_ok=True)
     held = _locked(folder)
@@ -921,6 +931,14 @@ def archive(path: Path, folder: Path, whole: bool = False, taken: bool = False) 
         record.log(f"busy: another archive held {folder} for {WAIT:.0f} seconds, so {path.name} was not read this time")
         return 0
     try:
+        # Read with the lock held, which the switch holds too (see `switch`): a span opened while an
+        # archive is under way is opened before it reads them, or after it has appended.
+        if lost(folder):  # what the record of the spans held cannot be told: nothing is kept
+            return 0
+        try:
+            kept_off, _ = off.spans(folder)
+        except OSError:
+            return 0
         return _archive(path, folder, whole, taken, kept_off, session)
     finally:
         _unlocked(folder, held)

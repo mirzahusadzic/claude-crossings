@@ -240,6 +240,7 @@ def test_switching_on_a_home_made_earlier_only_adds_the_line_and_the_switch(tmp_
         (outside / name).write_text(value, encoding="utf-8")
     assert store.kept(loose) is None and through("switch", "toggle", "--cwd", str(loose)) == (0, ON)
     assert {p.name: p.read_text(encoding="utf-8") for p in outside.iterdir()} == {
+        "archive.lock": "",  # the home's lock, which the switch holds as it turns
         "mode": "own\n",
         "carry": "message\n",
         "project": f"{loose.resolve()}\n",

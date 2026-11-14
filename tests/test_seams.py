@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import sys
 import tempfile
+import threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -22,9 +23,9 @@ from test_checks import ON  # noqa: E402
 from test_edges import through  # noqa: E402
 from test_homes import public  # noqa: E402
 from test_off import says  # noqa: E402
-from test_store import DATA  # noqa: E402  (and its data folder: no test reaches the real home)
+from test_store import DATA, started_by  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import door, off, store  # noqa: E402
+from crossing import door, hook, off, store  # noqa: E402
 
 # No test here reaches a disk image either: a stand-in for macOS's hdiutil comes first on the path,
 # beside the one for the Keychain, and refuses. A test of a disk image's own use puts its own first.
@@ -78,6 +79,56 @@ def test_what_is_said_after_the_clock_went_back_while_off_is_kept_off_too(tmp_pa
         assert ("Said on the record before switching off." in kept) is known, (known, kept)
         spans, unread = off.spans(home_)
         assert unread == 0 and len(spans) == 2 and not store.lost(home_), spans
+
+
+# --- a switch while an archive is under way ---------------------------------------------------------------
+
+
+def test_what_is_said_after_switching_off_is_not_kept_by_an_archive_already_under_way(tmp_path):
+    """A hook's archive has begun when the person switches off, and the session speaks the moment
+    the switch has answered. The archive was made to pause just after it read the spans, so that
+    the switch comes in between, as it may when two things happen at once."""
+    project, home_, path = public(tmp_path)
+    path.write_text("", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    event = {"hook_event_name": "PreToolUse", "tool_name": "mcp__plugin_crossing_door__find", "cwd": str(project)}
+    event.update(transcript_path=str(path), session_id=path.stem)
+    entered, release, answers = threading.Event(), threading.Event(), []
+    real = off.spans
+
+    def paused(folder: Path):
+        found = real(folder)
+        entered.set()
+        release.wait(timeout=20)
+        return found
+
+    def switching() -> None:
+        answers.append(through("switch", "off", "--cwd", str(project)))
+
+    said = "Said the moment the switch was turned off."
+    with started_by("cli"):
+        off.spans = paused
+        try:
+            archiving = threading.Thread(target=hook.run, args=(event,))
+            archiving.start()
+            assert entered.wait(timeout=20)
+            switch = threading.Thread(target=switching)
+            switch.start()
+            switch.join(timeout=1.0)
+            spoken = not switch.is_alive()  # the switch answered while the archive was still under way
+            if spoken:
+                says(path, "20000001", said)
+            release.set()
+            switch.join(timeout=20)
+            archiving.join(timeout=20)
+        finally:
+            off.spans = real
+            release.set()
+        if not spoken:  # the switch waited for the archive: the session speaks once it has answered
+            says(path, "20000001", said)
+        assert answers == [(0, door.SWITCHED["off"] + "\n")]
+        assert hook.run(event) is None  # and the next reading
+    assert said not in kept_texts(home_)
 
 
 if __name__ == "__main__":
