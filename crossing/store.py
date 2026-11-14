@@ -89,7 +89,7 @@ BENEATH = re.compile(r"\b([RW]\d+)@([0-9a-f]{6})\b")
 STATES = ("carried", "cooled", "misaligned", "unresolved")
 # A pasted text's id, as an anchor is written: its message's id and a number, between backticks.
 PASTED_ID = re.compile(r"`([0-9a-f]{8}\+\d+)`")
-MADE = 4  # the make of the database: one of another make is built again before it is read
+MADE = 5  # the make of the database: one of another make is built again before it is read (5: anchors by label)
 # Which model wrote a label is kept beside the pages, not in them, so that every page reads as it did.
 MODELS = "models.txt"
 SIGNED = re.compile(r"^([RWN]\d+)@([0-9a-f]{6})\s+(\S+)$")
@@ -2176,6 +2176,7 @@ def _index(folder: Path, db: sqlite3.Connection) -> None:
         create virtual table label_fts using fts5(text, tokenize='{TOKENS}');
         create table anchor(label text, said text);
         create index anchor_said on anchor(said);
+        create index anchor_label on anchor(label);
         create table beneath(stack text, line text, digest text);
         create index beneath_stack on beneath(stack);
         create table word(term text primary key, n integer);

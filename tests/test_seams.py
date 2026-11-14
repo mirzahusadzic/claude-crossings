@@ -2526,6 +2526,28 @@ def test_two_reads_that_make_a_stale_index_again_at_once_both_answer(tmp_path):
         store.WAIT = was
 
 
+def test_a_labels_anchors_are_found_by_an_index_and_an_index_of_the_make_before_is_made_again(tmp_path):
+    """The frame and `labels` ask the index for each label's anchors: they are found by an index on
+    the label, not by reading every anchor, so that the work grows with the labels and not with their
+    square. An index of the make before, which has none, is made again before it is read."""
+    project, home_, path = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    with contextlib.closing(sqlite3.connect(home_ / "store.db")) as db:
+        plan = " ".join(
+            str(r[-1]) for r in db.execute("explain query plan select said from anchor where label = ?", ("W1",))
+        )
+        assert "USING" in plan and "INDEX" in plan and "anchor_label" in plan, plan
+        db.execute("drop index anchor_label")
+        db.execute(f"pragma user_version = {store.MADE - 1}")
+        db.commit()
+    assert through("status", "--cwd", str(project))[0] == 0
+    assert through("build", "--cwd", str(project))[0] == 0
+    with contextlib.closing(sqlite3.connect(home_ / "store.db")) as db:
+        assert db.execute("pragma user_version").fetchone()[0] == store.MADE
+        assert db.execute("select 1 from sqlite_master where name = 'anchor_label'").fetchone() == (1,)
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
