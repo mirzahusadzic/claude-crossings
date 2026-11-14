@@ -138,7 +138,10 @@ CUT = [
 
 
 def written(folder: Path, rows: list) -> Path:
+    """A transcript of these rows. A row given with no id of its own is given one by its line, as the
+    harness gives every row one: a row whose id is no name is counted by no reading."""
     path = folder / "session-0001.jsonl"
+    rows = [r if "uuid" in r else {**r, "uuid": f"{n:08x}-0000-4000-8000-000000000000"} for n, r in enumerate(rows, 1)]
     path.write_text("".join(json.dumps(r) + "\n" for r in rows) + "not json\n", encoding="utf-8")
     return path
 

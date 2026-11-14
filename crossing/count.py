@@ -139,6 +139,7 @@ def count(
     (`retold`; nothing where there is none to compare with). Neither is a text.
     """
     from . import off  # here: off reads a home through record, which takes its figures from this file
+    from .record import nameable
 
     if pending or summary is not None:
         ordinal, start, cut = transcript.locate(path, summary)
@@ -153,14 +154,21 @@ def count(
             continue
         if line >= cut.line:
             break
-        said = transcript.person(row)
+        # A subagent's row is no one's here, its tool traffic too; and a row whose id is no name is
+        # passed over as every reading passes it over: it is archived by none, and no pointer names it.
+        if transcript.sidechain(row) or not nameable(str(row.get("uuid") or "")):
+            continue
+        # One message a row, its text blocks joined as the archive joins them.
+        said = transcript.norm("\n\n".join(transcript.person(row)))
         if said:
             if row.get("type") == "attachment":
-                sent_mid_turn += len(said)
+                sent_mid_turn += 1
             else:
-                typed += len(said)
-            his += [(line, transcript.ident(row), text) for text in said]
-        own += [(line, transcript.ident(row), text) for text in transcript.session(row)]
+                typed += 1
+            his.append((line, transcript.ident(row), said))
+        spoken = transcript.norm("\n\n".join(transcript.session(row)))
+        if spoken:
+            own.append((line, transcript.ident(row), spoken))
         c, r = transcript.tool_traffic(row)
         calls, results = calls + c, results + r
     deadline = time.monotonic() + seconds

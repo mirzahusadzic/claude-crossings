@@ -326,6 +326,46 @@ def test_two_cuts_whose_summaries_open_alike_are_two_cuts(tmp_path):
     assert (second["cut"], second["span_starts_after"], second["person"]["messages"]) == (2, 4, 2), second
 
 
+# --- the count's rows -----------------------------------------------------------------------------------
+
+
+def counted_cut(tmp_path: Path, rows: list) -> tuple[dict, Path]:
+    """The sidecar a cut's hook writes for a transcript of these rows, in a project switched on."""
+    project, home_, path = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    path.write_text("".join(json.dumps(each) + "\n" for each in rows), encoding="utf-8")
+    event = {"hook_event_name": "PostCompact", "transcript_path": str(path), "cwd": str(project), "trigger": "auto"}
+    with started_by("cli"):
+        assert hook.run({**event, "session_id": path.stem, "compact_summary": "A summary of the conversation."}) is None
+    return json.loads((home_ / "abcdef01-cut-1.json").read_text(encoding="utf-8")), home_
+
+
+def test_a_subagents_tool_traffic_is_not_counted(tmp_path):
+    called = row("assistant", "33333333", 3, [{"type": "tool_use", "input": {"blob": "x" * 12345}}])
+    answered = row("user", "44444444", 4, [{"type": "tool_result", "content": "y" * 6789}])
+    own_call = row("assistant", "55555555", 5, [{"type": "tool_use", "input": {"blob": "z" * 100}}])
+    rows = [row("user", "11111111", 1, "The main conversation's message."), {**called, "isSidechain": True}]
+    side, _ = counted_cut(tmp_path, [*rows, {**answered, "isSidechain": True}, own_call])
+    assert (side["tool_call_chars"], side["tool_result_chars"]) == (len(json.dumps({"blob": "z" * 100})), 0), side
+
+
+def test_a_message_of_two_text_blocks_is_one_message_of_the_count(tmp_path):
+    two = [{"type": "text", "text": "The first part of one message."}, {"type": "text", "text": "And its second part."}]
+    side, home_ = counted_cut(tmp_path, [row("user", "aaaaaaaa", 1, two)])
+    assert side["person"]["messages"] == side["person"]["typed"] == 1, side["person"]
+    # as the archive keeps it, its white space folded as the count folds it
+    assert [p["chars"] for p in side["person"]["pointers"]] == [
+        len(" ".join(store._archived(home_)[0]["text"].split()))
+    ]
+
+
+def test_a_row_whose_id_is_no_name_is_passed_over_by_the_count(tmp_path):
+    bad = {**row("user", "aaaaaaaa", 1, "This row has an id that is no name."), "uuid": "bad/id"}
+    side, home_ = counted_cut(tmp_path, [bad, row("user", "bbbbbbbb", 2, "This row has one that is.")])
+    assert [p["id"] for p in side["person"]["pointers"]] == ["bbbbbbbb"], side["person"]
+    assert [said["id"] for said in store._archived(home_)] == ["bbbbbbbb"]
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

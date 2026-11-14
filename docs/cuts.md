@@ -31,7 +31,7 @@ Every cut is counted by script, from the session's transcript, and written to a 
 | what share of the record the two voices were by characters, tool calls and their results being the rest | the transcript |
 | the ten least held messages of each voice, by id, line, length and share held | the transcript and the summary |
 
-"Word for word" is the whole claim: a run of 24 characters or more that the summary also holds. A message under 12 characters is too short to judge and is counted as not held. A summary can carry a message in other words and get no credit here. The count covers only what stood since the cut before, or since the start, and leaves out every message said while the switch was off, and every row the harness marks as a subagent's.
+"Word for word" is the whole claim: a run of 24 characters or more that the summary also holds. A message under 12 characters is too short to judge and is counted as not held. A summary can carry a message in other words and get no credit here. The count covers only what stood since the cut before, or since the start, and leaves out every message said while the switch was off, every row the harness marks as a subagent's, its tool calls and results too, and every row whose id is no name, as the archive does. A row is one message, however many text blocks it holds.
 
 | Event | The page |
 | --- | --- |
