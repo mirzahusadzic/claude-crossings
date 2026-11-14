@@ -33,7 +33,7 @@ from test_off import says  # noqa: E402
 from test_serve import said  # noqa: E402
 from test_store import DATA, at_terminal, home, row, started_by  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import count, door, frame, handover, hook, layer, off, second, store  # noqa: E402
+from crossing import count, door, frame, handover, hook, layer, off, record, second, store  # noqa: E402
 
 # No test here reaches a disk image either: a stand-in for macOS's hdiutil comes first on the path,
 # beside the one for the Keychain, and refuses. A test of a disk image's own use puts its own first.
@@ -1015,6 +1015,46 @@ def test_the_lines_of_models_txt_an_adopted_home_holds_are_named_once_as_come_by
     ), told
     assert "models.txt" not in through("status", "--cwd", str(project))[1]  # once
     assert store.models(crossings)[("W1", store.digest(sentence))] == "shipped-made-up-model"  # followed
+
+
+# --- a cut whose figures are of an unexpected shape ---------------------------------------------------------
+
+
+def test_a_cut_whose_figures_are_of_an_unexpected_shape_is_written_with_no_figures(tmp_path):
+    project, home_, path = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    for n, figures in enumerate(
+        (
+            {"preTokens": "many", "postTokens": 10, "durationMs": "slow"},
+            {"preTokens": True, "postTokens": [1], "durationMs": {}, "trigger": ["auto"]},
+            {"preTokens": 120000, "postTokens": "few", "durationMs": None},
+        ),
+        1,
+    ):
+        rows = [
+            row("user", f"{n}aaaaaaa", 1, "A message before the cut."),
+            {"type": "system", "subtype": "compact_boundary", "compactMetadata": figures},
+            {
+                "type": "user",
+                "isCompactSummary": True,
+                "message": {"content": [{"type": "text", "text": "A summary."}]},
+            },
+        ]
+        with open(path, "a" if n > 1 else "w", encoding="utf-8") as handle:
+            handle.write("".join(json.dumps(each) + "\n" for each in rows))
+        event = {"hook_event_name": "PostCompact", "transcript_path": str(path), "cwd": str(project)}
+        given = json.dumps({**event, "session_id": path.stem, "trigger": "auto", "compact_summary": "A summary."})
+        done = ran("hook.py", stdin=given, CLAUDE_CODE_ENTRYPOINT="cli")
+        assert (done.returncode, done.stdout, done.stderr) == (0, "", ""), done
+        shown = (home_ / f"abcdef01-cut-{n}.md").read_text(encoding="utf-8")
+        size = "120,000 tokens before" if n == 3 else "not given by the harness"
+        assert f"| Size | {size} |" in shown, (n, shown)
+        assert "| Kind | context compaction, auto |" in shown, (n, shown)
+    # A count of figures of another shape handed to the page, as no harness gives them now, is written too.
+    counted = json.loads((home_ / "abcdef01-cut-1.json").read_text(encoding="utf-8"))
+    counted.update(tokens_before="many", tokens_after={}, cut_ms="slow")
+    written = record.write(counted, home_, "abcdef01-4444", path, "2026-11-11")
+    assert "| Size | not given by the harness |" in written.read_text(encoding="utf-8")
 
 
 if __name__ == "__main__":

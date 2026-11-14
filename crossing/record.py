@@ -484,6 +484,12 @@ def _voice_lines(name: str, v: dict) -> list[str]:
     ]
 
 
+def _figure(value) -> int | float | None:
+    """A figure of a cut's count, where it is a number (and no truth value); else none: a figure of
+    another shape leaves the page written without it."""
+    return value if type(value) in (int, float) else None
+
+
 def page(counted: dict, session_id: str, transcript: Path, on: str) -> str:
     from crossing.store import clean  # here: the store reads this file. What the harness gave is shown cleaned
 
@@ -491,11 +497,12 @@ def page(counted: dict, session_id: str, transcript: Path, on: str) -> str:
     trigger, transcript = clean(counted["trigger"] or "trigger not given"), clean(transcript)
     (row_p,), least_p = _voice_lines("the person's", person)
     (row_s,), least_s = _voice_lines("the session's", own)
+    before, after, took = (_figure(counted.get(name)) for name in ("tokens_before", "tokens_after", "cut_ms"))
     size = "not given by the harness"
-    if counted["tokens_before"]:
-        size = f"{counted['tokens_before']:,} tokens before, {counted['tokens_after']:,} after"
-        if counted["cut_ms"]:
-            size += f"; the cut took {counted['cut_ms'] / 1000:.0f} seconds"
+    if before:
+        size = f"{before:,} tokens before" + (f", {after:,} after" if after is not None else "")
+        if took:
+            size += f"; the cut took {took / 1000:.0f} seconds"
     voices = person["chars"] + own["chars"]
     record = voices + counted["tool_call_chars"] + counted["tool_result_chars"]
     unfinished = (

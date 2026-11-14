@@ -195,12 +195,24 @@ class Cut:
     meta: dict  # the harness's own figures for the cut, when it gives them
 
 
+# The harness's figures for a cut that are read, each with the kind of value it must be: a figure of
+# any other shape is none, and the cut is still the cut, with no such figure.
+FIGURES = {"trigger": (str,), "preTokens": (int, float), "postTokens": (int, float), "durationMs": (int, float)}
+
+
+def figures(meta) -> dict:
+    """Of a boundary's `compactMetadata`, the figures of FIGURES whose value has its kind (a number
+    is never a truth value); nothing where it is no object."""
+    if not isinstance(meta, dict):
+        return {}
+    return {name: meta[name] for name, kinds in FIGURES.items() if type(meta.get(name)) in kinds}
+
+
 def cuts(path: Path) -> list[Cut]:
     found: list[Cut] = []
     for number, row in rows(path):
         if is_boundary(row):
-            meta = row.get("compactMetadata")  # the harness's figures, where they are an object; else none
-            found.append(Cut(number, None, "", dict(meta) if isinstance(meta, dict) else {}))
+            found.append(Cut(number, None, "", figures(row.get("compactMetadata"))))
         elif is_summary(row) and found and found[-1].summary_line is None:
             found[-1].summary_line = number
             found[-1].summary = norm(" ".join(b.get("text", "") for b in _blocks(row) if b.get("type") == "text"))
