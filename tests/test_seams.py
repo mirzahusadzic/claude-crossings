@@ -2252,6 +2252,32 @@ def test_layer_refuses_in_a_home_switched_off_and_writes_nothing(tmp_path):
     assert code == 0 and out.startswith("Signed 2 labels and 2 messages"), out
 
 
+# --- the small paths of the restore by id and the receipts -----------------------------------------------
+
+
+def test_a_restore_passes_over_a_transcript_gone_and_a_receipt_with_nothing_to_add_writes_nothing(tmp_path):
+    """Switching on restores a lost record where a transcript the archive knows is gone since: it is
+    passed over, and what another transcript held is kept off by its id. A receipt asked for with
+    nothing to add, for a home the receipts know already, writes nothing."""
+    project, home_, path = public(tmp_path)
+    path.write_text("", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    gone = tmp_path / "fedcba98-6666.jsonl"
+    for each in (path, gone):
+        says(each, "1000000a" if each == path else "2000000a", "Said on the record.")
+        assert through("build", "--transcript", str(each), "--cwd", str(project))[0] == 0
+    assert through("switch", "off", "--cwd", str(project))[0] == 0
+    says(path, "1000000b", "Said while off.", at="2099-01-01T00:00:00.000Z")
+    gone.unlink()
+    (home_ / off.FILE).unlink()
+    assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["restored"] + "\n")
+    assert "1000000b" + UID in off.unsaid(home_)
+    crossings, _ = home(tmp_path / "built")
+    receipts = store._receipts_path().read_bytes()
+    store._receipted(crossings)
+    assert store._receipts_path().read_bytes() == receipts
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
