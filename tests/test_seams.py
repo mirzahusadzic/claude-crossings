@@ -13,6 +13,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
 import sys
 import tempfile
 import threading
@@ -469,6 +470,52 @@ def test_a_long_miss_lists_the_words_once_and_tries_a_few_and_a_thread_reaches_f
     assert through("thread", f"{60:08x}", "--around", "1000", "--cwd", str(project))[1].startswith(
         f"thread of `{60:08x}`: 101 messages"
     )
+
+
+# --- rows of an unknown shape ---------------------------------------------------------------------------
+
+
+def test_a_row_of_an_unknown_shape_is_passed_over_and_the_rows_beside_it_are_kept(tmp_path):
+    """The harness's format changes between versions. A row whose message, attachment, figures or
+    tool result has a shape these rules do not know is no one's words, and the hook goes on."""
+    project, home_, path = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    odd = [
+        {**row("user", "bbbbbbb1", 2, ""), "message": "not an object"},
+        {**row("user", "bbbbbbb2", 3, ""), "message": {"role": "user", "content": 7}},
+        {**row("user", "bbbbbbb3", 4, [{"type": "text", "text": ["not", "a", "string"]}])},
+        {**row("assistant", "bbbbbbb4", 5, [{"type": "text", "text": {"no": "string"}}])},
+        {"type": "attachment", "uuid": "bbbbbbb5-0000-4000-8000-000000000000", "attachment": "not an object"},
+        {
+            "type": "attachment",
+            "uuid": "bbbbbbb6-0000-4000-8000-000000000000",
+            "attachment": {"origin": "x", "prompt": 7},
+        },
+        {**row("user", "bbbbbbb7", 6, "Not the person's: a tool's result of an odd shape."), "toolUseResult": ""},
+        {"type": "system", "subtype": "compact_boundary", "compactMetadata": "not an object"},
+        {"type": "user", "isCompactSummary": True, "message": "not an object"},
+    ]
+    rows = [
+        row("user", "aaaaaaaa", 1, "The valid message before."),
+        *odd,
+        row("user", "cccccccc", 7, "And the one after."),
+    ]
+    path.write_text("".join(json.dumps(each) + "\n" for each in rows), encoding="utf-8")
+    log = Path(os.environ["CLAUDE_PLUGIN_DATA"]) / "errors.log"
+    before = log.read_text(encoding="utf-8") if log.exists() else ""
+    for name in ("PreToolUse", "PostCompact"):
+        event = {"hook_event_name": name, "transcript_path": str(path), "cwd": str(project), "session_id": path.stem}
+        given = json.dumps({**event, "compact_summary": "A summary.", "trigger": "auto"})
+        done = ran("hook.py", stdin=given, CLAUDE_CODE_ENTRYPOINT="cli")  # a session a person sits in
+        done_env = (done.returncode, done.stdout, done.stderr)
+        assert done_env[0] == 0 and done_env[2] == "", done_env
+    assert kept_texts(home_) == ["The valid message before.", "And the one after."]
+    after = log.read_text(encoding="utf-8") if log.exists() else ""
+    assert "Traceback" not in after[len(before) :], after[len(before) :]
+    side = json.loads(
+        (home_ / "abcdef01-cut-2.json").read_text(encoding="utf-8")
+    )  # the boundary of odd figures is a cut
+    assert side["person"]["messages"] == 1 and side["trigger"] == "auto", side
 
 
 if __name__ == "__main__":

@@ -73,11 +73,22 @@ def appended(path: Path, start: int = 0) -> Iterator[tuple[int, dict | None]]:
             yield at, row if isinstance(row, dict) else None
 
 
+def _message(row: dict) -> dict:
+    """A row's `message`, where it is an object; else none: a row of a shape these rules do not
+    know is passed over, never guessed at, and never an error."""
+    found = row.get("message")
+    return found if isinstance(found, dict) else {}
+
+
 def _blocks(row: dict) -> list[dict]:
-    content = (row.get("message") or {}).get("content")
+    """A row's blocks: its content as one text, or the objects of its list. A text block whose text
+    is no string is none."""
+    content = _message(row).get("content")
     if isinstance(content, str):
         return [{"type": "text", "text": content}]
-    return [b for b in (content or []) if isinstance(b, dict)]
+    if not isinstance(content, list):
+        return []
+    return [b for b in content if isinstance(b, dict) and (b.get("type") != "text" or isinstance(b.get("text"), str))]
 
 
 def _flat(value) -> str:
@@ -119,12 +130,15 @@ def person(row: dict, whole: bool = False) -> list[str]:
     if sidechain(row):
         return []
     if row.get("type") == "attachment":
-        held = row.get("attachment") or {}
-        human = (held.get("origin") or {}).get("kind") == "human" or held.get("humanTurn")
-        if held.get("type") == "queued_command" and human and norm(held.get("prompt", "")):
-            return [held["prompt"].strip() if whole else norm(held["prompt"])]
+        held = row.get("attachment") if isinstance(row.get("attachment"), dict) else {}
+        origin = held.get("origin") if isinstance(held.get("origin"), dict) else {}
+        human = origin.get("kind") == "human" or held.get("humanTurn") is True
+        prompt = held.get("prompt") if isinstance(held.get("prompt"), str) else ""
+        if held.get("type") == "queued_command" and human and norm(prompt):
+            return [prompt.strip() if whole else norm(prompt)]
         return []
-    if row.get("type") != "user" or row.get("toolUseResult") or row.get("isMeta") or is_summary(row):
+    # A tool's result, of whatever shape the harness gives it, is no one's words.
+    if row.get("type") != "user" or row.get("toolUseResult") is not None or row.get("isMeta") or is_summary(row):
         return []
     said = []
     for block in _blocks(row):
@@ -159,7 +173,7 @@ def model(row: dict) -> str:
 
     if row.get("type") != "assistant":
         return ""
-    return named((row.get("message") or {}).get("model"))
+    return named(_message(row).get("model"))
 
 
 def tool_traffic(row: dict) -> tuple[int, int]:
@@ -185,7 +199,8 @@ def cuts(path: Path) -> list[Cut]:
     found: list[Cut] = []
     for number, row in rows(path):
         if is_boundary(row):
-            found.append(Cut(number, None, "", dict(row.get("compactMetadata") or {})))
+            meta = row.get("compactMetadata")  # the harness's figures, where they are an object; else none
+            found.append(Cut(number, None, "", dict(meta) if isinstance(meta, dict) else {}))
         elif is_summary(row) and found and found[-1].summary_line is None:
             found[-1].summary_line = number
             found[-1].summary = norm(" ".join(b.get("text", "") for b in _blocks(row) if b.get("type") == "text"))
