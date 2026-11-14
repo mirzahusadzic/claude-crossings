@@ -2415,9 +2415,31 @@ def mark(
         return {"written": False, "why": "a label needs a sentence and at least one anchor"}
     if len(text) > LONGEST:
         return {"written": False, "why": f"a label is one sentence, and this one is longer than {LONGEST:,} characters"}
+    day = record.ident(day or datetime.date.today().isoformat())  # the page's name
+    letter = LETTER.get(kind, "W")
+    if not folder.is_dir():  # a home not made yet holds nothing to rest on: refused as it stands, and none is made
+        return {"written": False, "why": _unmarked(folder, letter, lines, anchors, facing, persons)[0]}
+    # Decided with the lock held, from the index opened under it: two marks at once over one line
+    # would otherwise both find it beneath no stack, and both stand over it.
+    held = _locked(folder)  # one mark, strike, archive or layering at a time: two marks at once take two keys
+    if held is None:
+        return {"written": False, "why": BUSY.format("marked")}
+    try:
+        why, beneath = _unmarked(folder, letter, lines, anchors, facing, persons)
+        if why:
+            return {"written": False, "why": why}
+        return _marked(folder, letter, whose, text, lines, anchors, beneath, day, model)
+    finally:
+        _unlocked(folder, held)
+
+
+def _unmarked(
+    folder: Path, letter: str, lines: list[str], anchors: list[str], facing: str, persons: bool
+) -> tuple[str, dict]:
+    """Why `mark` refuses, or nothing; and each label named as a line beneath, as the store holds
+    it. The caller holds the home's lock, where there is a home."""
     db = _open(folder)
     missing = [a for a in anchors if db.execute("select 1 from said where id = ?", (a,)).fetchone() is None]
-    letter = LETTER.get(kind, "W")
     beneath = {
         key: db.execute(
             "select l.kind, l.text, l.parent, "
@@ -2451,7 +2473,7 @@ def mark(
     ]
     db.close()
     if missing:
-        return {"written": False, "why": "no such message in the archive: " + ", ".join(missing)}
+        return "no such message in the archive: " + ", ".join(missing), beneath
     why = _unstackable(KINDS[letter], beneath, deep) or _scoped(over, above, facing)
     theirs = (
         []
@@ -2464,18 +2486,9 @@ def mark(
             )
         )
     )
-    why = why or (f"{theirs[0]} is a stack of the person's, and only the person writes it again" if theirs else "")
-    if why:
-        return {"written": False, "why": why}
-    day = record.ident(day or datetime.date.today().isoformat())  # the page's name
-    folder.mkdir(parents=True, exist_ok=True)
-    held = _locked(folder)  # one mark, strike, archive or layering at a time: two marks at once take two keys
-    if held is None:
-        return {"written": False, "why": BUSY.format("marked")}
-    try:
-        return _marked(folder, letter, whose, text, lines, anchors, beneath, day, model)
-    finally:
-        _unlocked(folder, held)
+    return why or (
+        f"{theirs[0]} is a stack of the person's, and only the person writes it again" if theirs else ""
+    ), beneath
 
 
 LONGEST = 4000  # characters of a label's sentence, at most: a frame has room for the line left at the door

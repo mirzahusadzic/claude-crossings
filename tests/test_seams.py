@@ -193,6 +193,41 @@ def test_the_helper_is_the_persons_to_run(tmp_path):
     assert out[0] == 0 and "My boat is called Tern." in out[1]  # and the door's page reads it, as before
 
 
+# --- two marks at once --------------------------------------------------------------------------------
+
+
+def test_two_marks_over_one_line_at_the_same_moment_give_one_stack(tmp_path):
+    """Two sessions stack the same standing line in the same instant: one stack stands over it, and
+    the other mark is refused in its sentence. The two were made to meet just before the lock."""
+    crossings, _ = home(tmp_path)  # R1 and W1 on its hand-over page
+    barrier, answers, real = threading.Barrier(2), [], store._locked
+
+    def met(folder: Path):
+        barrier.wait(timeout=20)
+        return real(folder)
+
+    def marking(sentence: str) -> None:
+        answers.append(store.mark(crossings, "relation", "session", sentence, ["R1"], persons=False))
+
+    store._locked = met
+    try:
+        both = [threading.Thread(target=marking, args=(each,)) for each in ("The first stack.", "The second stack.")]
+        for each in both:
+            each.start()
+        for each in both:
+            each.join(timeout=30)
+    finally:
+        store._locked = real
+    # Each thread marks through the store itself: what the door prints goes to one stream for the whole process.
+    assert sorted(out["written"] for out in answers) == [False, True], answers
+    refused = next(out["why"] for out in answers if not out["written"])
+    assert refused.startswith("R1 already stands beneath ") and refused.endswith(
+        ", and a line stands beneath one stack alone"
+    ), refused
+    stacks = [label["id"] for label in store.labels(crossings) if any(key == "R1" for key, _ in label["beneath"])]
+    assert len(stacks) == 1, stacks
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
