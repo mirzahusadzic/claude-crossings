@@ -532,6 +532,93 @@ def test_the_reader_takes_only_what_a_voice_said(tmp_path):
         raise AssertionError("a transcript without a cut was given one")
 
 
+# --- the last small paths a measure of coverage found unwalked ---------------------------------------------
+
+
+def test_a_path_is_taken_as_given_where_the_system_cannot_spell_it(tmp_path):
+    """record.spelled asks the system for a folder's own spelling (F_GETPATH, on macOS). Where the asking
+    fails, the path is as it was given; where it answers, what lies below and is not there yet is kept as
+    given. A stand-in for the system's call walks both on any system."""
+    folder = tmp_path / "Tern"
+    folder.mkdir()
+    given = Path(os.path.abspath(folder / "not-yet"))
+
+    class Refusing:
+        F_GETPATH = 50
+
+        @staticmethod
+        def fcntl(handle, operation, buffer):
+            raise OSError("no path for this handle")
+
+    class Answering:
+        F_GETPATH = 50
+
+        @staticmethod
+        def fcntl(handle, operation, buffer):
+            return os.fsencode(str(folder.resolve())) + b"\0" * 8
+
+    was = record._fcntl
+    try:
+        record._fcntl = Refusing
+        assert record.spelled(given) == given
+        record._fcntl = Answering
+        assert record.spelled(given) == folder.resolve() / "not-yet"
+    finally:
+        record._fcntl = was
+
+
+def test_a_home_named_outright_may_be_a_link_and_is_believed_only_where_the_record_says_it_leads(tmp_path):
+    """A project's own crossings that is a link is no home; a home named outright (CROSSING_HOME) may be
+    one, since a harness with no project names it so. It is switched on through the link, and believed
+    only while the link leads where the person's record names."""
+    project, first, other = tmp_path / "project", tmp_path / "first", tmp_path / "other"
+    for folder in (project, first, other):
+        folder.mkdir()
+    named = tmp_path / "named"
+    named.symlink_to(first, target_is_directory=True)
+    with set_to(CROSSING_HOME=str(named)):
+        assert store.linked(project) is None  # only a project's own crossings is asked about
+        assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["on"] + "\n")
+        assert store.kept(project) == named and (first / "switch").read_text(encoding="utf-8") == "on\n"
+        named.unlink()
+        named.symlink_to(other, target_is_directory=True)
+        assert store.kept(project) is None  # the record names where it led, and it leads elsewhere now
+
+
+def test_a_switch_that_cannot_have_the_persons_record_writes_no_line_there_and_says_so(tmp_path):
+    """The person's record of switches has one lock for its two writers (store._recording). A switch that
+    cannot have it within its time writes no line into the record, and says in one sentence that the switch
+    may not stand as asked; the project is not believed."""
+    project = tmp_path / "project"
+    project.mkdir()
+    lock = store.switched().with_name(store.switched().name + ".lock")
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    was, store.WAIT = store.WAIT, 0.2
+    held = store._held_at(lock)
+    try:
+        said = through("switch", "on", "--cwd", str(project))
+    finally:
+        store._let_go(lock, held)
+        store.WAIT = was
+    assert said == (1, door.UNKEPT.format("OSError") + "\n"), said
+    assert store.kept(project) is None
+
+
+def test_layer_writes_back_a_line_of_the_archive_that_is_no_text_as_it_was(tmp_path):
+    """`layer` signs the session's messages that name no model, page by page. A line of the archive that
+    holds a byte that is no text is no message: it is written back byte for byte as it was, and the
+    messages around it are signed."""
+    crossings, _ = home(tmp_path)
+    page = crossings / "said" / "session-.jsonl"
+    damaged = b'{"text": "cut short \xe2\x80"}\n'
+    page.write_bytes(page.read_bytes() + damaged)
+    assert store.layered(crossings, "a-model") == (2, 2)
+    data = page.read_bytes()
+    assert data.endswith(damaged)
+    said = [json.loads(line) for line in data.split(b"\n")[:-2]]
+    assert [one.get("model") for one in said if one["voice"] == "session"] == ["a-model", "a-model"], said
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
