@@ -2831,6 +2831,9 @@ def mark(
     `model` is the model that wrote the label, where whoever marks it knows (see `spoke`): it is
     kept beside the pages, in `models.txt`, and the row itself is written as it always was.
 
+    An id of eight characters that two messages share is refused as an anchor, in a sentence that
+    names both whole ids: a label resting on it could rest on either.
+
     `facing` is the model that marks now, where that is known. A stack is then scoped to its own
     layer: it is refused where any line it would stand over, at any depth, or a misaligned stack
     it would take the place of, is of another model's layer (see `foreign`). The person's lines,
@@ -2869,6 +2872,13 @@ def _unmarked(
     it. The caller holds the home's lock, where there is a home."""
     db = _open(folder)
     missing = [a for a in anchors if db.execute("select 1 from said where id = ?", (a,)).fetchone() is None]
+    # An id two messages share is no one message, as `thread` says: a label resting on it would rest on either.
+    shared = {
+        a: [r[0] for r in db.execute("select distinct uuid from said where id = ? order by uuid", (a,))]
+        for a in anchors
+        if a not in missing
+    }
+    shared = {a: whole for a, whole in shared.items() if len(whole) > 1}
     beneath = {
         key: db.execute(
             "select l.kind, l.text, l.parent, "
@@ -2903,6 +2913,13 @@ def _unmarked(
     db.close()
     if missing:
         return "no such message in the archive: " + ", ".join(missing), beneath
+    if shared:
+        a, whole = next(iter(shared.items()))
+        named_ = [f"`{each}`" for each in whole]
+        return (
+            f"{'two' if len(whole) == 2 else len(whole)} messages are named `{a}`, {', '.join(named_[:-1])} and "
+            f"{named_[-1]}, so a label cannot rest on that id"
+        ), beneath
     why = _unstackable(KINDS[letter], beneath, deep) or _scoped(over, above, facing)
     theirs = (
         []

@@ -1681,6 +1681,43 @@ def test_the_labels_an_adopted_home_holds_are_named_once_as_come_by_no_mark_a_st
         assert sentence in through("frame", "--cwd", str(project))[1]  # carried as before
 
 
+# --- an id two messages share, as a label's anchor ----------------------------------------------------------
+
+
+def test_a_label_cannot_rest_on_an_id_two_messages_share_and_the_frame_quotes_nothing_under_one(tmp_path):
+    """Two messages whose whole ids begin alike: a mark that rests on their shared eight characters
+    is refused in a sentence that names both, as thread names them, and nothing is written. In a home
+    whose pages hold such a label already, the frame quotes neither message as the person's words."""
+    project, home_, path = public(tmp_path)
+    path.write_text("", encoding="utf-8")
+    first, other = "aaaaaaaa-0000-4000-8000-000000000000", "aaaaaaaa-1111-4000-8000-000000000000"
+    for n, (uuid, text) in enumerate(((first, "The first under the shared id."), (other, "The other under it.")), 1):
+        given = row("user", "bbbbbbbb", n, text)
+        given["uuid"] = uuid
+        with open(path, "a", encoding="utf-8") as handle:
+            handle.write(json.dumps(given) + "\n")
+    says(path, "cccccccc", "A message of its own id.", at="2026-11-11T09:05:00.000Z")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    out = through("mark", "--anchors", "aaaaaaaa", "--cwd", str(project), "The shared id as a label.")
+    assert out == (
+        1,
+        f"not marked: two messages are named `aaaaaaaa`, `{first}` and `{other}`, so a label cannot rest on that id\n",
+    ), out
+    assert store.labels(home_) == [] and not (home_ / "labels").exists()
+    (home_ / "labels").mkdir()
+    (home_ / "labels" / "2026-11-11.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n"
+        "| W1 | A label written by hand on the shared id. | session | `aaaaaaaa` |\n"
+        "| W2 | A label on a message of its own id. | session | `cccccccc` |\n",
+        encoding="utf-8",
+    )
+    assert through("build", "--cwd", str(project))[0] == 0  # as a hook makes it
+    framed = through("frame", "--cwd", str(project))[1]
+    assert "A label written by hand on the shared id." in framed and "- `cccccccc`: A message of its own id." in framed
+    assert "The first under the shared id." not in framed and "The other under it." not in framed, framed
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

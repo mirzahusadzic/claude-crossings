@@ -146,7 +146,7 @@ It holds, in this order:
 4. The standing lines, whole while they fit, up to 80% of the frame.
 5. The labels about the work, newest first, up to 90%.
 6. By key, the standing lines that did not fit, how many more labels the store holds, and the labels that rest on what the archive no longer holds.
-7. A few of the person's own words: the messages of the person's that the carried work labels and the line at the door rest on, newest first, each cut at 300 characters. Never a standing line's messages, never a pasted text, and never a message noted as looking like it holds a key.
+7. A few of the person's own words: the messages of the person's that the carried work labels and the line at the door rest on, newest first, each cut at 300 characters. Never a standing line's messages, never a pasted text, never a message noted as looking like it holds a key, and nothing under an id two messages share.
 8. How many messages and labels the store holds, and from which day to which.
 
 Of a stack it carries the top, with the keys of its lines in its brackets, and not the lines. A misaligned stack crosses with its lines and says it is to be written again. An unresolved label is named by its key and not carried.

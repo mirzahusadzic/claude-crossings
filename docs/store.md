@@ -107,7 +107,7 @@ A label is one row of a page in `labels/`, named by the day it was marked:
 | whose | `his` (the person's), `session` or `both` |
 | anchors | what it rests on, each in backticks: the ids of messages, a pasted text's `<id>+<n>`, or, for a stack, the keys of the lines beneath it |
 
-A label whose anchor the archive does not hold is refused, and so is one with no sentence or no anchor, or a sentence longer than 4,000 characters.
+A label whose anchor the archive does not hold is refused, and so is one with no sentence or no anchor, or a sentence longer than 4,000 characters. So is one that rests on an id of eight characters two messages share: the sentence that refuses it names both whole ids, as `thread` does, since a label resting there could rest on either.
 
 A label that comes into the pages by no mark through the door (a pull, a branch switch, a hand) crosses cuts as any other. Every label the home has met is kept in `labelled.txt` by its key and its sentence's digest; a build that finds one it has not met, or one reworded since, notes it in `arrived.txt`, and the person's next `status` names it once. The first build of a home with no `labelled.txt` meets every label there is, and notes none. A home that is adopted (`/crossings adopt`) has met none of the labels its pages hold then, whatever a `labelled.txt` that came with it says: each is noted as it is adopted, and the person's next `status` names it once, a standing line and one that speaks for the person (`his` or `both`) said as such. A line left at the door rests on messages alone, and one left through the door's `leave` is always the session's.
 

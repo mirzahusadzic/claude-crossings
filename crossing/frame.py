@@ -218,9 +218,11 @@ def compose(folder: Path, size: int | None = None, new: bool = False, model: str
     # not those of a label the frame does not carry, which would bring in what the frame left out.
     # And not a message noted as looking like it holds a key or a password (store.flagged): the
     # labels that rest on it are carried by their own sentences, and its words are not put on show.
+    # And nothing under an id two messages share: it names no one message, and either could be quoted as theirs.
     words, seen = [], set(store.flagged(folder))
     for anchor in [anchor for row in left + kept_work for anchor in row["anchors"]]:
-        said = db.execute("select id, text from said where id = ? and voice = 'his'", (anchor,)).fetchone()
+        found = db.execute("select id, text, voice, uuid from said where id = ?", (anchor,)).fetchall()
+        said = found[0] if len({each["uuid"] for each in found}) == 1 and found[0]["voice"] == "his" else None
         if said is None or said["id"] in seen:
             continue
         seen.add(said["id"])
