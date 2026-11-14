@@ -658,7 +658,7 @@ test('every small file a hook or the door alone writes is kept from a session th
   // Neither written nor named in a shell: how far each transcript was read (a marker set by hand would hide what
   // came before it), the sentences said once, what was pulled, the lock, a copy's stage and the traces.
   const kept = ['markers.jsonl', 'passed-over.txt', 'ignore-told.txt', 'copy-told.txt', 'damaged-told.txt', 'reached.jsonl',
-    'archive.lock', 'copy-stage.txt', 'last-carry.json', 'last-cut.json']
+    'archive.lock', 'copy-stage.txt', 'last-carry.json', 'last-cut.json', 'models-met.txt', 'models-arrived.txt']
   for (const home of HOMES) {
     for (const file of kept) {
       const file_path = `${home}/${file}`

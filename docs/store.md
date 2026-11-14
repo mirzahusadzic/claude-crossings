@@ -38,7 +38,9 @@ Every file is reached through one check, `within` in `crossing/record.py`: no fi
 | `labels/<day>.md` | the label pages, one row a label | `mark`, `leave`, a strike; the hooks module refuses a session's tool or shell command that writes one | yes; the store follows at its next build |
 | `hand-over.md` | a label page of the same form, read before `labels/` | nothing in the plugin but a strike | yes |
 | `*.words.md` | the words a hand-over's labels rest on, one line a message, leaving out what the home keeps out | `crossing/handover.py`, from the person's own terminal, into a home the door believes | a strike mends it or takes it away |
-| `models.txt` | which model wrote each label, by its key and its sentence's digest | a mark through the door, the hook after it, `door.py layer` | a later line stands over an earlier one |
+| `models.txt` | which model wrote each label, by its key and its sentence's digest | a mark through the door, the hook after it, `door.py layer` | a later line stands over an earlier one; a line written by any other hand is followed, and named once by the person's next `status` |
+| `models-met.txt` | every line of `models.txt` the home has met, as `key@digest model` | a signing through the door, `door.py layer`, and every build | no |
+| `models-arrived.txt` | lines of `models.txt` a build found that came by no signing through the door, until the person's `status` names them | builds | no |
 | `there.txt` | the model each session runs, as its hooks were told it | the hooks | no |
 | `calling.txt` | the model behind a call of `mark`, by the call's digest | the hook before the call; the server takes its line out, and keeps the newest 64 | no |
 | `markers.jsonl` | how far each transcript was read | every archive | no; a line that is no marker reads that transcript from its start |

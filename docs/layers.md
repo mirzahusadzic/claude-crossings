@@ -14,7 +14,7 @@ What changes when more than one model works in a home. A session can change its 
 | a message of the person's, and a plain label whose `whose` is `his` | no layer: there for whichever model faces the person |
 | a line with no model named, a label reworded since it was signed, or one a subagent marked | no known layer: read as a line of whichever model faces the person, and stood over by any |
 
-`models.txt` is the one place the plugin keeps who wrote a label. The pages read as they always did, and the frame does not carry a model.
+`models.txt` is the one place the plugin keeps who wrote a label. The pages read as they always did, and the frame does not carry a model. Every line a signing through the door or `door.py layer` writes is met by the home (`models-met.txt`); a line a build finds that the home has not met (a pull, a checkout, a hand) is followed all the same, and the person's next `status` names it once, by the label's key and the model it names, as it names a label that came by no mark.
 
 A label marked through the door is signed with the model of the session that marks it. The server is not told which session calls it, so the hook before a call of `mark` hands over the model, and the hook after `mark` or `leave` signs the label where it was not signed as it was written. Only the label of that key and that sentence is signed, and only once. A label a subagent marks is left unsigned: the hook is told the subagent and not its model.
 

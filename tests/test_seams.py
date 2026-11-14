@@ -670,6 +670,31 @@ def test_the_hand_over_page_is_given_as_its_rows_alone_and_never_raw(tmp_path):
     ), page.stdout
 
 
+# --- a line of models.txt the door did not write ---------------------------------------------------------
+
+
+def test_a_line_of_models_txt_that_came_by_no_signing_is_named_once_and_one_signed_never(tmp_path):
+    crossings, _ = home(tmp_path)  # its first build met every label and every line there was
+    project = str(crossings.parent)
+    marked = through(
+        "mark", "--anchors", "bbbbbbbb", "--model", "made-up-model", "--cwd", project, "The hull gets paint."
+    )
+    assert marked[0] == 0, marked
+    store.build(crossings)
+    assert "models.txt" not in through("status", "--cwd", project)[1]  # signed through the door: never named
+    with open(crossings / "models.txt", "a", encoding="utf-8") as handle:  # as a pull could bring it
+        handle.write(f"W2@{store.digest('The hull gets paint.')} other-made-up-model\n")
+    store.build(crossings)
+    told = through("status", "--cwd", project)[1]
+    assert (
+        "A line of models.txt came into this home without a signing through the door, and is followed as any "
+        "other: W2 by other-made-up-model." in told
+    ), told
+    assert "models.txt" not in through("status", "--cwd", project)[1]  # once
+    assert store.models(crossings)[("W2", store.digest("The hull gets paint."))] == "other-made-up-model"  # followed
+    assert "models.txt" not in through("status", "--bare", "--cwd", project)[1]
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

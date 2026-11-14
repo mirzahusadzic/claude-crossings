@@ -322,7 +322,7 @@ const named = (e: Record<string, unknown>, home: string): string => {
 // was off and of what was said then, which model wrote each label, the files of session ids, how far
 // each transcript was read, the sentences said once, what was pulled, the lock, a copy's stage, and
 // the traces of the last cut and the last frame.
-const KEPT = String.raw`(?:(?:off|unsaid|models|welcomed|told|there|unattended|shelled|labelled|arrived|collided|passed-over|ignore-told|copy-told|damaged-told|copy-stage)\.txt\b|(?:markers|reached)\.jsonl\b|archive\.lock\b|last-(?:carry|cut)\.json\b)`
+const KEPT = String.raw`(?:(?:off|unsaid|models|welcomed|told|there|unattended|shelled|labelled|arrived|collided|passed-over|ignore-told|copy-told|damaged-told|copy-stage|models-met|models-arrived)\.txt\b|(?:markers|reached)\.jsonl\b|archive\.lock\b|last-(?:carry|cut)\.json\b)`
 // The files of a home the door alone writes, which a session may read: the label pages, the hand-over
 // and every words page, what was struck, the model behind a call, the ids noted as looking like a key,
 // the pages of the cuts and their sidecars, the one-line settings, the project's name and the ignore file.

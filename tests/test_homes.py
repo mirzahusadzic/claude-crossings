@@ -338,6 +338,7 @@ def test_a_home_outside_holds_everything_a_projects_own_folder_would(tmp_path):
             "last-carry.json",
             "markers.jsonl",
             "mode",
+            "models-met.txt",
             "project",
             "reached.jsonl",
             "said",

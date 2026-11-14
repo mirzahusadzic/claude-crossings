@@ -139,6 +139,7 @@ UNSEATED = "The frame and the hand-over are for sessions a person sits in, and t
 # Said by the person's own status alone, each once.
 DAMAGED = "A file of this home holds a line that cannot be read as text, and it is passed over wherever it is read: {}."
 ARRIVED = "came into this home's pages without a mark through the door, and"
+SIGNS_CAME = "came into this home without a signing through the door, and"
 COLLIDED = "Two messages of this home share the id {0}: thread {0} names both, and a strike takes one by its whole id."
 # The verbs that are the person's alone, or the hooks module's: those that write a kept file of the home.
 PERSONAL = ("switch", "strike", "layer", "copy", "trace", "welcome")
@@ -732,6 +733,8 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             store.shelled_told(folder)  # told the person: the next status says only what is marked since
         if held["arrived"] and args.verb == "status" and not args.bare and personal(args):
             store.arrived_told(folder)
+        if held["signs_arrived"] and args.verb == "status" and not args.bare and personal(args):
+            store.signs_arrived_told(folder)
         if held["collided"] and args.verb == "status" and not args.bare and personal(args):
             store.collided_told(folder)
     elif args.verb == "strike":
@@ -765,7 +768,8 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
 
 def told_once(args: argparse.Namespace, folder: Path, held: dict) -> str:
     """The sentences of the person's own status that are said once each: the labels that came into
-    the pages by no mark through the door (store.arrived), the ids two messages share
+    the pages by no mark through the door (store.arrived), the lines of models.txt that came by no
+    signing through the door (store.signs_arrived), the ids two messages share
     (store.collided), and the files that hold a line that is no text (store.damaged). The door's
     server is told none of them, and neither is a build, which the hooks run with no one to read it."""
     if args.bare or args.verb != "status":
@@ -779,6 +783,19 @@ def told_once(args: argparse.Namespace, folder: Path, held: dict) -> str:
             + (f"{len(came)} labels" if some else "A label")
             + f" {ARRIVED} cross{'' if some else 'es'} every cut as "
             f"any other: {', '.join(came)}."
+        )
+    signs = held["signs_arrived"]
+    if signs:
+        some = len(signs) != 1
+        out += (
+            " "
+            + (f"{len(signs)} lines" if some else "A line")
+            + f" of models.txt {SIGNS_CAME} {'are' if some else 'is'} followed as any other: "
+            + ", ".join(
+                store.clean(each).replace("@", " ", 1).split()[0] + " by " + store.clean(each.split()[-1])
+                for each in signs
+            )
+            + "."
         )
     out += "".join(" " + COLLIDED.format(each) for each in held["collided"])
     hurt = store.damaged(folder)

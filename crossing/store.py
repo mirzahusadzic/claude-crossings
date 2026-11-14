@@ -1111,7 +1111,10 @@ def models(folder: Path) -> dict[tuple[str, str], str]:
 
 
 def _signed(folder: Path, key: str, text: str, model: str) -> None:
-    """One line in `models.txt`: this label, as its sentence stands now, was written by this model."""
+    """One line in `models.txt`: this label, as its sentence stands now, was written by this model.
+    Written so, by the door's signing or the person's `layer`, the line is one the home has met
+    (see SIGNS_MET): no build takes it for one that arrived."""
+    _signs_known(folder, [f"{key}@{digest(text)} {model}"])
     fresh = not within(folder, MODELS).exists()
     with open(within(folder, MODELS), "a", encoding="utf-8") as handle:
         if fresh:
@@ -1987,6 +1990,7 @@ def status(folder: Path) -> dict:
     held["lost"] = lost(folder)
     held["shelled"] = shelled(folder)
     held["arrived"], held["collided"] = arrived(folder), collided(folder)
+    held["signs_arrived"] = signs_arrived(folder)
     return held
 
 
@@ -2007,6 +2011,8 @@ LINED = (
     "labelled.txt",
     "arrived.txt",
     "collided.txt",
+    "models-met.txt",
+    "models-arrived.txt",
     "mode",
     "carry",
     "switch",
@@ -2114,9 +2120,75 @@ def _known(folder: Path, entries: list[str]) -> list[str]:
     return new
 
 
+# As for labels, so for the lines of `models.txt`: SIGNS_MET holds every line the home has met, as
+# `key@digest model`, and a build that finds one it has not met (a pull, a checkout, a hand) notes it
+# in SIGNS_ARRIVED, for the person's next `status`. The line is followed all the same, as an arrived
+# label is carried. The first build of a home that has no SIGNS_MET meets every line there is.
+SIGNS_MET, SIGNS_ARRIVED = "models-met.txt", "models-arrived.txt"
+
+
+def _model_lines(folder: Path) -> list[str]:
+    """The lines of `models.txt` that sign a label, as `key@digest model`."""
+    try:
+        lines = record.lines_in(within(folder, MODELS))
+    except OSError:
+        return []
+    found = (SIGNED.match(line.split("#")[0].strip()) for line in lines)
+    return [f"{m.group(1)}@{m.group(2)} {m.group(3)}" for m in found if m]
+
+
+def _signs_met(folder: Path) -> set[str] | None:
+    try:
+        return {line.strip() for line in record.lines_in(within(folder, SIGNS_MET)) if not line.startswith("#")}
+    except FileNotFoundError:
+        return None
+
+
+def _signs_known(folder: Path, entries: list[str]) -> list[str]:
+    """Add these lines to those the home has met; where it has met none yet, every line `models.txt`
+    holds now is met first. Gives those that were new to it."""
+    met = _signs_met(folder)
+    if met is None:
+        held = _model_lines(folder)
+        with open(within(folder, SIGNS_MET), "a", encoding="utf-8") as handle:
+            handle.write(
+                "# The lines of models.txt this home has met: a build notes any other in models-arrived.txt.\n"
+            )
+            handle.write("".join(each + "\n" for each in dict.fromkeys(held)))
+        met = set(held)
+    new = [each for each in dict.fromkeys(entries) if each not in met]
+    if new:
+        with open(within(folder, SIGNS_MET), "a", encoding="utf-8") as handle:
+            handle.write("".join(each + "\n" for each in new))
+    return new
+
+
+def signs_arrived(folder: Path) -> list[str]:
+    """The lines noted in SIGNS_ARRIVED that `models.txt` still holds, each once, in its order."""
+    try:
+        lines = record.lines_in(within(folder, SIGNS_ARRIVED))
+    except OSError:
+        return []
+    there = set(_model_lines(folder))
+    return list(dict.fromkeys(line.strip() for line in lines if line.strip() in there))
+
+
+def signs_arrived_told(folder: Path) -> None:
+    """The person was told the lines of `models.txt` that arrived: the file goes."""
+    within(folder, SIGNS_ARRIVED).unlink(missing_ok=True)
+
+
 def _noticed(folder: Path) -> None:
     """At a build: the labels of the pages the home has not met, which came by no mark through the
-    door, noted in ARRIVED, by key and digest, and met from now on. A struck key is not noted."""
+    door, noted in ARRIVED, by key and digest, and met from now on. A struck key is not noted. And so
+    the lines of `models.txt` the home has not met, in SIGNS_ARRIVED."""
+    if _signs_met(folder) is None:
+        _signs_known(folder, [])
+    else:
+        came = _signs_known(folder, _model_lines(folder))
+        if came:
+            with open(within(folder, SIGNS_ARRIVED), "a", encoding="utf-8") as handle:
+                handle.write("".join(each + "\n" for each in came))
     if _met(folder) is None:
         _known(folder, [])
         return
