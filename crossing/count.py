@@ -133,6 +133,7 @@ def count(
     key: bytes | None = None,
     earlier=None,
     untold: bool = False,
+    unsaid: frozenset = frozenset(),
 ) -> dict:
     """The counted part of the record of one cut of the transcript at `path`.
 
@@ -141,7 +142,8 @@ def count(
     Otherwise it is the last cut the transcript holds.
 
     A row said while the person's switch was off, inside one of `spans` (see crossing/off.py),
-    is not counted at all: no message, no character and no pointer of it is kept. With `untold`,
+    is not counted at all: no message, no character and no pointer of it is kept; nor is a row whose
+    id is among `unsaid`, the ids the home keeps as said while it was off (see off.UNSAID). With `untold`,
     what the home's record of those spans held cannot be told (see store.lost), so what was said
     off the record cannot be told from the rest: nothing said is counted or listed, and the count
     says so (`untold`), for the page to say it.
@@ -162,8 +164,8 @@ def count(
     typed = sent_mid_turn = 0
     own: list[tuple[int, str, str]] = []
     calls = results = 0
-    for line, row, _, unsaid in off.judged(transcript.rows(path), list(spans)):
-        if line <= start or unsaid or untold:
+    for line, row, _, inside in off.judged(transcript.rows(path), list(spans)):
+        if line <= start or inside or untold or (unsaid and str(row.get("uuid") or "") in unsaid):
             continue
         if line >= cut.line:
             break

@@ -484,7 +484,9 @@ def switch(cwd: Path, to: str) -> str:
 def _switched(cwd: Path, folder: Path, on: bool) -> str:
     """`switch`, from its span on, with the home's lock held."""
     if not on:
-        off.opened(folder)  # from this moment nothing said is kept
+        reached = _reached_now(folder)  # where each transcript the archive knows stands, before the span opens
+        if off.opened(folder) or not within(folder, PLACES).exists():  # from this moment nothing said is kept
+            _places_kept(folder, reached)
         _spans_kept(folder, steady=off.steady())
     within(folder, "switch").write_text("on\n" if on else "off\n", encoding="utf-8")
     if not on:
@@ -493,6 +495,7 @@ def _switched(cwd: Path, folder: Path, on: bool) -> str:
     ignored(folder)
     was_lost = lost(folder)  # a home adopted with a damaged record is restored as it is switched on, too
     closed = off.closed(folder, since=steadied(folder))
+    _unsaid_by_place(folder)  # what the transcripts it knew gained meanwhile is off, by its place, whatever its time
     if was_lost:
         off.everything_before(folder)  # what the missing record may have held is kept off, all of it
     if closed or was_lost or within(folder, off.FILE).exists():
@@ -503,6 +506,115 @@ def _switched(cwd: Path, folder: Path, on: bool) -> str:
         else:  # it cannot be made here, and one that came from elsewhere is not read: it goes, as it may at any time
             within(folder, "store.db").unlink()
     return "restored" if was_lost else "again" if closed else "on"
+
+
+# Where each transcript the archive knows stood as the switch was turned off: one line a transcript,
+# by its resolved path as its marker names it, the byte just after its last whole line then and the
+# digest of the bytes before it (as `markers`). Switching on again keeps off, by id in unsaid.txt,
+# every row those transcripts gained between that place and the place they stand at then, whatever
+# time a row bears: a clock set forward and back while it was off moves no row out of the span. A
+# transcript the archive never met is judged by its rows' times alone (see off.judged).
+PLACES = "off-places.jsonl"
+
+
+def _reached(path: Path) -> int | None:
+    """The byte just after the last whole line of a transcript as it stands; nothing where it
+    cannot be read."""
+    try:
+        with open(path, "rb") as handle:
+            end = os.fstat(handle.fileno()).st_size
+            while end > 0:
+                start = max(0, end - 65536)
+                handle.seek(start)
+                at = handle.read(end - start).rfind(b"\n")
+                if at >= 0:
+                    return start + at + 1
+                end = start
+            return 0
+    except OSError:
+        return None
+
+
+def _reached_now(folder: Path) -> dict[str, dict]:
+    """Where each transcript the home's markers name stands now (see PLACES), by its path."""
+    found = {}
+    for key in markers(folder):
+        name = key[: -len("#unattended")] if key.endswith("#unattended") else key  # a session no person sat in
+        try:
+            with open(name, "rb") as handle:
+                at = _reached(Path(name))
+                if at is not None:
+                    found[name] = {"offset": at, "check": _check(handle, at)}
+        except OSError:  # a transcript that is gone: nothing more is said in it
+            continue
+    return found
+
+
+def _places_kept(folder: Path, reached: dict[str, dict]) -> None:
+    """Keep PLACES whole, written beside itself and put in its place; where the archive knows no
+    transcript, no file is made."""
+    if not reached:
+        return
+    fresh = within(folder, PLACES + ".new")
+    fresh.write_text(
+        "".join(json.dumps({"path": name, **at}, ensure_ascii=False) + "\n" for name, at in reached.items()),
+        encoding="utf-8",
+    )
+    os.replace(fresh, within(folder, PLACES))
+
+
+def _places(folder: Path) -> dict[str, dict]:
+    """The places PLACES keeps, by path. A line that is not one is passed over."""
+    try:
+        lines = record.lines_in(within(folder, PLACES))
+    except OSError:
+        return {}
+    found = {}
+    for line in lines:
+        try:
+            at = json.loads(line)
+        except ValueError:
+            continue
+        if (
+            isinstance(at, dict)
+            and isinstance(at.get("path"), str)
+            and type(at.get("offset")) is int
+            and at["offset"] >= 0
+            and isinstance(at.get("check"), str)
+        ):
+            found[at["path"]] = {"offset": at["offset"], "check": at["check"]}
+    return found
+
+
+def _unsaid_by_place(folder: Path) -> None:
+    """As the switch turns on: keep in unsaid.txt the id of every message, of either voice, that a
+    transcript PLACES names gained since the switch was turned off, up to its last whole line now;
+    then PLACES goes. A transcript that is shorter now, or whose bytes before its place are not
+    those that were there, is another one, and its rows are judged by their times alone."""
+    ids = []
+    for name, at in _places(folder).items():
+        path, end = Path(name), _reached(Path(name))
+        try:
+            if end is None or end < at["offset"]:
+                continue
+            with open(path, "rb") as handle:
+                if _check(handle, at["offset"]) != at["check"]:
+                    continue
+            for offset, row in transcript.appended(path, at["offset"]):
+                if offset > end:
+                    break
+                uuid = str(row.get("uuid") or "") if row is not None else ""
+                if record.nameable(uuid) and (
+                    transcript.person(row, whole=True) or transcript.session(row, whole=True)
+                ):
+                    ids.append(uuid)
+        except OSError:  # gone since: its rows are judged by their times alone
+            continue
+    off.keep_unsaid(folder, ids)
+    try:
+        within(folder, PLACES).unlink()
+    except FileNotFoundError:
+        pass
 
 
 # What a home inside a repository is given as its ignore file, where it has none: everything in it
@@ -2013,6 +2125,7 @@ LINED = (
     MARKERS,
     UNHELD,
     off.UNSAID,
+    PLACES,
     FLAGGED,
     "shelled.txt",
     "welcomed.txt",

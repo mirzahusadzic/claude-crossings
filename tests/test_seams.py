@@ -852,6 +852,55 @@ def test_a_damaged_line_of_the_record_of_spans_keeps_everything_off_until_switch
     assert door.LOST not in through("status", "--cwd", str(project))[1]
 
 
+# --- a clock set forward and back while Crossing was off ----------------------------------------------------
+
+
+def test_what_a_known_transcript_gained_while_off_is_kept_off_by_its_place_whatever_its_time(tmp_path):
+    """The clock was set forward while the switch was off and back before it was switched on: a
+    message said meanwhile bears a time after the span's end. In a transcript the archive knew as
+    it was switched off, it is off by its place; in one it never met, it is judged by its time."""
+    project, home_, path = public(tmp_path)
+    path.write_text("", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    says(path, "10000001", "Said on the record before switching off.", at="2026-11-11T09:58:00.000Z")
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0  # the archive knows it
+    other = tmp_path / "fedcba98-5555.jsonl"  # a session the archive never met
+    clock, steady = {"now": "2026-11-11T10:00:00.000000+00:00"}, {"at": 1000.0}
+    was_now, was_steady = off.now, off.steady
+    off.now, off.steady = (lambda: clock["now"]), (lambda: steady["at"])
+    try:
+        assert through("switch", "off", "--cwd", str(project))[0] == 0
+        says(path, "10000002", "Said while off, after the clock went forward.", at="2026-11-11T12:00:00.000Z")
+        says(path, "10000003", "Said while off with no time of its own.", at=None)
+        says(
+            other,
+            "20000001",
+            "Said while off in a session never met, after the clock went forward.",
+            at="2026-11-11T12:00:00.000Z",
+        )
+        clock["now"], steady["at"] = "2026-11-11T10:30:00.000000+00:00", 2800.0
+        assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["again"] + "\n")
+    finally:
+        off.now, off.steady = was_now, was_steady
+    assert not (home_ / "off-places.jsonl").exists()  # what it kept was decided as it was switched on
+    says(path, "10000004", "Said on the record after switching on.", at="2026-11-11T10:31:00.000Z")
+    for each in (path, other):
+        assert through("build", "--transcript", str(each), "--cwd", str(project))[0] == 0
+    kept = kept_texts(home_)
+    assert "Said while off, after the clock went forward." not in kept, kept
+    assert "Said while off with no time of its own." not in kept, kept
+    assert "Said on the record before switching off." in kept and "Said on the record after switching on." in kept
+    # Judged by its time alone, as privacy.md says: the one case the place cannot reach.
+    assert "Said while off in a session never met, after the clock went forward." in kept, kept
+    assert {f"{each}-0000-4000-8000-000000000000" for each in ("10000002", "10000003")} <= off.unsaid(home_)
+    # A cut counted afterwards names none of it either.
+    event = {"hook_event_name": "PostCompact", "transcript_path": str(path), "cwd": str(project), "trigger": "auto"}
+    with started_by("cli"):
+        assert hook.run({**event, "session_id": path.stem, "compact_summary": "A summary."}) is None
+    cut = json.loads((home_ / "abcdef01-cut-1.json").read_text(encoding="utf-8"))
+    assert [p["id"] for p in cut["person"]["pointers"]] == ["10000001", "10000004"], cut["person"]
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

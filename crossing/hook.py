@@ -448,6 +448,7 @@ def run(event: dict) -> str | None:
             key=key,
             earlier=lambda ordinal: earlier(folder, session_id, ordinal, key),
             untold=store.lost(folder),
+            unsaid=frozenset(off.unsaid(folder)),
         )
         counted["trigger"] = counted["trigger"] or event.get("trigger")
         line = retelling(counted, folder, session_id, key)

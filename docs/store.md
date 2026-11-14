@@ -49,6 +49,7 @@ Every file is reached through one check, `within` in `crossing/record.py`: no fi
 | `flagged.txt` | the ids of messages that look like they hold a key or a password | the archive | no |
 | `off.txt` | when the switch was off: a line a span, its two moments in UTC | the switch alone | no |
 | `unsaid.txt` | the ids of what was said while the switch was off | the archive, and switching on again | no |
+| `off-places.jsonl` | while the switch is off: where each transcript the markers name stood as it was turned off | switching off; switching on again reads it and takes it away | no |
 | `welcomed.txt`, `told.txt` | the sessions welcomed, and those told the switch was turned | the hooks, the person's command | no |
 | `shelled.txt` | labels marked from a shell for the person, until their `status` says them | `door.py mark` | no |
 | `labelled.txt` | every label the home has met, by its key and its sentence's digest | a mark, and every build | no |
