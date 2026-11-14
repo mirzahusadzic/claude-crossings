@@ -2561,8 +2561,10 @@ def thread(folder: Path, said_id: str, around: int = 2) -> dict:
     if len(twins) > 1:
         db.close()
         return {"asked": said_id, "found": False, "said": [], "labels": [], "twins": twins}
+    # An id's own characters are taken as themselves, never as a pattern: `%` and `_` name no message.
+    begun = said_id.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
     centre = db.execute(
-        "select seq from said where id = ? or uuid like ? order by seq limit 1", (said_id, said_id + "%")
+        "select seq from said where id = ? or uuid like ? escape '\\' order by seq limit 1", (said_id, begun)
     ).fetchone()
     if centre is None:
         db.close()

@@ -1150,6 +1150,39 @@ def test_an_index_whose_mark_cannot_be_kept_is_made_once_in_a_process_and_every_
     assert added.count("the mark of a home's index could not be kept") == 1, added
 
 
+# --- a sidecar written by another hand, and an id that is no pattern ------------------------------------------
+
+
+def test_a_sidecar_written_by_another_hand_is_shown_cleaned_and_a_threads_id_is_no_pattern(tmp_path):
+    from crossing import show
+
+    project, home_, path = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    path.write_text(json.dumps(row("user", "aaaaaaaa", 1, "The only message.")) + "\n", encoding="utf-8")
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    voice = {"pointers": [], "covered": 0, "chars": 0, "messages": 0}
+    crafted = {
+        "session_id": "ab\n# forged\u202e",
+        "counted_on": "x\n## forged",
+        "cut": "1\n# forged",
+        "trigger": "auto",
+        "person": voice,
+        "session": voice,
+    }
+    (home_ / "abcdef01-cut-1.json").write_text(json.dumps(crafted), encoding="utf-8")
+    shown = show.block(project)
+    assert not forged(shown) and "\u202e" not in shown, shown
+    assert "x## forged · session ab# forg, cut 1# forged · auto" in shown, shown
+    # A thread's id is the id asked for, its % and _ included: neither stands for any character.
+    for asked in ("%", "_", "a%", "aaaaaaa_", "_aaaaaaa-0000"):
+        assert (
+            through("thread", asked, "--cwd", str(project))[1]
+            == f"thread of `{asked}`: no such message in the store.\n"
+        )
+    for asked in ("aaaaaaaa", "aaaaaaaa-0000-4000"):
+        assert "the one you named" in through("thread", asked, "--cwd", str(project))[1], asked
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

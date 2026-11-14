@@ -44,12 +44,12 @@ A session is a person's where the harness names it `cli` in `CLAUDE_CODE_ENTRYPO
 | --- | --- |
 | `find` | each word by its stem, and also as a plain run of letters wherever it stands, so the door never finds less than a search of the files would; `word*` takes every word that begins so, and `"a phrase"` the phrase; up to eight messages and eight labels; a miss names up to five of the nearest words that are there, to the first five words asked |
 | `find`, where labels hold only some of the words | three of them, each sentence cut at 240 characters, and a standing line among them named by key and not recited |
-| `thread` | the message named up to 6,000 characters, each neighbour up to 500; a span when Crossings was off stands in its place as its two moments, and nothing of what was said then; an id of eight characters that two messages share is answered with both whole ids, and either is threaded by its own |
+| `thread` | the message named up to 6,000 characters, each neighbour up to 500; a span when Crossings was off stands in its place as its two moments, and nothing of what was said then; an id of eight characters that two messages share is answered with both whole ids, and either is threaded by its own; an id, or the start of a whole one, is taken as it is written, so `%` and `_` stand for no character |
 | `labels` | the forty newest, and how many older ones there are; a sentence cut at 240 characters in a list, and given whole by its key; its state where it is not carried, and the stack it stands beneath |
 | `labels`, nothing named | the standing lines counted by key and not listed: they are listed when asked for by their kind or their key |
 | `look` | the standing lines by key and number alone; how many stand beneath how many stacks; misaligned and unresolved labels by key; a span off the record among the days, by its two moments |
 
-Wherever the door shows a label's sentence, its whose and its model, or a message's words, one function, `clean` in `crossing/store.py`, takes out of what is shown control characters, the line and paragraph separators (U+2028, U+2029) and every format character, the direction marks, overrides and isolates among them. A message keeps its own line breaks in a thread. The pages are left as they were written.
+Wherever the door shows a label's sentence, its whose and its model, or a message's words, one function, `clean` in `crossing/store.py`, takes out of what is shown control characters, the line and paragraph separators (U+2028, U+2029) and every format character, the direction marks, overrides and isolates among them. A message keeps its own line breaks in a thread. `crossing/show.py` shows a cut's sidecar by the same function: its session, its day, its cut and the place of its page. The pages are left as they were written.
 
 ---
 

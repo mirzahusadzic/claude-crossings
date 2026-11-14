@@ -46,16 +46,17 @@ def block(cwd: Path, session: str | None = None) -> str:
             where = page.relative_to(cwd)
         except ValueError:
             where = page
+        clean = store.clean  # a sidecar a hand or a repository wrote is shown by the one cleaning rule
         out += [
             "",
-            f"  {c.get('counted_on', '')} · session {str(c.get('session_id', ''))[:8]}, cut {c.get('cut')} · "
-            f"{store.clean(c.get('trigger') or 'trigger not given')}",
+            f"  {clean(c.get('counted_on', ''))} · session {clean(str(c.get('session_id', '')))[:8]}, "
+            f"cut {clean(c.get('cut'))} · {clean(c.get('trigger') or 'trigger not given')}",
             f"    {size}",
             f"    held word for word: the person's {record.share(person['covered'], person['chars'])}"
             f" · the session's {record.share(own['covered'], own['chars'])}",
             f"    nothing held: {none(person)} of {person['messages']} messages · "
             f"{none(own)} of {own['messages']} replies",
-            f"    {where}",
+            f"    {clean(where)}",
         ]
     return "\n".join(out) + "\n"
 
