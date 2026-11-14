@@ -787,6 +787,18 @@ test("the marks of the homes' indexes, beside the person's record, are kept from
   expect(reached).toEqual([])
 })
 
+test("the receipts of what the door wrote into each home, beside the person's record, are kept from a session's hand", async ($, on) => {
+  const reached = await tools($, on, { ...PLACES, CROSSING_SWITCHED: '/elsewhere/record/switched' })
+  for (const command of ['rm ~/.claude/crossing/switched.receipts', 'echo x >> /elsewhere/record/switched.receipts']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(PERSONS)
+  }
+  for (const file_path of ['/Users/someone/.claude/crossing/switched.receipts', '/elsewhere/record/switched.receipts']) {
+    expect(refused(await $.tool.call({ tool: 'Write', file_path, content: '' }))).toBe(PERSONS)
+    expect(refused(await $.tool.call({ tool: 'Edit', file_path, old_string: 'a', new_string: 'b' }))).toBe(PERSONS)
+  }
+  expect(reached).toEqual([])
+})
+
 test("a words page is read through the door alone, as the archive's own files are, by any tool and any shell read", async ($, on) => {
   const reached = await tools($, on)
   for (const home of HOMES) {

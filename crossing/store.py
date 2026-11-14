@@ -25,7 +25,8 @@ a folder outside it; or the one on this computer that is the person's and the se
   archive.lock           held by one archive, mark, strike, layering or switch at a time, from what
                          it reads to the last file it writes.
   labelled.txt,          every label the home has met, by key and digest; and those a build found that
-  arrived.txt            came by no mark through the door, for the person's next `status`.
+  arrived.txt            came by no mark through the door, for the person's next `status`. What the
+                         door wrote is believed only from outside the home (see RECEIPTS).
   collided.txt           ids of eight characters that two messages share, for the person's next `status`.
   off.txt                when the person's switch was off: a line a span, its two moments in UTC.
                          Nothing said inside a span is archived, from any transcript (see crossing/off.py).
@@ -520,16 +521,19 @@ def switch(cwd: Path, to: str) -> str:
     if held is None:
         raise OSError(f"the home was held by another act for {WAIT:.0f} seconds")
     try:
-        return _switched(cwd, folder, on, adopted)
+        return _switched(cwd, folder, on, adopted, fresh=on and not believed)
     finally:
         _unlocked(folder, held)
 
 
-def _switched(cwd: Path, folder: Path, on: bool, adopted: bool = False) -> str:
+def _switched(cwd: Path, folder: Path, on: bool, adopted: bool = False, fresh: bool = False) -> str:
     """`switch`, from its span on, with the home's lock held. A home `adopted` has met no line of
     its `models.txt` and no label of its pages: none of them was signed or marked through the door
     (see `_signs_unmet` and `_labels_unmet`), and each is noted as come by no other way, for the
-    person's next `status`."""
+    person's next `status`. A home not believed until now (`fresh`) keeps no receipt of an earlier
+    time (see `_receipts_begun`)."""
+    if fresh:
+        _receipts_begun(folder, met_none=adopted)
     if adopted and (_signs_unmet(folder) | _labels_unmet(folder)):  # both are asked, and either may note
         _noticed(folder)
     if not on:
@@ -1310,12 +1314,13 @@ def _signed(folder: Path, key: str, text: str, model: str) -> None:
 
 def _signed_all(folder: Path, signed: list[tuple[str, str]], model: str) -> None:
     """A line in `models.txt` for each of these labels, as (key, sentence), all written by this
-    model, as `_signed` writes one: SIGNS_MET is read once for them all, and both files are
-    appended to once."""
+    model, as `_signed` writes one: SIGNS_MET is read once for them all, both files are appended to
+    once, and so are the receipts kept outside every project (see RECEIPTS)."""
     lines = [f"{key}@{digest(text)} {model}" for key, text in signed]
     if not lines:
         return
     _signs_known(folder, lines)
+    _receipted(folder, signs=lines)
     record.add(
         within(folder, MODELS),
         "".join(line + "\n" for line in lines),
@@ -2447,22 +2452,167 @@ def signs_arrived_told(folder: Path) -> None:
 def _noticed(folder: Path) -> None:
     """At a build: the labels of the pages the home has not met, which came by no mark through the
     door, noted in ARRIVED, by key and digest, and met from now on. A struck key is not noted. And so
-    the lines of `models.txt` the home has not met, in SIGNS_ARRIVED."""
-    if _signs_met(folder) is None:
-        _signs_known(folder, [])
-    else:
-        came = _signs_known(folder, _model_lines(folder))
-        if came:
-            record.add(within(folder, SIGNS_ARRIVED), "".join(each + "\n" for each in came))
-    if _met(folder) is None:
-        _known(folder, [])
-        return
+    the lines of `models.txt` the home has not met, in SIGNS_ARRIVED. What the home has met is what
+    the receipts kept outside every project know (see RECEIPTS); LABELLED and SIGNS_MET are written as
+    before, and are no proof alone. A home with no receipts yet has them made first from those two
+    files, silently (see `_seeded`)."""
+    met = _receipts(folder)
+    if met is None:  # a home believed before its receipts were kept outside, or never built yet
+        met = _seeded(folder)
+        _receipted(folder, seed=met)
+    signs = _model_lines(folder)
+    _signs_known(folder, signs)
     gone = struck(folder)
-    came = _known(
-        folder, [f"{label['id']}@{digest(label['text'])}" for label in labels(folder) if label["id"] not in gone]
-    )
+    entries = [f"{label['id']}@{digest(label['text'])}" for label in labels(folder) if label["id"] not in gone]
+    _known(folder, entries)
+    came_signs = [each for each in dict.fromkeys(signs) if each not in met["signs"]]
+    came = [each for each in dict.fromkeys(entries) if each not in met["labels"]]
+    if came_signs:
+        record.add(within(folder, SIGNS_ARRIVED), "".join(each + "\n" for each in came_signs))
     if came:
         record.add(within(folder, ARRIVED), "".join(each + "\n" for each in came))
+    if came or came_signs:  # noted once: met from now on
+        _receipted(folder, came, came_signs)
+
+
+# What the door wrote is believed only from outside every project: which labels this home has met
+# (marked through the door, or noted as arrived) and which lines of `models.txt` (signed through the
+# door or by `layer`, or noted as arrived) are kept in a file beside the person's record (see
+# `switched`), as the index's mark is (see MINTED): a line an act, {"home": ..., "labels": [...],
+# "signs": [...]}, each `key@digest` and `key@digest model` as LABELLED and SIGNS_MET hold them. The
+# two files inside the home are still written as they were, and a pull into a home that lies in a
+# repository can bring a line of either together with the label or the line it names: so they are no
+# proof alone, and anything these receipts do not know is noted as arrived. Switching on a home not
+# believed yet takes away any line for it; adopting one keeps one line with nothing in it, so that it
+# has met nothing. A home believed before receipts were kept here has them made once from LABELLED
+# and SIGNS_MET (see `_seeded`).
+RECEIPTS = "receipts"
+
+
+def _receipts_path() -> Path:
+    return switched().with_name(switched().name + "." + RECEIPTS)
+
+
+def _receipt_lines() -> list[dict]:
+    """The lines of RECEIPTS that are receipts, in its order: a line that is no object, or names no
+    home, is passed over, and so is an entry that is no text. A file that is not there, or cannot be
+    read, raises OSError."""
+    found = []
+    for line in record.lines_in(_receipts_path()):
+        try:
+            given = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(given, dict) and isinstance(given.get("home"), str):
+            found.append(
+                {
+                    "home": given["home"],
+                    **{
+                        name: [each for each in given.get(name) or [] if isinstance(each, str)]
+                        if isinstance(given.get(name), list)
+                        else []
+                        for name in ("labels", "signs")
+                    },
+                }
+            )
+    return found
+
+
+def _of_home(lines: list[dict], folder: Path) -> list[dict]:
+    """The receipts of this home: named as the person's record names it, or by another spelling of
+    the same folder, each spelling asked about once."""
+    home, same = spelled(folder), {}
+    for given in lines:
+        if given["home"] not in same:
+            same[given["home"]] = given["home"] == home or record._same(Path(given["home"]), folder)
+    return [given for given in lines if same[given["home"]]]
+
+
+def _receipts(folder: Path) -> dict[str, set[str]] | None:
+    """The labels and the lines of `models.txt` the receipts know this home has met; nothing where
+    they hold no line for it. Where the file is there and cannot be read, the home has met nothing:
+    every label and line is noted as arrived."""
+    try:
+        mine = _of_home(_receipt_lines(), folder)
+    except FileNotFoundError:
+        return None
+    except OSError:
+        return {"labels": set(), "signs": set()}
+    if not mine:
+        return None
+    return {name: {each for given in mine for each in given[name]} for name in ("labels", "signs")}
+
+
+def _seeded(folder: Path) -> dict[str, set[str]]:
+    """What a home that has no receipts yet has met, from its own files, as a build read them before
+    receipts were kept outside: the labels LABELLED holds, or, where there is none, every label its
+    pages hold; and the lines SIGNS_MET holds, or, where there is none, every line of `models.txt`."""
+    met, signs = _met(folder), _signs_met(folder)
+    return {
+        "labels": met if met is not None else {f"{label['id']}@{digest(label['text'])}" for label in labels(folder)},
+        "signs": signs if signs is not None else set(_model_lines(folder)),
+    }
+
+
+_receipts_unkept: set[str] = set()  # the homes whose receipts could not be kept, logged once a process
+
+
+def _receipted(folder: Path, labels: list[str] = (), signs: list[str] = (), seed: dict | None = None) -> None:
+    """Keep in RECEIPTS that this home has met these labels and these lines of `models.txt`: one
+    line, appended under the record's lock (see `_recording`, taken after the home's). Where the file
+    holds no line for the home yet, a line of what it met before (`seed`, else `_seeded`) comes
+    first. Where it cannot be written, the error log says so once a process, and what was not kept is
+    noted as arrived by a later build."""
+    home = spelled(folder)
+    try:
+        with _recording():
+            try:
+                lines = _receipt_lines()
+            except FileNotFoundError:
+                lines = []
+            out = [] if _of_home(lines, folder) else [seed if seed is not None else _seeded(folder)]
+            if labels or signs:
+                out.append({"labels": list(labels), "signs": list(signs)})
+            if out:
+                record.add(
+                    _receipts_path(),
+                    "".join(
+                        json.dumps(
+                            {"home": home, "labels": sorted(given["labels"]), "signs": sorted(given["signs"])},
+                            ensure_ascii=False,
+                        )
+                        + "\n"
+                        for given in out
+                    ),
+                )
+        _receipts_unkept.discard(home)
+    except OSError as err:
+        if home not in _receipts_unkept:
+            record.log(f"what the door wrote into a home could not be kept beside the person's record: {err}")
+        _receipts_unkept.add(home)
+
+
+def _receipts_begun(folder: Path, met_none: bool) -> None:
+    """As a home not believed yet is switched on: any line RECEIPTS holds for it goes, so that what it
+    met is made from its own files at its first build; and, where it is adopted (`met_none`), one line
+    with nothing in it is kept, so that it has met nothing. The file is written whole beside itself and
+    put in its place, under the record's lock; its other lines stay as they are."""
+    try:
+        with _recording():
+            try:
+                lines = _receipt_lines()
+            except FileNotFoundError:
+                lines = []
+            mine = _of_home(lines, folder)
+            if not mine and not met_none:
+                return
+            kept = [given for given in lines if all(given is not each for each in mine)]
+            kept += [{"home": spelled(folder), "labels": [], "signs": []}] if met_none else []
+            fresh = _receipts_path().with_name(_receipts_path().name + ".new")
+            fresh.write_text("".join(json.dumps(given, ensure_ascii=False) + "\n" for given in kept), encoding="utf-8")
+            os.replace(fresh, _receipts_path())
+    except OSError as err:
+        record.log(f"what the door wrote into a home could not be kept beside the person's record: {err}")
 
 
 def arrived(folder: Path) -> list[str]:
@@ -3017,6 +3167,7 @@ def _marked(
     if model:
         _signed(folder, key, text, model)
     _known(folder, [f"{key}@{digest(text)}"])  # marked through the door: no build takes it for one that arrived
+    _receipted(folder, labels=[f"{key}@{digest(text)}"])  # and so kept outside every project, where a pull cannot
     # The new row is written first: were the act cut short here, both stacks would stand in the
     # pages and nothing would be lost. Only a misaligned stack gets this far (see _unstackable).
     replaced = list(dict.fromkeys(beneath[line]["parent"] for line in lines if beneath[line]["parent"]))

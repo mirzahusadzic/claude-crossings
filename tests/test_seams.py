@@ -29,6 +29,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 from test_checks import ON  # noqa: E402
 from test_count import set_to  # noqa: E402
 from test_edges import as_the_module, ran, reader, through, words_script  # noqa: E402
+from test_guards import standing  # noqa: E402
 from test_homes import public  # noqa: E402
 from test_off import says  # noqa: E402
 from test_serve import said  # noqa: E402
@@ -2124,6 +2125,112 @@ def test_a_restore_keeps_off_by_id_what_a_known_transcript_held_and_not_by_its_t
     assert "Said while off, after the clock went forward." not in kept, kept
     assert "Said on the record before switching off." in kept and "Said on the record after switching on." in kept
     assert "Said while off in a session never met." in kept, kept  # judged by its time alone
+
+
+# --- what the door wrote, believed from outside the home --------------------------------------------------
+
+
+def by_hand(crossings: Path, key: str, sentence: str, model: str) -> None:
+    """A label row and its line of models.txt, with the lines labelled.txt and models-met.txt would
+    hold had the door written them: all by hand, as a pull into a home in a repository could bring them."""
+    entry = f"{key}@{store.digest(sentence)}"
+    for name, line in (
+        ("hand-over.md", f"| {key} | {sentence} | his | `{A}` |"),
+        ("models.txt", f"{entry} {model}"),
+        ("labelled.txt", entry),
+        ("models-met.txt", f"{entry} {model}"),
+    ):
+        with open(crossings / name, "a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+
+
+def test_a_label_and_a_line_of_models_txt_brought_with_their_receipts_are_named_as_arrived_once(tmp_path):
+    """labelled.txt and models-met.txt lie inside the home, so a pull can bring a label and its line
+    of models.txt together with the lines that would say the door wrote them. What the door wrote is
+    believed only from the receipts kept beside the person's record: both are named once by the
+    person's next status, and what was marked and signed through the door never."""
+    crossings, _ = home(tmp_path)  # switched on and built: its first build met the labels it holds
+    project = str(crossings.parent)
+    marked = through("mark", "--anchors", B, "--model", "made-up-model", "--cwd", project, "The hull gets paint.")
+    assert marked[0] == 0, marked
+    assert through("build", "--cwd", project)[0] == 0
+    told = through("status", "--cwd", project)[1]
+    assert door.ARRIVED not in told and "models.txt" not in told, told  # through the door: never named
+    by_hand(crossings, "R2", "Arrived with its receipt.", "other-made-up-model")
+    assert through("build", "--cwd", project)[0] == 0
+    told = through("status", "--cwd", project)[1]
+    such = "a standing line about the two of you, speaking for the person"
+    assert f"A label {door.ARRIVED} crosses every cut as any other: R2 ({such})." in told, told
+    assert (
+        "A line of models.txt came into this home without a signing through the door, and is followed as any "
+        "other: R2 by other-made-up-model." in told
+    ), told
+    assert through("build", "--cwd", project)[0] == 0
+    told = through("status", "--cwd", project)[1]
+    assert door.ARRIVED not in told and "models.txt" not in told, told  # once
+    # A home believed before its receipts were kept outside has them made once from its own files, silently.
+    store._receipts_begun(crossings, met_none=False)  # its lines taken out of the receipts, as before they were kept
+    assert store._receipts(crossings) is None
+    assert through("build", "--cwd", project)[0] == 0
+    told = through("status", "--cwd", project)[1]
+    assert door.ARRIVED not in told and "models.txt" not in told, told
+    by_hand(crossings, "R3", "Arrived after the receipts were made.", "other-made-up-model")
+    assert through("build", "--cwd", project)[0] == 0
+    told = through("status", "--cwd", project)[1]
+    assert (
+        "R3 (a standing line about the two of you, speaking for the person)" in told
+        and "R3 by other-made-up-model" in told
+    ), told
+
+
+def test_the_receipts_pass_over_odd_lines_and_a_file_that_cannot_be_read_or_written_notes_all_as_arrived(tmp_path):
+    """The receipts beside the person's record: a line that is no receipt is passed over, an entry that
+    is no text too; switching on a folder not believed yet takes away the receipts of an earlier time,
+    and adopting keeps one line with nothing in it; a file that cannot be read has met nothing, and one
+    that cannot be written is said in the log once a process, and the build goes on."""
+    empty = tmp_path / "empty"
+    (empty / ".git").mkdir(parents=True)
+    (empty / "crossings").mkdir()
+    folder = (empty / "crossings").resolve()
+    receipts = store._receipts_path()
+    kept = receipts.read_text(encoding="utf-8") if receipts.exists() else ""
+    odd = [
+        "not json",
+        "[1, 2]",
+        json.dumps({"home": 5}),
+        json.dumps({"home": str(folder), "labels": "W1@abcdef", "signs": [1, "W1@abcdef made-up-model"]}),
+    ]
+    receipts.write_text(kept + "\n".join(odd) + "\n", encoding="utf-8")
+    assert store._receipts(folder) == {"labels": set(), "signs": {"W1@abcdef made-up-model"}}
+    assert through("switch", "on", "--cwd", str(empty)) == (0, ON)  # a folder not believed: what was kept for it goes
+    assert store._receipts(folder) is None and receipts.read_text(encoding="utf-8").startswith(kept)
+    store._receipts_begun(folder, met_none=False)  # nothing kept for it: nothing is written
+    assert store._receipts(folder) is None
+    shipped = tmp_path / "shipped"  # a home that came with its repository, adopted
+    (shipped / ".git").mkdir(parents=True)
+    standing(shipped / "crossings", "A line someone else wrote.")
+    assert through("switch", "adopt", "--cwd", str(shipped)) == (0, ON)
+    crossings = (shipped / "crossings").resolve()
+    assert store._receipts(crossings) == {
+        "labels": {f"R1@{store.digest('A line someone else wrote.')}"},
+        "signs": set(),
+    }
+    # A file that cannot be read has met nothing; one that cannot be written is said once in the log.
+    receipts.rename(receipts.with_name("receipts-aside"))
+    receipts.mkdir()
+    try:
+        assert store._receipts(crossings) == {"labels": set(), "signs": set()}
+        store.build(crossings)
+        store.build(crossings)
+        store._receipts_begun(crossings, met_none=True)
+        logged = (Path(os.environ["CLAUDE_PLUGIN_DATA"]) / "errors.log").read_text(encoding="utf-8")
+        assert logged.count("what the door wrote into a home could not be kept beside the person's record") == 2
+        assert "R1" in store.arrived(crossings)
+    finally:
+        receipts.rmdir()
+        receipts.with_name("receipts-aside").rename(receipts)
+    store.build(crossings)  # written again: the log is not told twice, and the next failure is
+    assert store._receipts(crossings) is not None
 
 
 if __name__ == "__main__":
