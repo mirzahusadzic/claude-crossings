@@ -1235,14 +1235,24 @@ def _signed(folder: Path, key: str, text: str, model: str) -> None:
     """One line in `models.txt`: this label, as its sentence stands now, was written by this model.
     Written so, by the door's signing or the person's `layer`, the line is one the home has met
     (see SIGNS_MET): no build takes it for one that arrived."""
-    _signs_known(folder, [f"{key}@{digest(text)} {model}"])
+    _signed_all(folder, [(key, text)], model)
+
+
+def _signed_all(folder: Path, signed: list[tuple[str, str]], model: str) -> None:
+    """A line in `models.txt` for each of these labels, as (key, sentence), all written by this
+    model, as `_signed` writes one: SIGNS_MET is read once for them all, and both files are
+    appended to once."""
+    lines = [f"{key}@{digest(text)} {model}" for key, text in signed]
+    if not lines:
+        return
+    _signs_known(folder, lines)
     fresh = not within(folder, MODELS).exists()
     with open(within(folder, MODELS), "a", encoding="utf-8") as handle:
         if fresh:
             handle.write(
                 "# Which model wrote each label: its key, six characters of its sentence's digest, the model.\n"
             )
-        handle.write(f"{key}@{digest(text)} {model}\n")
+        handle.write("".join(line + "\n" for line in lines))
 
 
 def newest(folder: Path, session: str) -> dict:
@@ -1337,11 +1347,13 @@ def layered(folder: Path, model: str) -> tuple[int, int] | None:
 def _layered(folder: Path, model: str) -> tuple[int, int]:
     """`layered`, with the home's lock held."""
     by, gone = models(folder), struck(folder)
-    signed = 0
-    for label in labels(folder):
-        if label["id"] not in gone and (label["id"], digest(label["text"])) not in by:
-            _signed(folder, label["id"], label["text"], model)
-            signed += 1
+    unsigned = [
+        (label["id"], label["text"])
+        for label in labels(folder)
+        if label["id"] not in gone and (label["id"], digest(label["text"])) not in by
+    ]
+    _signed_all(folder, unsigned, model)  # the lines met read once for the whole batch, not once a label
+    signed = len(unsigned)
     spoken = 0
     for page in said_pages(folder):
         lines = lines_of(_text(page))

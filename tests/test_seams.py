@@ -1088,6 +1088,41 @@ def test_a_count_whose_time_runs_out_while_one_held_run_is_lengthened_is_unfinis
     assert "**Not all of it was counted:**" in (home_ / "abcdef01-cut-1.md").read_text(encoding="utf-8")
 
 
+# --- layering many labels -----------------------------------------------------------------------------------
+
+
+def test_layering_reads_the_lines_met_once_for_a_whole_batch_of_labels(tmp_path):
+    """The person's `layer` over many labels that have no model: the file of the lines met is read
+    as often for forty labels as for four, and every label is signed and met."""
+    from crossing import record
+
+    def layered(folder: Path, many: int) -> int:
+        crossings, _ = home(folder)
+        rows = "".join(f"| W{n} | A made-up label number {n}. | session | `dddddddd` |\n" for n in range(2, many + 2))
+        (crossings / "labels").mkdir(exist_ok=True)
+        (crossings / "labels" / "2026-11-11.md").write_text(
+            "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n" + rows, encoding="utf-8"
+        )
+        reads, real = [0], record.lines_in
+
+        def counted(path):
+            reads[0] += Path(path).name == "models-met.txt"
+            return real(path)
+
+        record.lines_in = counted
+        try:
+            code, out = through("layer", "made-up-model", "--cwd", str(crossings.parent))
+        finally:
+            record.lines_in = real
+        assert code == 0 and out.startswith(f"Signed {many + 2} labels"), out
+        met = (crossings / "models-met.txt").read_text(encoding="utf-8")
+        assert all(f"W{n}@" in met for n in range(2, many + 2)) and store.signs_arrived(crossings) == []
+        return reads[0]
+
+    few, many = layered(tmp_path / "few", 4), layered(tmp_path / "many", 40)
+    assert few == many <= 4, (few, many)
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
