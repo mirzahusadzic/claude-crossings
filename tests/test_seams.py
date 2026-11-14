@@ -2004,6 +2004,56 @@ def test_a_prompt_another_plugin_submitted_between_turns_is_not_the_persons_word
     assert "a reading of the work landed" not in words and "The first prompt" in words, words
 
 
+# --- a home that holds nothing yet, and the plugin's own logs -----------------------------------------------
+
+
+def test_status_of_a_home_that_holds_nothing_yet_says_so_and_a_store_with_no_time_gives_no_span(tmp_path):
+    """Just switched on, a home holds nothing, and status says so plainly with no empty span of days;
+    a store whose messages bear no time gives their characters and no span either."""
+    project, home_, _ = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    told = through("status", "--cwd", str(project))[1]
+    assert told.startswith(f"The store at {home_} holds nothing yet.") and " to )" not in told, told
+    assert through("status", "--bare", "--cwd", str(project))[1].startswith("The store holds nothing yet.")
+    (home_ / "said").mkdir()
+    (home_ / "said" / "abcdef01.jsonl").write_text(  # a message an older make kept with no time
+        json.dumps({"uuid": f"aaaaaaaa{WHOLE}", "id": "aaaaaaaa", "session": "abcdef01", "voice": "his", "text": "A."})
+        + "\n",
+        encoding="utf-8",
+    )
+    assert through("build", "--cwd", str(project))[0] == 0
+    told = through("status", "--cwd", str(project))[1]
+    assert "holds 1 message of the person's and 0 of the session's (2 characters), 0 labels" in told, told
+
+
+def test_the_plugins_own_logs_left_wide_are_narrowed_to_their_owner_the_next_time_they_are_written(tmp_path):
+    """errors.log and calls.log, left readable by other accounts by an earlier make, are their owner's
+    alone once a hook or the door writes them again."""
+    data = tmp_path / "data"
+    data.mkdir()
+    for name in ("errors.log", "calls.log"):
+        (data / name).write_text("an earlier line\n", encoding="utf-8")
+        (data / name).chmod(0o644)
+    event = {"hook_event_name": "SessionStart", "source": "startup", "cwd": str(tmp_path), "session_id": "abcdef01"}
+    assert ran("hook.py", stdin=json.dumps(event), CLAUDE_PLUGIN_DATA=str(data)).returncode == 0  # writes calls.log
+    assert oct((data / "calls.log").stat().st_mode & 0o777) == "0o600"
+    (data / "errors.log").chmod(0o644)
+    assert ran("hook.py", stdin='"not an event"', CLAUDE_PLUGIN_DATA=str(data)).returncode == 0  # a failure, logged
+    assert oct((data / "errors.log").stat().st_mode & 0o777) == "0o600"
+    (data / "errors.log").chmod(0o644)
+    refused = ran(
+        "door.py",
+        "look",
+        "--session",
+        "../x",
+        "--by-module",
+        CLAUDE_PLUGIN_DATA=str(data),
+        CLAUDE_PLUGIN_ROOT=str(ROOT),
+    )
+    assert refused.returncode == 1 and oct((data / "errors.log").stat().st_mode & 0o777) == "0o600", refused
+    assert (data / "errors.log").read_text(encoding="utf-8").startswith("an earlier line\n")
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

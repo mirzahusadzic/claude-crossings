@@ -195,7 +195,7 @@ def test_a_home_named_outright_is_switched_like_any_other_and_names_no_project(t
         assert through("switch", "on") == (0, ON)
         assert sorted(p.name for p in named.iterdir()) == ["archive.lock", "carry", "mode", "switch"]
         assert through("home") == (0, f"{named}\n")
-        assert "holds 0 messages of the person's" in through("status")[1]
+        assert "holds nothing yet." in through("status")[1]
 
 
 # --- never switched on ----------------------------------------------------------------------------
@@ -278,7 +278,7 @@ def test_the_server_answers_in_one_sentence_and_names_no_folder_where_crossing_i
         assert not outside.exists() and inside(project) == BARE
         assert said("look", home="ours") == (NOT_ON, True)  # nor the home on this computer, from here
         assert through("switch", "on", "--cwd", str(project)) == (0, ON)  # the person's own command; the server runs on
-        assert said("status")[1] is False and said("status")[0].startswith("The store holds 0 messages of the person's")
+        assert said("status")[1] is False and said("status")[0].startswith("The store holds nothing yet.")
         ours, failed = said("look", home="ours")  # switched on here, the home on this computer is offered
         assert failed is False and ours.startswith("The store in outline: 0 days") and not (tmp_path / "ours").exists()
     assert NOT_ON.count(".") == 1 and "/" not in NOT_ON and not re.search(r"\bask(s|ed|ing)?\b", NOT_ON, re.I)

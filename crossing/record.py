@@ -116,6 +116,17 @@ def add(path: Path, text: str, head: str = "") -> None:
         handle.write(text)
 
 
+def logged(path: Path, text: str) -> None:
+    """Append to one of the plugin's own logs (see `add`), and narrow it to its owner alone where an
+    earlier make left it readable by other accounts (0644): a file the process makes is its owner's
+    already (see `private`), and one made before is narrowed the next time it is written. On Windows
+    a mode says nothing, and nothing is done."""
+    add(path, text)
+    mode = stat.S_IMODE(path.stat().st_mode)
+    if not WINDOWS and mode & 0o077:
+        os.chmod(path, mode & 0o700)
+
+
 def undecodable(path: Path) -> int:
     """How many lines of a file cannot be read as text; nought for a file that cannot be opened."""
     try:
@@ -305,7 +316,7 @@ def data() -> Path:
 def log(line: str) -> None:
     """One line in the plugin's error log. A log that cannot be written is no reason to stop."""
     try:
-        add(data() / "errors.log", line + "\n")
+        logged(data() / "errors.log", line + "\n")
     except OSError:
         pass
 

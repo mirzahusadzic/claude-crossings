@@ -603,7 +603,7 @@ def note(event: dict, **more) -> None:
         size, changed = seen.st_size, round(seen.st_mtime, 3)
     except (OSError, ValueError):  # no transcript yet, or a path that is none
         size = changed = None
-    record.add(
+    record.logged(
         data() / "calls.log",
         json.dumps(
             {
@@ -647,7 +647,7 @@ def main() -> int:
         record.refused(err)
     except Exception:  # never break a session over a count
         try:
-            record.add(data() / "errors.log", traceback.format_exc() + "\n")
+            record.logged(data() / "errors.log", traceback.format_exc() + "\n")
         except OSError:
             pass
     return 0

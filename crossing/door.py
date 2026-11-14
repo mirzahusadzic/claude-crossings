@@ -671,11 +671,7 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         # is written to it, so those sentences wait until it is on (see store.once).
         quiet = args.bare or not on
         print(
-            f"The store{'' if args.bare else f' at {folder}'} holds {many(held['his'], 'message')} of the person's and "
-            f"{held['session']} of the session's ({many(held['characters'], 'character')}, "
-            f"{store.clean(held['from'])} to {store.clean(held['to'])}), "
-            f"{many(held['labels'], 'label')}, "
-            f"and {held['struck']} struck."
+            holding(folder, held, args.bare)
             + (
                 " Of the labels: {cooled} cooled, {misaligned} misaligned, {unresolved} unresolved.".format(
                     **held["states"]
@@ -778,6 +774,21 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         )
         return 0 if out["copied"] else 1
     return 0
+
+
+def holding(folder: Path, held: dict, bare: bool) -> str:
+    """What `status` says first: what the store holds, with the span of days its messages were said
+    in where they have one; or, where it holds no message, no label and nothing struck, that it holds
+    nothing yet."""
+    store_ = "The store" + ("" if bare else f" at {folder}")
+    if not (held["his"] or held["session"] or held["pasted"] or held["labels"] or held["struck"]):
+        return f"{store_} holds nothing yet."
+    days = f", {store.clean(held['from'])} to {store.clean(held['to'])}" if held["from"] else ""
+    return (
+        f"{store_} holds {many(held['his'], 'message')} of the person's and {held['session']} of the session's "
+        f"({many(held['characters'], 'character')}{days}), {many(held['labels'], 'label')}, "
+        f"and {held['struck']} struck."
+    )
 
 
 def told_once(args: argparse.Namespace, folder: Path, held: dict, quiet: bool = False) -> str:
