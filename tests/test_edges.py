@@ -47,6 +47,12 @@ def as_the_module(*argv: str, **env: str) -> subprocess.CompletedProcess:
     return ran("door.py", *argv, "--by-module", CLAUDE_PLUGIN_ROOT=str(ROOT), **env)
 
 
+def words_script(*argv: str) -> subprocess.CompletedProcess:
+    """The hand-over's words script as a process of its own, as the plugin's own module would start
+    it: with its flag, and the plugin's folder in CLAUDE_PLUGIN_ROOT (see handover.main)."""
+    return ran("handover.py", "--by-module", *argv, CLAUDE_PLUGIN_ROOT=str(ROOT))
+
+
 def through(*argv: str) -> tuple[int, str]:
     """The door, in this process."""
     out = io.StringIO()
@@ -80,9 +86,9 @@ def test_a_message_is_read_back_from_the_command_line_and_nothing_else_is(tmp_pa
 
 def test_the_anchored_words_are_written_from_the_command_line(tmp_path):
     crossings, path = home(tmp_path)
-    wrong = ran("handover.py", str(path))
+    wrong = words_script(str(path))
     assert wrong.returncode == 2 and "Usage:" in wrong.stderr
-    made = ran("handover.py", str(path), str(crossings / "hand-over.md"))
+    made = words_script(str(path), str(crossings / "hand-over.md"))
     out = crossings / "hand-over.words.md"
     assert made.returncode == 0 and made.stdout.strip() == str(out)
     words = out.read_text(encoding="utf-8")

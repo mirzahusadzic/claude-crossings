@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from test_checks import NOT_ON, ON, shell  # noqa: E402
 from test_count import BEFORE, SUMMARY, written  # noqa: E402
-from test_edges import as_the_module, ran, set_to, through  # noqa: E402
+from test_edges import as_the_module, set_to, through, words_script  # noqa: E402
 from test_homes import public  # noqa: E402
 from test_off import says  # noqa: E402
 from test_store import A, B, D, E, home, row, started_by, sweep, switched_on  # noqa: E402  (and its data folder)
@@ -77,7 +77,7 @@ def test_a_struck_session_stays_struck_in_a_transcript_of_any_name(tmp_path):
     db = store._open(crossings)
     assert db.execute("select count(*) from said").fetchone()[0] == 0
     db.close()
-    assert ran("handover.py", str(fork), str(crossings / "hand-over.md")).returncode == 0
+    assert words_script(str(fork), str(crossings / "hand-over.md")).returncode == 0
     for gone in ("Tern", "hull", "Grey", A, B, D, E):
         assert f"`{gone}`, the" not in words_page(crossings) and "Tern" not in words_page(crossings), gone
     (crossings / "hand-over.words.md").write_text(f"- `{B}`, the session: Noted: Tern.\n", encoding="utf-8")

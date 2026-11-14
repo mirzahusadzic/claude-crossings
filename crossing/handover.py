@@ -14,7 +14,9 @@ keeps: no message struck, nothing said while Crossing was off (by its spans and 
 noted then), and nothing a session no person sat in held. Where the home's record of when it
 was off cannot be read, or is missing or shorter than it was, no message is given. The page
 is written through `within`, for its owner alone, as every file of a home is; where a file of
-it is a link, nothing is written.
+it is a link, nothing is written. It is the person's to run, as the door's own verbs are, and
+writes only into a home the door believes for its project: anywhere else it says so in one
+sentence, and writes nothing.
 """
 
 from __future__ import annotations
@@ -117,24 +119,57 @@ def page(path: Path, hand_over: Path) -> str:
     return "\n".join(lines) + "\n"
 
 
-def main() -> int:
-    if len(sys.argv) != 3:
+PERSONS = "This is the person's to run, from their own terminal, so nothing was written."
+UNBELIEVED = "This page lies in no home Crossings was switched on for, so nothing was written."
+LINKED = "A file of this home is a link, so nothing was written."
+
+
+def believed(folder: Path) -> Path | None:
+    """The home the page's folder is, where the door believes it (store.kept): a home the person's
+    record names for a project, which the door finds for that project, and which this folder is, by
+    the files. A project's own `crossings` that is a link is no home, and a link to a home is not the
+    home: only a home named outright (CROSSING_HOME) may be one, by its own name."""
+    from crossing import record, store
+
+    for project, _ in store.consented():
+        found = store.kept(Path(project))
+        if found is not None and record._same(found, folder) and (not folder.is_symlink() or folder == found):
+            return found
+    return None
+
+
+def main(argv: list[str] | None = None) -> int:
+    """The helper's entry: the person's alone, as the door's own verbs are (door.personal), from
+    their terminal or for the plugin's own hooks and module (`--by-hook`, `--by-module`, with the
+    plugin's folder in CLAUDE_PLUGIN_ROOT); and only into a home the door believes (`believed`)."""
+    from argparse import Namespace
+
+    from crossing import door, record
+
+    given = list(sys.argv[1:] if argv is None else argv)
+    flags = {each for each in given if each in ("--by-hook", "--by-module")}
+    named_ = [each for each in given if each not in flags]
+    if len(named_) != 2:
         print(__doc__.strip(), file=sys.stderr)
         return 2
-    from crossing import record
-
     record.private()  # the words page is its owner's alone, as every file of a home is
-    source, hand_over = Path(sys.argv[1]), Path(sys.argv[2])
-    folder = hand_over.parent
+    if not door.personal(Namespace(by_hook="--by-hook" in flags, by_module="--by-module" in flags)):
+        print(PERSONS, file=sys.stderr)
+        return 1
+    source, hand_over = Path(named_[0]), Path(named_[1])
     try:
+        folder = believed(hand_over.parent)
+        if folder is None:
+            print(UNBELIEVED, file=sys.stderr)
+            return 1
         record.sound(folder)  # a link anywhere in the home, and nothing is read or written
         out = record.within(folder, hand_over.with_suffix(".words.md").name)
         out.write_text(page(source, record.within(folder, hand_over.name)), encoding="utf-8")
     except record.Linked as err:
         record.refused(err)
-        print("A file of this home is a link, so nothing was written.", file=sys.stderr)
+        print(LINKED, file=sys.stderr)
         return 1
-    print(out)
+    print(hand_over.parent / out.name)  # by the path it was named by: the same folder, by the files
     return 0
 
 

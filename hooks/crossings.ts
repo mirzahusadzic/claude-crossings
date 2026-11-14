@@ -268,9 +268,9 @@ const registerCommand = (on: Parameters<Register>[0]) => {
 // the hand-over and its words page, what was struck, the model behind a call, the ids noted as
 // looking like a key, the one-word settings) are refused to a tool that writes a file, and to a
 // shell command that names one in any part of it that is not a plain read (a command of READS
-// with no `>` in it) or a run of the hand-over's words script; reading them stays open. These too
-// are string checks: against a session with a shell, the wall is the person's own approval of the
-// commands it runs.
+// with no `>` in it); reading them stays open. A shell command that runs the hand-over's words
+// script is the person's too. These too are string checks: against a session with a shell, the
+// wall is the person's own approval of the commands it runs.
 
 const REFUSED =
   "What was said is reached through the door's tools (look, labels, find and thread), not by opening the archive's own " +
@@ -346,18 +346,28 @@ const PARTS = /[;&|\n]/ // where one command of a shell's line ends and the next
 const runsTheirs = (command: string): boolean =>
   command.split(PARTS).some(part => DOOR.test(part) && THEIRS.test(part.slice(part.search(DOOR))))
 
-// The commands that only read the files they name, and the hand-over's words script, which writes
-// its words page from the record alone (crossing/handover.py).
+// The commands that only read the files they name.
 const READS = new Set(['cat', 'head', 'tail', 'less', 'more', 'grep', 'egrep', 'fgrep', 'rg', 'wc', 'ls', 'stat', 'file',
   'diff', 'cmp', 'nl', 'cut', 'md5', 'md5sum', 'shasum', 'sha256sum'])
-const WORDS_SCRIPT = /^python3?$/
+const commandOf = (part: string): string[] =>
+  part.trim().split(/\s+/).filter(word => !/^[A-Za-z_]\w*=/.test(word)) // an assignment before the command
 const plainRead = (part: string): boolean => {
   const said = part.replace(/\d*>\s*\/dev\/null|\d*>&\d/g, ' ') // what is sent to nowhere writes nothing
-  const words = said.trim().split(/\s+/).filter(word => !/^[A-Za-z_]\w*=/.test(word)) // an assignment before the command
-  const first = (words[0] ?? '').replace(/^.*\//, '')
-  if (WORDS_SCRIPT.test(first)) return !/>/.test(said) && /(?:^|\/)handover\.py$/.test(words.find((w, n) => n > 0 && !w.startsWith('-')) ?? '')
+  const first = (commandOf(said)[0] ?? '').replace(/^.*\//, '')
   return READS.has(first) && !/>/.test(said)
 }
+// A shell command that runs the hand-over's words script (crossing/handover.py), which writes a words
+// page into a home: the person's to run, as the door's own verbs are. Read, the script is a file as any.
+const PYTHON = /^python(?:3(?:\.\d+)?)?$/
+const runsHelper = (command: string): boolean =>
+  command.split(PARTS).some(part => {
+    const words = commandOf(part.replace(/['"\\]/g, ''))
+    const first = (words[0] ?? '').replace(/^.*\//, '')
+    if (first === 'handover.py') return true // the script itself, by its own first line
+    if (!PYTHON.test(first)) return false
+    const at = words.findIndex((word, n) => n > 0 && !word.startsWith('-'))
+    return (at > 0 && /(?:^|\/)handover\.py$/.test(words[at])) || words.some((word, n) => word === '-m' && words[n + 1] === 'crossing.handover')
+  })
 // A shell command that names a file of `places` in any part of it that is not a plain read.
 const writesTo = (command: string, home: string, found: RegExp[]): boolean =>
   command.replace(/\d*>&\d/g, ' ').split(PARTS).some(part => found.some(place => place.test(named({ command: part }, home))) && !plainRead(part))
@@ -381,7 +391,7 @@ const registerGuard = (on: Parameters<Register>[0]) => {
     const outright = (await $.env.get('CROSSING_HOME')) ?? ''
     if (places(homes, ours, outright).some(place => place.test(text))) return { deny: REFUSED }
     const command = typeof given.command === 'string' ? given.command : ''
-    if (command && runsTheirs(command)) return { deny: PERSONS }
+    if (command && (runsTheirs(command) || runsHelper(command))) return { deny: PERSONS }
     if (command || WRITES.includes(e.tool)) {
       const switched = (await $.env.get('CROSSING_SWITCHED')) ?? ''
       const kept = [...places(homes, ours, outright, KEPT), ...recordOf(switched)]

@@ -569,7 +569,7 @@ test('a shell command that writes those files is refused, and one that reads the
   expect(reached).toEqual([])
   const reads = ['cat crossings/labels/2026-11-12.md', 'grep -n hull crossings/hand-over.md', 'head -3 crossings/struck.txt 2>/dev/null',
     'ls crossings/labels', 'wc -l /elsewhere/ours/labels/x.md', 'cat crossings/mode crossings/carry | grep beside',
-    'python3 crossing/handover.py /x/abcdef01.jsonl crossings/hand-over.md', 'echo the mode > notes/mode.txt']
+    'echo the mode > notes/mode.txt']
   for (const command of reads) expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(undefined)
   expect(reached.length).toBe(reads.length)
 })
@@ -636,4 +636,19 @@ test('the door is handed how the session was started, so that it carries nothing
     expect(init?.env?.CLAUDE_CODE_ENTRYPOINT).toBe('sdk-cli')
     expect(typeof init?.env?.CLAUDE_PLUGIN_ROOT).toBe('string')
   }
+})
+
+test("a shell command that runs the hand-over's words script is the person's, and one that reads the script runs", async ($, on) => {
+  const reached = tools(on)
+  for (const command of ['python3 crossing/handover.py /x/abcdef01.jsonl crossings/hand-over.md',
+    'python3 -I /plugins/crossing/crossing/handover.py /x/abcdef01.jsonl /elsewhere/notes.md', 'cd /p && python crossing/handover.py a b',
+    'FOO=1 python3.9 "crossing/handover.py" a b', 'python3 -m crossing.handover a b', './crossing/handover.py a b',
+    'CLAUDE_PLUGIN_ROOT=/p python3 /p/crossing/handover.py --by-module a b']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(PERSONS)
+  }
+  expect(reached).toEqual([])
+  for (const command of ['cat crossing/handover.py', 'grep -n main crossing/handover.py', 'python3 crossing/read.py a b']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(undefined)
+  }
+  expect(reached.length).toBe(3)
 })

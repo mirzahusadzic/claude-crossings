@@ -10,6 +10,9 @@ Run with pytest, or without it:  python3 tests/test_seams.py
 
 from __future__ import annotations
 
+import contextlib
+import io
+import json
 import sys
 import tempfile
 import threading
@@ -20,12 +23,12 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
 from test_checks import ON  # noqa: E402
-from test_edges import through  # noqa: E402
+from test_edges import ran, through, words_script  # noqa: E402
 from test_homes import public  # noqa: E402
 from test_off import says  # noqa: E402
-from test_store import DATA, started_by  # noqa: E402  (and its data folder: no test reaches the real home)
+from test_store import DATA, at_terminal, home, row, started_by  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import door, hook, off, store  # noqa: E402
+from crossing import door, handover, hook, off, store  # noqa: E402
 
 # No test here reaches a disk image either: a stand-in for macOS's hdiutil comes first on the path,
 # beside the one for the Keychain, and refuses. A test of a disk image's own use puts its own first.
@@ -129,6 +132,65 @@ def test_what_is_said_after_switching_off_is_not_kept_by_an_archive_already_unde
         assert answers == [(0, door.SWITCHED["off"] + "\n")]
         assert hook.run(event) is None  # and the next reading
     assert said not in kept_texts(home_)
+
+
+# --- the hand-over's helper ---------------------------------------------------------------------------
+
+
+# What the helper says, as the person reads it: written out here, so that the words are held too.
+UNBELIEVED = "This page lies in no home Crossings was switched on for, so nothing was written."
+HELPERS = "This is the person's to run, from their own terminal, so nothing was written."
+
+
+def a_page_and_its_transcript(folder: Path, crossings: Path) -> tuple[Path, Path]:
+    """A hand-over page in `crossings` that names one message, and a transcript that holds it."""
+    path = folder / "session-0009.jsonl"
+    path.write_text(json.dumps(row("user", "aaaaaaaa", 1, "Words a helper must not copy.")) + "\n", encoding="utf-8")
+    page = crossings / "hand-over.md"
+    page.write_text("| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n| R1 | A line. | his | `aaaaaaaa` |\n")
+    return path, page
+
+
+def helper_at_a_terminal(*argv: str) -> tuple[int, str]:
+    """The hand-over's words script as the person runs it from their own terminal, in this process:
+    its answer's status and what it says on its error stream."""
+    out, was = io.StringIO(), sys.argv
+    sys.argv = ["handover.py", *argv]
+    try:
+        with at_terminal(), contextlib.redirect_stderr(out):
+            code = handover.main()
+    finally:
+        sys.argv = was
+    return code, out.getvalue()
+
+
+def test_the_helper_writes_no_words_page_in_a_project_never_switched_on(tmp_path):
+    crossings = tmp_path / "project" / "crossings"
+    crossings.mkdir(parents=True)  # a crossings/ folder a repository brought, and no switch
+    path, page = a_page_and_its_transcript(tmp_path, crossings)
+    assert helper_at_a_terminal(str(path), str(page)) == (1, UNBELIEVED + "\n")
+    assert not (crossings / "hand-over.words.md").exists()
+
+
+def test_the_helper_writes_nothing_through_a_projects_crossings_that_is_a_link(tmp_path):
+    project, outside = tmp_path / "project", tmp_path / "outside"
+    project.mkdir()
+    outside.mkdir()
+    (project / "crossings").symlink_to(outside, target_is_directory=True)
+    path, _ = a_page_and_its_transcript(tmp_path, outside)
+    assert helper_at_a_terminal(str(path), str(project / "crossings" / "hand-over.md")) == (1, UNBELIEVED + "\n")
+    assert not (outside / "hand-over.words.md").exists()
+
+
+def test_the_helper_is_the_persons_to_run(tmp_path):
+    crossings, path = home(tmp_path)  # a home the person switched on
+    made = ran("handover.py", str(path), str(crossings / "hand-over.md"))  # a session's shell: no terminal, no flag
+    assert (made.returncode, made.stderr) == (1, HELPERS + "\n"), made
+    assert not (crossings / "hand-over.words.md").exists()
+    assert words_script(str(path), str(crossings / "hand-over.md")).returncode == 0  # as the plugin's own module
+    assert (crossings / "hand-over.words.md").exists()
+    out = through("page", "--cwd", str(crossings.parent))
+    assert out[0] == 0 and "My boat is called Tern." in out[1]  # and the door's page reads it, as before
 
 
 if __name__ == "__main__":

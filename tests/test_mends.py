@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from test_checks import PERSONS, shell  # noqa: E402
 from test_count import BEFORE, SUMMARY, written  # noqa: E402
-from test_edges import as_the_module, ran, set_to, through  # noqa: E402
+from test_edges import as_the_module, set_to, through, words_script  # noqa: E402
 from test_reach import KEY, stood_in  # noqa: E402
 from test_serve import said  # noqa: E402
 from test_store import A, B, D, E, home, own_folder, row, started_by, sweep, switched_on  # noqa: E402  (and its data folder)
@@ -51,7 +51,7 @@ def test_the_words_page_holds_nothing_struck_nothing_said_off_the_record_and_not
         off.HEAD + "2026-11-11T09:03:30.000000+00:00 2026-11-11T09:04:30.000000+00:00\n", encoding="utf-8"
     )
     (crossings / "unattended.txt").write_text(f"{E}{WHOLE}\n", encoding="utf-8")
-    made = ran("handover.py", str(path), str(crossings / "hand-over.md"))
+    made = words_script(str(path), str(crossings / "hand-over.md"))
     assert made.returncode == 0, made.stderr
     words = page_of(crossings)
     assert f"- `{B}`, the session: Noted: Tern, at mooring 41." in words
@@ -62,25 +62,25 @@ def test_the_words_page_holds_nothing_struck_nothing_said_off_the_record_and_not
 def test_where_the_record_of_when_crossing_was_off_cannot_be_told_the_words_page_gives_no_message(tmp_path):
     crossings, path = home(tmp_path)
     (crossings / "off.txt").mkdir()  # there, and no file that can be read
-    assert ran("handover.py", str(path), str(crossings / "hand-over.md")).returncode == 0
+    assert words_script(str(path), str(crossings / "hand-over.md")).returncode == 0
     assert "- `" not in page_of(crossings) and "Tern" not in page_of(crossings)
     (crossings / "off.txt").rmdir()
     assert through("switch", "off", "--cwd", str(crossings.parent))[0] == 0  # the record now counts its lines
     (crossings / "off.txt").unlink()  # and it is taken away: what it held can no longer be told
-    assert ran("handover.py", str(path), str(crossings / "hand-over.md")).returncode == 0
+    assert words_script(str(path), str(crossings / "hand-over.md")).returncode == 0
     assert "- `" not in page_of(crossings) and "Tern" not in page_of(crossings)
     unnamed = row("user", "1234abcd", 30, "An id that is no name.")
     unnamed["uuid"] = "1234abcd 0000"
     (crossings / "hand-over.md").write_text("| W9 | A label. | his | `1234abcd` |\n", encoding="utf-8")
     path.write_text(json.dumps(unnamed) + "\n", encoding="utf-8")
     through("switch", "on", "--cwd", str(crossings.parent))
-    assert ran("handover.py", str(path), str(crossings / "hand-over.md")).returncode == 0
+    assert words_script(str(path), str(crossings / "hand-over.md")).returncode == 0
     assert "An id that is no name" not in page_of(crossings)
 
 
 def test_the_words_page_is_written_through_within_and_for_its_owner_alone(tmp_path):
     crossings, path = home(tmp_path)
-    made = ran("handover.py", str(path), str(crossings / "hand-over.md"))
+    made = words_script(str(path), str(crossings / "hand-over.md"))
     assert made.returncode == 0, made.stderr
     if os.name != "nt":  # a wide umask in the shell that runs it is narrowed, as every entry of the plugin does
         assert stat.S_IMODE((crossings / "hand-over.words.md").stat().st_mode) == 0o600
@@ -88,7 +88,7 @@ def test_the_words_page_is_written_through_within_and_for_its_owner_alone(tmp_pa
     elsewhere = tmp_path / "elsewhere.md"
     elsewhere.write_text("left alone\n", encoding="utf-8")
     (crossings / "hand-over.words.md").symlink_to(elsewhere)
-    linked = ran("handover.py", str(path), str(crossings / "hand-over.md"))
+    linked = words_script(str(path), str(crossings / "hand-over.md"))
     assert linked.returncode == 1 and elsewhere.read_text(encoding="utf-8") == "left alone\n"
 
 
