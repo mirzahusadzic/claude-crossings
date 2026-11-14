@@ -1,6 +1,7 @@
 # <img src="assets/icon.svg" width="36" height="36" alt="" align="top"> Crossings
 
 [![CI](https://github.com/mirzahusadzic/claude-crossings/actions/workflows/ci.yml/badge.svg)](https://github.com/mirzahusadzic/claude-crossings/actions/workflows/ci.yml)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24221677.svg)](https://doi.org/10.5281/zenodo.24221677)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 ![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B%20%C2%B7%20stdlib%20only-3776ab?logo=python&logoColor=white)

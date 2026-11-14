@@ -8,5 +8,6 @@ authors:
     given-names: Mirza
     orcid: "https://orcid.org/0009-0004-8359-4090"
 repository-code: "https://github.com/mirzahusadzic/claude-crossings"
+doi: 10.5281/zenodo.24221677
 license: Apache-2.0
 version: 0.1.0
