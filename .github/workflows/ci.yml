@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Every action is pinned to the commit of its release, not a moving tag.
+jobs:
+  test:
+    name: Python ${{ matrix.python }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    # Windows is not supported yet. Its jobs run so that what fails there stays in view, and do
+    # not fail the run.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.9", "3.13", "3.14"]  # 3.9 is the python3 macOS ships, and the hooks run on whichever is on the path
+    defaults:
+      run:
+        shell: bash  # Git Bash on Windows, the shell Claude Code runs hooks with there
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Git identity for the tests' own repositories
+        run: git config --global user.email ci@example.invalid && git config --global user.name ci
+      - name: Lint and format
+        run: uvx ruff@0.17.4 check . && uvx ruff@0.17.4 format --check .
+      - name: Full-text search is in this Python's sqlite3
+        run: uv run --no-project --python ${{ matrix.python }} python -c "import sqlite3; sqlite3.connect(':memory:').execute('create virtual table t using fts5(x)')"
+      - name: Test, each file on its own; no network, no model, no key
+        run: |
+          failed=0
+          for file in tests/test_*.py; do
+            echo "== $file"
+            uv run --no-project --python ${{ matrix.python }} python "$file" || failed=1
+          done
+          exit $failed

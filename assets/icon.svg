@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<rect width="512" height="512" rx="96" fill="#311420"/>
+<!-- the doorway: a frame opened at the foot -->
+<path d="M136 456 V124 a28 28 0 0 1 28 -28 H348 a28 28 0 0 1 28 28 V456" fill="none" stroke="#ffa19c" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+<!-- the door, left ajar -->
+<path d="M368 128 L284 166 V438 L368 456 Z" fill="#b2f3cc"/>
+<circle cx="301" cy="304" r="7.5" fill="#311420"/>
+<!-- marks on the doorframe, as heights are marked; the newest one lit -->
+<g fill="none" stroke-linecap="round" stroke-width="9">
+<path d="M151 406 h26" stroke="#fff2ed"/>
+<path d="M151 362 h40" stroke="#fff2ed"/>
+<path d="M151 318 h26" stroke="#fff2ed"/>
+<path d="M151 274 h40" stroke="#fff2ed"/>
+<path d="M151 226 h56" stroke="#b2f3cc"/>
+</g>
+</svg>

@@ -1,0 +1,12 @@
+# Branch coverage of crossing/, for development only: scripts/coverage.sh runs it.
+# COVERAGE_ROOT is the checkout, so the hooks' own processes, started in other folders, report too.
+[run]
+branch = True
+parallel = True
+source = ${COVERAGE_ROOT}/crossing
+data_file = ${COVERAGE_ROOT}/tests/.work/coverage/.coverage
+
+[report]
+fail_under = 99
+show_missing = True
+skip_empty = True

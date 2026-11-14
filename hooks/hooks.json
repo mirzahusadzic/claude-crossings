@@ -1,0 +1,90 @@
+{
+  "description": "Count a cut; brief the session that wakes and bring it a frame from the store; keep the archive ahead of the door; keep which model wrote a label marked through the door, and show the person one that speaks for them; which model a session runs, telling the one that arrives where another was holding it; welcome a session once as it starts where the store holds no label; tell a resumed session where another has worked here since; mark the sessions Crossings is on in; answer a cut with a hand-over when asked to",
+  "hooks": {
+    "PostCompact": [
+      {
+        "matcher": "manual|auto",
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 30,
+            "statusMessage": "crossing \u00b7 counting the cut",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\""
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact|fork",
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 30,
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "startup|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 30,
+            "statusMessage": "crossing \u00b7 bringing the frame across",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" frame"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 5,
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__plugin_crossing_door__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 10,
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__plugin_crossing_door__(mark|leave)",
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 10,
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\""
+          }
+        ]
+      }
+    ],
+    "PostModelSwitch": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 10,
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\""
+          }
+        ]
+      }
+    ]
+  },
+  "modules": [
+    "./crossings.ts"
+  ]
+}

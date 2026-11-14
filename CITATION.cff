@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use Crossings, please cite it as below."
+title: Crossings
+type: software
+abstract: "A Claude Code plugin for what a context cut keeps: what was said, word for word, in plain files; a door back to it for the session; and a small frame across the cut."
+authors:
+  - family-names: Husadzic
+    given-names: Mirza
+    orcid: "https://orcid.org/0009-0004-8359-4090"
+repository-code: "https://github.com/mirzahusadzic/claude-crossings"
+license: Apache-2.0

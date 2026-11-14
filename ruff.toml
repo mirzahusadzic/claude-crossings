@@ -1,0 +1,8 @@
+target-version = "py39"  # the python3 macOS ships: the hooks run on whichever is on the path
+line-length = 120
+
+[lint]
+select = ["E", "W", "F", "I", "B"]
+
+[lint.per-file-ignores]
+"tests/*" = ["E501"]  # a test holds whole sentences of the tool word for word
