@@ -140,6 +140,7 @@ def digest(path: Path) -> str:
 
 STAGED = "copy-stage.txt"  # where the copy being made stages its plain files, so that a killed run's are found
 STAGE = "crossing-copy-"  # how the name of a stage begins
+MARK = ".mark"  # after a stage's name, the file beside it that holds the token its note holds
 
 
 def staging() -> Path:
@@ -162,19 +163,40 @@ def emptied(stage: Path) -> None:
 
 def cleared(folder: Path) -> None:
     """The stage a run that was killed before its end left, as the home's note names it: taken
-    away (see `emptied`), and the note with it. A note that names anything but a stage of this
-    plugin's in the temporary folder is taken away alone, with a line in the log."""
+    away (see `emptied`), and the note with it. A note names a stage and a token, which the file
+    beside the stage (`<stage>.mark`) holds too, so that a stage is known as this copy's in
+    whatever temporary folder it was made; a note of an older make names only a stage, which must
+    lie in today's temporary folder. A note that names anything else is taken away alone, with a
+    line in the log."""
     note = store.within(folder, STAGED)
     try:
-        left = Path("\n".join(record.lines_in(note)).strip())
+        given = "\n".join(record.lines_in(note)).strip()
     except FileNotFoundError:
         return
-    ours = left.is_absolute() and left.name.startswith(STAGE) and left.parent == staging()
+    named, _, token = given.partition("\t")
+    left = Path(named)
+    ours = left.is_absolute() and left.name.startswith(STAGE)
+    ours = ours and (marked(left, token) if token else left.parent == staging())
     if not ours:
-        record.log(f"refused: the note of a copy's stage names no stage of the plugin's: {str(left)[:120]!r}")
-    elif left.is_dir() and not left.is_symlink():
-        emptied(left)
+        record.log(f"refused: the note of a copy's stage names no stage of the plugin's: {named[:120]!r}")
+    else:
+        if left.is_dir() and not left.is_symlink():
+            emptied(left)
+        mark_of(left).unlink(missing_ok=True)
     note.unlink()
+
+
+def mark_of(stage: Path) -> Path:
+    return stage.with_name(stage.name + MARK)
+
+
+def marked(stage: Path, token: str) -> bool:
+    """Whether the file beside a stage holds the token its note holds: a plain file, never a link."""
+    mark = mark_of(stage)
+    try:
+        return not mark.is_symlink() and mark.is_file() and mark.read_bytes().strip() == token.encode("utf-8")
+    except OSError:
+        return False
 
 
 NOTHING = "nothing to copy yet"
@@ -229,8 +251,10 @@ def _make(folder: Path, dest: Path, name: str, top: Path | None) -> dict:
         return {"copied": False, "why": "the system's temporary folder lies inside the project"}
     key = passphrase().encode() + b"\0"
     stage = Path(tempfile.mkdtemp(prefix=STAGE, dir=where))
+    token = secrets.token_hex(16)  # the stage is known as this copy's by it, in whatever temporary folder
+    mark_of(stage).write_text(f"{token}\n", encoding="utf-8")
     note = store.within(folder, STAGED)
-    note.write_text(f"{stage}\n", encoding="utf-8")
+    note.write_text(f"{stage}\t{token}\n", encoding="utf-8")
     made: list[Path] = []
     staged: dict[Path, tuple[int, str]] = {}  # each source as it was staged: its length and digest
     try:
@@ -289,6 +313,7 @@ def _make(folder: Path, dest: Path, name: str, top: Path | None) -> dict:
         for target in made:  # the staged plain copies, one by one
             target.unlink()
         emptied(stage)  # its folders, now empty
+        mark_of(stage).unlink()
         note.unlink()
     image = dest / f"{name}.dmg"
     return {"copied": True, "image": str(image), "files": len(files), "bytes": image.stat().st_size}

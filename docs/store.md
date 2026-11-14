@@ -63,7 +63,7 @@ The plugin's own bookkeeping, which the hooks and the door write alone:
 | `said/runs.key` | the home's key for the digests of a summary's runs, made at the first cut that needs it |
 | `archive.lock` | held by one act at a time (see below) |
 | `copy.lock` | held by one second copy at a time, from its first file read to its image's place |
-| `copy-stage.txt` | where a second copy stages its files, while it is made or after one was killed |
+| `copy-stage.txt` | where a second copy stages its files, while it is made or after one was killed, with the token a file beside the stage holds |
 | `last-carry.json`, `last-cut.json` | a trace of the last frame carried, and of what the module did at the last cut |
 
 `<session>` is the first eight characters of the session's id. An id that becomes part of a file's name, or a line of these small files, is letters, digits, `-` and `_` alone, 128 at most (`ident`, in `crossing/record.py`). Any other is refused, and says so; a row of a transcript whose id is not one is passed over by every reading.

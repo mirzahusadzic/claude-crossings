@@ -461,14 +461,16 @@ def test_the_copy_stages_nothing_inside_the_home(tmp_path, seen):
     assert not (crossings / ".copy-stage").exists() and not (crossings / NOTE).exists()
 
 
-@stood_in
-def test_a_stage_a_killed_run_left_is_taken_away_by_the_next(tmp_path, seen):
-    crossings, _ = home(tmp_path)
+def staged(note: Path) -> Path:
+    """The stage a copy's note names: its first field."""
+    return Path(note.read_text(encoding="utf-8").strip().split("\t")[0])
+
+
+def killed_copy(tmp_path: Path, crossings: Path, **env: str) -> Path:
+    """A copy killed once it staged, as the harness ends a hook that overran: the stage its note names."""
     bin_ = tmp_path / "bin"
-    bin_.mkdir()
-    (bin_ / "hdiutil").write_text(
-        "#!/bin/sh\nexec sleep 60\n", encoding="utf-8"
-    )  # an image tool that overruns its time
+    bin_.mkdir(exist_ok=True)
+    (bin_ / "hdiutil").write_text("#!/bin/sh\nexec sleep 60\n", encoding="utf-8")  # an image tool that overruns
     (bin_ / "hdiutil").chmod(0o755)
     script = (
         "import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); from crossing import record, second; "
@@ -476,28 +478,46 @@ def test_a_stage_a_killed_run_left_is_taken_away_by_the_next(tmp_path, seen):
     )  # the person's
     started = subprocess.Popen(
         [sys.executable, "-I", "-c", script, str(ROOT), str(crossings), str(tmp_path / "cloud")],
-        env={**os.environ, "PATH": f"{bin_}{os.pathsep}{os.environ['PATH']}", "CROSSING_COPY_KEY": KEY},
+        env={**os.environ, "PATH": f"{bin_}{os.pathsep}{os.environ['PATH']}", "CROSSING_COPY_KEY": KEY, **env},
         start_new_session=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    note, old = crossings / NOTE, crossings / ".copy-stage" / "project" / "said"
+    note = crossings / NOTE
     try:
         until = time.monotonic() + 20
-        while (
-            not (note.exists() and Path(note.read_text(encoding="utf-8").strip(), "said").exists()) and not old.exists()
-        ):
+        while not (note.exists() and (staged(note) / "said").exists()):
             assert time.monotonic() < until, "the copy was never staged"
             time.sleep(0.05)
     finally:
-        os.killpg(started.pid, signal.SIGKILL)  # the run and its image tool, as the harness ends a hook that overran
+        os.killpg(started.pid, signal.SIGKILL)  # the run and its image tool
         started.wait(timeout=30)
+    return staged(note)
+
+
+@stood_in
+def test_a_stage_a_killed_run_left_is_taken_away_by_the_next(tmp_path, seen):
+    crossings, _ = home(tmp_path)
+    left = killed_copy(tmp_path, crossings)
     assert not (crossings / ".copy-stage").exists()  # nothing staged inside the home
-    left = Path(note.read_text(encoding="utf-8").strip())
     assert (left / "said" / "session-.jsonl").exists()  # what the killed run left, where the note says
     with set_to(CROSSING_COPY_KEY=KEY):
         assert second.make(crossings, tmp_path / "cloud", "project")["copied"]
-    assert not left.exists() and not note.exists() and not seen[0]["folder"].exists()
+    assert not left.exists() and not (crossings / NOTE).exists() and not seen[0]["folder"].exists()
+
+
+@stood_in
+def test_a_stage_a_killed_copy_left_is_taken_away_by_the_next_whatever_its_temporary_folder(tmp_path, seen):
+    # The next copy under another TMPDIR dropped the note of a killed copy's stage and left its plain files (pass 5, F2).
+    crossings, _ = home(tmp_path)
+    elsewhere = tmp_path / "tmp-old"
+    elsewhere.mkdir()
+    left = killed_copy(tmp_path, crossings, TMPDIR=str(elsewhere))
+    assert left.parent == elsewhere.resolve() and (left / "said" / "session-.jsonl").exists()
+    with set_to(CROSSING_COPY_KEY=KEY):
+        assert second.make(crossings, tmp_path / "cloud", "project")["copied"]
+    assert not left.exists() and not (crossings / NOTE).exists()
+    assert list(elsewhere.iterdir()) == []  # whatever marked it went with it
 
 
 @stood_in
@@ -520,6 +540,41 @@ def test_a_note_that_names_anything_but_a_stage_is_taken_away_alone(tmp_path, se
         second.cleared(crossings)  # a stage taken away already: the note goes, and nothing is said of it
     assert not (crossings / NOTE).exists() and len(logged(data).splitlines()) == 3
     second.cleared(crossings)  # and with no note, nothing is done
+
+
+@stood_in
+def test_a_note_whose_stage_bears_no_mark_of_its_token_is_taken_away_alone(tmp_path, seen):
+    # A note names a stage and a token: a stage is taken away wherever it lies only where the file beside it holds that
+    # token, so a note set by hand, or carried from elsewhere, empties no folder of the person's.
+    crossings, _ = home(tmp_path)
+    data = tmp_path / "data"
+    data.mkdir()
+    elsewhere = tmp_path / "elsewhere"
+    precious = elsewhere / "crossing-copy-precious"
+    (precious / "said").mkdir(parents=True)
+    (precious / "said" / "kept.jsonl").write_text("not the stage's\n", encoding="utf-8")
+    mark = elsewhere / "crossing-copy-precious.mark"
+    other = elsewhere / "another-mark"
+    other.write_bytes(b"0123\n")
+    for how in ("none", "another token", "not text", "a link", "unreadable"):
+        mark.unlink(missing_ok=True)
+        if how == "another token":
+            mark.write_text("not-this-token\n", encoding="utf-8")
+        elif how == "not text":
+            mark.write_bytes(b"\xff\xfe\n")
+        elif how == "a link":
+            mark.symlink_to(other)
+        elif how == "unreadable":
+            mark.write_text("0123\n", encoding="utf-8")
+            mark.chmod(0)
+        (crossings / NOTE).write_text(f"{precious}\t0123\n", encoding="utf-8")
+        with set_to(CLAUDE_PLUGIN_DATA=str(data), CROSSING_COPY_KEY=KEY):
+            assert second.make(crossings, tmp_path / "cloud", "project")["copied"], how
+        assert not (crossings / NOTE).exists() and (precious / "said" / "kept.jsonl").exists(), how
+        assert logged(data).splitlines()[-1].startswith("refused: the note of a copy's stage names no stage"), how
+        if how == "unreadable":
+            mark.chmod(0o600)
+    assert other.read_bytes() == b"0123\n"
 
 
 @stood_in
