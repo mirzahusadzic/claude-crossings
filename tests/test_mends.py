@@ -101,7 +101,7 @@ def test_the_door_gives_no_words_page_that_names_what_was_struck_or_kept_off(tmp
         f"- `{D}`, the person: We paint the hull grey in spring\n", encoding="utf-8"
     )
     shown = as_the_module("page", "--cwd", project, CLAUDE_CODE_ENTRYPOINT="cli")  # a person sits in the session
-    assert shown.returncode == 0 and "| W1 |" in shown.stdout and "We paint the hull" not in shown.stdout
+    assert shown.returncode == 0 and "- W1 (both): " in shown.stdout and "We paint the hull" not in shown.stdout
     (crossings / "unsaid.txt").write_text(f"{E}{WHOLE}\n", encoding="utf-8")
     (crossings / "hand-over.words.md").write_text(f"- `{E}`, the session: Grey it is.\n", encoding="utf-8")
     assert "Grey it is" not in as_the_module("page", "--cwd", project, CLAUDE_CODE_ENTRYPOINT="cli").stdout

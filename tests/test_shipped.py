@@ -418,9 +418,11 @@ def test_the_module_reads_and_writes_a_home_through_the_door(tmp_path):
     project = crossings.parent
     (crossings / "mode").write_text("Beside\n", encoding="utf-8")
     assert json.loads(through("words", "--cwd", str(project))[1]) == {"switch": "on", "mode": "beside", "carry": ""}
-    assert through("page", "--cwd", str(project))[1].startswith("# a hand-over")
+    assert through("page", "--cwd", str(project))[1].startswith("- R1 (")  # its rows, in the frame's own form
     (crossings / "hand-over.words.md").write_text("- `aaaaaaaa`, the person: the words\n", encoding="utf-8")
-    assert through("page", "--cwd", str(project))[1].endswith("|\n\n- `aaaaaaaa`, the person: the words\n")
+    assert through("page", "--cwd", str(project))[1].endswith(
+        "]\n\n## The anchored words, from the record\n\n- `aaaaaaaa`, the person: the words\n"
+    )
     (crossings / "hand-over.md").unlink()
     assert through("page", "--cwd", str(project)) == (1, "")
     assert through("trace", '{"did": "beside", "chars": 9}', "--cwd", str(project)) == (0, "")

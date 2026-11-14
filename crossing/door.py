@@ -857,12 +857,10 @@ def for_the_module(verb: str, folder: Path, on: bool, said: str) -> int:
         print(json.dumps({name: store.word(folder, name) for name in ("switch", "mode", "carry")}))
         return 0
     if verb == "page":
-        page, words = (plain(folder, name) for name in ("hand-over.md", "hand-over.words.md"))
-        if not page:
+        text = handed_over(folder)
+        if not text:
             return 1
-        if words and any(each in words for each in store.kept_out_ids(folder)):
-            words = ""  # a words page that names what was struck or kept off is not given: handover.py makes it again
-        print(page + (f"\n\n{words}" if words else ""))
+        print(text)
         return 0
     try:
         trace = json.loads(said)
@@ -875,6 +873,37 @@ def for_the_module(verb: str, folder: Path, on: bool, said: str) -> int:
         return 1
     store.within(folder, "last-cut.json").write_text(json.dumps(trace), encoding="utf-8")
     return 0
+
+
+WORDS_HEAD = "## The anchored words, from the record"
+
+
+def handed_over(folder: Path) -> str:
+    """The hand-over page as the module carries it where no frame can be made: never raw. Its label
+    rows alone, read as every label page is read (store.labels), each in the frame's own form and
+    cleaned (store.clean); and of its words page only the lines of the form crossing/handover.py
+    writes, cleaned, where it names nothing the home keeps out. The whole within frame.MOST; nothing
+    where the page holds no row."""
+    gone = store.struck(folder)
+    rows = [label for label in store.labels(folder) if label["page"] == "hand-over.md" and label["id"] not in gone]
+    lines = [
+        f"- {label['id']} ({store.clean(label['whose'])}): {store.clean(label['text'])} "
+        f"[{store.rests({**label, 'beneath': [key for key, _ in label['beneath']]})}]"
+        for label in rows
+    ]
+    words = plain(folder, "hand-over.words.md")
+    if words and any(each in words for each in store.kept_out_ids(folder)):
+        words = ""  # a words page that names what was struck or kept off is not given: handover.py makes it again
+    said = [
+        store.clean(line) for line in words.split("\n") if store.WORDS.match(line) or line.startswith(store.MISSING)
+    ]
+    out, used = [], 0
+    for line in lines + ([""] + [WORDS_HEAD, ""] + said if said else []):
+        if used + len(line) + 1 > frame.MOST:
+            break
+        out.append(line)
+        used += len(line) + 1
+    return "\n".join(out).strip() if lines else ""
 
 
 def plain(folder: Path, name: str) -> str:
