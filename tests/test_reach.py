@@ -49,6 +49,7 @@ NOTE, STAGE, LOCK = "copy-stage.txt", "crossing-copy-", "archive.lock"
 COPYING = "copy.lock"
 HELD = "another act was writing this home, so no copy was made this time"
 BUSY = "another copy of this home was being made at that moment, so none was made this time"
+UNLOCKED = "a second copy is made only where the system keeps file locks of its own, as macOS does, so none was made"
 UNUSABLE = "the home's copy lock is not a file this account can write"
 UNREAD = "the note of a copy's stage in the home cannot be read"
 CHANGED = "the home changed while the copy was made, so it was not put in place; the next copy takes it as it stands"
@@ -692,6 +693,22 @@ def test_a_home_that_holds_nothing_yet_is_seen_so_only_while_no_act_writes_it(tm
     with set_to(CROSSING_COPY_KEY=KEY):  # and a home that holds nothing is said so, with no image made
         assert second.make(crossings, tmp_path / "cloud", "project") == {"copied": False, "why": "nothing to copy yet"}
     assert len(seen) == 1
+
+
+@stood_in
+def test_no_copy_is_made_where_the_system_keeps_no_file_locks(tmp_path, seen):
+    # Without fcntl a lock older than STALE is taken for one a killed process left, so two copies could meet (pass 5, F6).
+    crossings, _ = home(tmp_path)
+    stages = {p for p in staging().iterdir() if p.name.startswith(STAGE)}
+    locks, store.fcntl = store.fcntl, None
+    try:
+        with set_to(CROSSING_COPY_KEY=KEY):
+            out = second.make(crossings, tmp_path / "cloud", "project")
+    finally:
+        store.fcntl = locks
+    assert out == {"copied": False, "why": UNLOCKED} and seen == []
+    assert not (crossings / COPYING).exists() and not (crossings / NOTE).exists()
+    assert {p for p in staging().iterdir() if p.name.startswith(STAGE)} == stages
 
 
 @stood_in

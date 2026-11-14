@@ -203,6 +203,7 @@ NOTHING = "nothing to copy yet"
 COPYING = "copy.lock"  # held by one copy of a home at a time, from its first file read to its image's place
 HELD = "another act was writing this home, so no copy was made this time"
 BUSY = "another copy of this home was being made at that moment, so none was made this time"
+UNLOCKED = "a second copy is made only where the system keeps file locks of its own, as macOS does, so none was made"
 UNUSABLE = "the home's copy lock is not a file this account can write"
 UNREAD = "the note of a copy's stage in the home cannot be read"
 CHANGED = "the home changed while the copy was made, so it was not put in place; the next copy takes it as it stands"
@@ -230,6 +231,8 @@ def make(folder: Path, dest: Path, name: str, top: Path | None = None) -> dict:
     other act took or rewrote words keeps the image before, so that the newest copy never holds a
     text struck before it was put in place."""
     record.private()
+    if store.fcntl is None:  # a lock file there is taken for a dead one once it is old: two copies could meet
+        return {"copied": False, "why": UNLOCKED}
     lock = store.within(folder, COPYING)
     try:
         copying = store._held_at(lock)
