@@ -2548,6 +2548,24 @@ def test_a_labels_anchors_are_found_by_an_index_and_an_index_of_the_make_before_
         assert db.execute("select 1 from sqlite_master where name = 'anchor_label'").fetchone() == (1,)
 
 
+def test_the_readme_and_settings_say_what_switch_on_does_with_a_crossings_folder_that_holds_something(tmp_path):
+    """A project's own crossings/ folder that holds a file this computer has no record of switching on
+    is not switched on by `on`, which names what it holds; `adopt` takes it, and writes no setting
+    into it. The README and the settings page say so, and neither says it is switched on as it is."""
+    project = tmp_path / "project"
+    (project / ".git").mkdir(parents=True)
+    (project / "crossings").mkdir()
+    (project / "crossings" / "notes.txt").write_text("A file of the person's.\n", encoding="utf-8")
+    code, said = through("switch", "on", "--cwd", str(project))
+    assert code == 1 and "adopt" in said and not store.believed(project.resolve(), project / "crossings"), said
+    assert through("switch", "adopt", "--cwd", str(project))[0] == 0
+    assert not (project / "crossings" / "mode").exists() and not (project / "crossings" / "carry").exists()
+    for page in ("README.md", "docs/settings.md"):
+        text = " ".join((ROOT / page).read_text(encoding="utf-8").split())
+        assert "is switched on as it is" not in text, page
+        assert "`/crossings on` names what it holds and leaves it, and `adopt` takes it" in text, page
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

@@ -56,7 +56,7 @@ Each is a plain file of the home with one line. A word is read without case or t
 | `retelling-share` | how much of it, in percent, must repeat the summary before; `%` may follow | 60 | the same |
 | `project` | the path of the project a home outside it belongs to, written by `/crossings on` | | a home named by the slug alone, without a digest, is used only where this names exactly the project's path |
 
-A home is found empty where it holds no folder and no file but those whose names begin with a dot (`.DS_Store`, `.gitkeep`, `.gitignore`). A home that holds anything else, a project's own `crossings/` folder among them, is switched on as it is: what a folder already holds is its person's, so switching writes no `mode` and no `carry` into it. A person who wants the frame there writes `mode` as `beside` and `carry` as `note`. Once switched on, a home holds its switch, so switching it off and on again never writes either anew.
+A home is found empty where it holds no folder and no file but those whose names begin with a dot (`.DS_Store`, `.gitkeep`, `.gitignore`). A home that holds anything else, a project's own `crossings/` folder among them, is taken as it is: what a folder already holds is its person's, so switching writes no `mode` and no `carry` into it; where this computer has no record of switching it on, `/crossings on` names what it holds and leaves it, and `adopt` takes it. A person who wants the frame there writes `mode` as `beside` and `carry` as `note`. Once switched on, a home holds its switch, so switching it off and on again never writes either anew.
 
 A home inside a repository is also given a `.gitignore` by `/crossings on` where it has none ([Privacy](privacy.md)).
 
