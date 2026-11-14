@@ -984,6 +984,39 @@ def test_a_words_line_is_carried_only_for_a_message_a_row_of_its_hand_over_page_
     ), page.stdout
 
 
+# --- the lines of models.txt a home that is adopted holds -----------------------------------------------------
+
+
+def test_the_lines_of_models_txt_an_adopted_home_holds_are_named_once_as_come_by_no_signing(tmp_path):
+    project = tmp_path / "project"
+    (project / ".git").mkdir(parents=True)
+    crossings = project / "crossings"
+    (crossings / "labels").mkdir(parents=True)
+    (crossings / "said").mkdir()
+    sentence = "A line shipped with a model."
+    (crossings / "said" / "deadbeef.jsonl").write_text(
+        json.dumps({"uuid": f"aaaaaaaa{WHOLE}", "id": "aaaaaaaa", "session": "deadbeef", "voice": "his", "text": "A."})
+        + "\n",
+        encoding="utf-8",
+    )
+    (crossings / "labels" / "2026-01-01.md").write_text(
+        f"| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n| W1 | {sentence} | both | `aaaaaaaa` |\n",
+        encoding="utf-8",
+    )
+    (crossings / "models.txt").write_text(f"W1@{store.digest(sentence)} shipped-made-up-model\n", encoding="utf-8")
+    # and a record of lines met that came with it, which would hide the line were it believed
+    (crossings / "models-met.txt").write_text(f"W1@{store.digest(sentence)} shipped-made-up-model\n", encoding="utf-8")
+    assert through("switch", "adopt", "--cwd", str(project)) == (0, ON)
+    assert through("build", "--cwd", str(project))[0] == 0  # the first build, as a hook makes it
+    told = through("status", "--cwd", str(project))[1]
+    assert (
+        "A line of models.txt came into this home without a signing through the door, and is followed as any "
+        "other: W1 by shipped-made-up-model." in told
+    ), told
+    assert "models.txt" not in through("status", "--cwd", str(project))[1]  # once
+    assert store.models(crossings)[("W1", store.digest(sentence))] == "shipped-made-up-model"  # followed
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

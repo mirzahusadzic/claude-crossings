@@ -460,7 +460,8 @@ def switch(cwd: Path, to: str) -> str:
     if on and folder.is_symlink() and folder == linked(cwd):
         return "linked"  # nothing is located, made or switched on through it
     record.sound(folder)  # nothing is switched in a home with a link in it
-    if on and to != "adopt" and unclaimed(cwd) is not None:
+    adopted = on and unclaimed(cwd) is not None
+    if adopted and to != "adopt":
         return "unclaimed"  # content someone else made is not trusted with no word said
     if not folder.is_dir():
         folder.mkdir(parents=True, exist_ok=True)  # two sessions may switch one project on at the same moment
@@ -476,13 +477,16 @@ def switch(cwd: Path, to: str) -> str:
     if held is None:
         raise OSError(f"the home was held by another act for {WAIT:.0f} seconds")
     try:
-        return _switched(cwd, folder, on)
+        return _switched(cwd, folder, on, adopted)
     finally:
         _unlocked(folder, held)
 
 
-def _switched(cwd: Path, folder: Path, on: bool) -> str:
-    """`switch`, from its span on, with the home's lock held."""
+def _switched(cwd: Path, folder: Path, on: bool, adopted: bool = False) -> str:
+    """`switch`, from its span on, with the home's lock held. A home `adopted` has met no line of
+    its `models.txt`: none of them was signed through the door (see `_signs_unmet`)."""
+    if adopted:
+        _signs_unmet(folder)
     if not on:
         reached = _reached_now(folder)  # where each transcript the archive knows stands, before the span opens
         if off.opened(folder) or not within(folder, PLACES).exists():  # from this moment nothing said is kept
@@ -2247,7 +2251,8 @@ def _known(folder: Path, entries: list[str]) -> list[str]:
 # As for labels, so for the lines of `models.txt`: SIGNS_MET holds every line the home has met, as
 # `key@digest model`, and a build that finds one it has not met (a pull, a checkout, a hand) notes it
 # in SIGNS_ARRIVED, for the person's next `status`. The line is followed all the same, as an arrived
-# label is carried. The first build of a home that has no SIGNS_MET meets every line there is.
+# label is carried. The first build of a home that has no SIGNS_MET meets every line there is; a home
+# that is adopted has met none of them (see `_signs_unmet`).
 SIGNS_MET, SIGNS_ARRIVED = "models-met.txt", "models-arrived.txt"
 
 
@@ -2285,6 +2290,21 @@ def _signs_known(folder: Path, entries: list[str]) -> list[str]:
         with open(within(folder, SIGNS_MET), "a", encoding="utf-8") as handle:
             handle.write("".join(each + "\n" for each in new))
     return new
+
+
+def _signs_unmet(folder: Path) -> None:
+    """As a home is adopted: where it holds `models.txt`, it has met none of its lines, whatever a
+    SIGNS_MET that came with it says, so that the next build notes every one in SIGNS_ARRIVED for the
+    person's `status`, as any line that came by no signing through the door. SIGNS_MET is written
+    whole, beside itself, with its header alone."""
+    if not within(folder, MODELS).exists():
+        return
+    fresh = within(folder, SIGNS_MET + ".new")
+    fresh.write_text(
+        "# The lines of models.txt this home has met: a build notes any other in models-arrived.txt.\n",
+        encoding="utf-8",
+    )
+    os.replace(fresh, within(folder, SIGNS_MET))
 
 
 def signs_arrived(folder: Path) -> list[str]:
