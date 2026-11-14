@@ -1467,6 +1467,13 @@ def _stood(kept: list[dict], held: set[str]) -> tuple[dict[str, str], dict[str, 
 
 def build(folder: Path) -> dict:
     """Make the database again from the plain files, whole. Returns what it now holds."""
+    _built(folder)
+    return status(folder)
+
+
+def _built(folder: Path) -> None:
+    """`build`, without what it gives back: made, put in its place, marked (see MINTED), and with
+    the labels and the lines of models.txt that arrived noted."""
     folder.mkdir(parents=True, exist_ok=True)
     fresh, made = within(folder, "store.db.new"), within(folder, "store.db")
     if fresh.exists():
@@ -1483,7 +1490,6 @@ def build(folder: Path) -> dict:
     _put(fresh, made)
     _mint(folder, minted)
     _noticed(folder)
-    return status(folder)
 
 
 # Which index a home's builds made is kept outside every project, beside the person's record (see
@@ -1944,7 +1950,7 @@ def _open(folder: Path) -> sqlite3.Connection:
             pass
         db.close()
         if stranger:  # an index no build here made, or an older make's: made again on disk, and read
-            build(folder)
+            _built(folder)
             db = sqlite3.connect(made)
             db.row_factory = sqlite3.Row
             return db

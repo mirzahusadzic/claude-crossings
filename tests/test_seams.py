@@ -14,6 +14,7 @@ import contextlib
 import io
 import json
 import os
+import sqlite3
 import sys
 import tempfile
 import threading
@@ -693,6 +694,37 @@ def test_a_line_of_models_txt_that_came_by_no_signing_is_named_once_and_one_sign
     assert "models.txt" not in through("status", "--cwd", project)[1]  # once
     assert store.models(crossings)[("W2", store.digest("The hull gets paint."))] == "other-made-up-model"  # followed
     assert "models.txt" not in through("status", "--bare", "--cwd", project)[1]
+
+
+# --- the marks of the indexes ----------------------------------------------------------------------------
+
+
+def test_the_marks_of_the_indexes_stand_odd_lines_a_mark_that_cannot_be_kept_and_an_index_with_none(tmp_path):
+    crossings, _ = home(tmp_path)
+    marks = store._minted_path()
+    kept = marks.read_text(encoding="utf-8")
+    marks.write_text("not json\n[1, 2]\n" + kept, encoding="utf-8")  # lines that are no mark are passed over
+    db = store._open(crossings)
+    db.close()
+    assert store._kept_mark(crossings) and marks.read_text(encoding="utf-8").startswith("not json")  # not built again
+    # An index with no mark in it, as an older make wrote one: made again, and marked.
+    db = sqlite3.connect(crossings / "store.db")
+    db.execute("drop table minted")
+    db.commit()
+    db.close()
+    db = store._open(crossings)
+    assert db.execute("select mark from minted").fetchone()[0] == store._kept_mark(crossings)
+    db.close()
+    # A mark that cannot be kept is said in the log, and the index is still made.
+    marks.unlink()
+    marks.mkdir()
+    try:
+        store.build(crossings)
+        logged = (Path(os.environ["CLAUDE_PLUGIN_DATA"]) / "errors.log").read_text(encoding="utf-8")
+        assert "the mark of a home's index could not be kept" in logged
+        assert (crossings / "store.db").exists()
+    finally:
+        marks.rmdir()
 
 
 if __name__ == "__main__":
