@@ -2352,6 +2352,41 @@ def test_the_words_helper_gives_no_message_under_an_id_two_messages_share(tmp_pa
     assert "The first under" not in shown and "The second." not in shown
 
 
+def test_a_whole_tag_block_of_a_name_the_harness_does_not_write_is_the_persons_words(tmp_path):
+    """Through a hook's own process: a message the person typed as one whole tag block, or several,
+    of names the harness is not known to write (`<mytag>`, `<div>`, `<b>`), is kept word for word;
+    a text made of the harness's own blocks alone is still not kept."""
+    project, home_, path = public(tmp_path)
+    kept = [
+        "<mytag> unique tag words </mytag>",
+        "<div>a box</div>\n<b>bold words</b>",
+        "<system-reminder>A reminder beside one of the person's.</system-reminder>\n<note>the person's own</note>",
+    ]
+    sent = [
+        *kept,
+        "<system-reminder>\nA reminder of the harness's.\n</system-reminder>",
+        "<bash-stdout>out</bash-stdout>",
+    ]
+    path.write_text(
+        "".join(json.dumps(row("user", f"{n + 1:08x}", n, text)) + "\n" for n, text in enumerate(sent)),
+        encoding="utf-8",
+    )
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    event = {
+        "hook_event_name": "PreToolUse",
+        "transcript_path": str(path),
+        "cwd": str(project),
+        "session_id": path.stem,
+    }
+    done = ran(
+        "hook.py",
+        stdin=json.dumps({**event, "tool_name": "mcp__plugin_crossing_door__find"}),
+        CLAUDE_CODE_ENTRYPOINT="cli",
+    )
+    assert (done.returncode, done.stderr) == (0, ""), done
+    assert kept_texts(home_) == kept, kept_texts(home_)
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

@@ -22,9 +22,31 @@ CARRIED = "A note from the Crossings plugin"
 CARRIED_BEFORE = "A note from the Crossing plugin"
 HARNESS_OPENINGS = ("[SYSTEM NOTIFICATION", "Another Claude session", "Caveat:", CARRIED, CARRIED_BEFORE)
 # A block the harness puts into the person's turn: `<name ...>...</name>`, its name of lower-case letters,
-# digits and hyphens (`system-reminder`, `local-command-stdout`, `command-name`). A text of the turn made of
-# such blocks alone, and white space, is the harness's (see `harness`); any other is the person's words.
+# digits and hyphens, and one of the names the harness is known to write (HARNESS_NAMES). A text of the
+# turn made of such blocks alone, and white space, is the harness's (see `harness`); any other is the
+# person's words, a block of any other name among them (`<div>`, `<mytag>`), which a person types too.
 OPENED = re.compile(r"<([a-z0-9-]+)(?:\s[^<>]*)?>")
+HARNESS_NAMES = frozenset(
+    {
+        "system-reminder",
+        "command-name",
+        "command-message",
+        "command-args",
+        "command-contents",
+        "local-command-stdout",
+        "local-command-stderr",
+        "local-command-caveat",
+        "bash-input",
+        "bash-stdout",
+        "bash-stderr",
+        "user-prompt-submit-hook",
+        "user-memory-input",
+        "task-notification",
+        "teammate-message",
+        "persisted-output",
+        "new-diagnostics",
+    }
+)
 # How the harness wraps a prompt another plugin submitted between turns, in the person's turn: it opens
 # so, and its last paragraph begins with the harness's own sentence. It is no one's words here; knowing
 # it rests on the harness's wording.
@@ -36,9 +58,10 @@ PASTE = re.compile(r'<pasted_content(?:\s+id="[^"]*")?\s*>(.*?)</pasted_content(
 
 def harness(text: str) -> bool:
     """Whether a text of the person's turn is the harness's: one whole block of the form
-    `<name ...>...</name>` whose name is of the harness's kind (OPENED), or several, with white space
-    alone around and between them. Each block ends at the first closing of its own name. A text of
-    any other shape (`<3`, a tag the person writes about, a sentence after a block) is the person's."""
+    `<name ...>...</name>` whose name is one the harness writes (OPENED, HARNESS_NAMES), or several,
+    with white space alone around and between them. Each block ends at the first closing of its own
+    name. A text of any other shape (`<3`, a tag the person writes about, a sentence after a block, a
+    block of a name the harness is not known to write) is the person's."""
     at, blocks = 0, 0
     while True:
         while at < len(text) and text[at].isspace():
@@ -46,6 +69,8 @@ def harness(text: str) -> bool:
         if at == len(text):
             return blocks > 0
         opened = OPENED.match(text, at)
+        if opened and opened.group(1) not in HARNESS_NAMES:
+            return False
         closing = f"</{opened.group(1)}>" if opened else ""
         end = text.find(closing, opened.end()) if opened else -1
         if end < 0:
