@@ -2788,7 +2788,8 @@ def _unworded(folder: Path, ids: set[str]) -> tuple[list[str], list[str]]:
 def _struck_out(folder: Path, token: str, why: str = "") -> dict:
     """Note a token among the struck and take what it names out of every plain file: how many
     lines left the archive and the label pages (`removed`), and the hand-over words pages mended
-    (`mended`) and gone whole (`dropped`). The database is not built here: whoever strikes builds
+    (`mended`) and gone whole (`dropped`), or, for a whole session, every one of them gone whole
+    (`cleared`). The database is not built here: whoever strikes builds
     it once, when the plain files stand as they are to stand.
 
     A line of the archive that is no message is left as it is, as a build passes over it: a
@@ -2853,8 +2854,20 @@ def _struck_out(folder: Path, token: str, why: str = "") -> dict:
         for name in BY_SESSION:
             _rewritten(folder, name, lambda line: _of_session(line, session))
         _rewritten(folder, MARKERS, lambda line: _marker_of(line, session))
-    mended, dropped = _unworded(folder, said) if said else ([], [])
-    return {"removed": removed, "mended": mended, "dropped": dropped, "ids": said}
+    cleared = _cleared(folder) if token.startswith("session:") else []
+    mended, dropped = _unworded(folder, said) if said and not cleared else ([], [])
+    return {"removed": removed, "mended": mended, "dropped": dropped, "cleared": cleared, "ids": said}
+
+
+def _cleared(folder: Path) -> list[str]:
+    """Every hand-over words page of the home (`*.words.md`), taken away whole, for a session's
+    strike: a page may give a message of that session the archive does not hold yet, which no id
+    struck names. The next hand-over makes the page again from the record. Gives their names."""
+    gone = []
+    for page in sorted(within(folder).glob("*.words.md")):
+        within(folder, page.name).unlink()
+        gone.append(page.name)
+    return gone
 
 
 def _pull(line: str) -> dict | None:

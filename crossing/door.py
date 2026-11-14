@@ -780,7 +780,8 @@ def out_kind(args: argparse.Namespace) -> str:
 
 def struck(out: dict) -> str:
     """What a strike says: how many lines went, the hand-over words pages it mended or took away
-    whole, the labels left resting on what it took, and what no strike can reach."""
+    whole (a session's strike takes every one), the labels left resting on what it took, and what no
+    strike can reach."""
     some = len(out["dropped"]) > 1
     return (
         f"struck {out['token']}: {out['removed']} line(s) removed, and it will not come back at a build."
@@ -789,6 +790,13 @@ def struck(out: dict) -> str:
             f" The hand-over words page{'s' if some else ''} {', '.join(out['dropped'])} could not be mended "
             f"line by line and {'were' if some else 'was'} removed whole."
             if out["dropped"]
+            else ""
+        )
+        + (
+            f" The hand-over words page{'s' if len(out['cleared']) > 1 else ''} {', '.join(out['cleared'])} "
+            f"{'were' if len(out['cleared']) > 1 else 'was'} removed whole, as a session's strike takes every one: "
+            "the next hand-over makes it again from the record."
+            if out.get("cleared")
             else ""
         )
         + resting(out.get("resting", []))

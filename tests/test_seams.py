@@ -228,6 +228,42 @@ def test_two_marks_over_one_line_at_the_same_moment_give_one_stack(tmp_path):
     assert len(stacks) == 1, stacks
 
 
+# --- a session's strike and its words pages -------------------------------------------------------------
+
+
+def test_a_sessions_strike_takes_every_words_page_whole_also_one_that_gives_what_was_not_archived_yet(tmp_path):
+    project, home_, path = public(tmp_path)
+    path.write_text("", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    says(path, "aaaaaaaa", "This first message was archived.")
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    says(path, "bbbbbbbb", "This second message was never archived.")  # said since, and no hook has read it
+    (home_ / "hand-over.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n| R1 | Both lines. | both | `aaaaaaaa`, `bbbbbbbb` |\n",
+        encoding="utf-8",
+    )
+    assert words_script(str(path), str(home_ / "hand-over.md")).returncode == 0
+    words = (home_ / "hand-over.words.md").read_text(encoding="utf-8")
+    assert "This first message was archived." in words and "This second message was never archived." in words
+    code, out = through("strike", f"session:{path.stem}", "--cwd", str(project))
+    assert code == 0 and not (home_ / "hand-over.words.md").exists(), out
+    assert (
+        "The hand-over words page hand-over.words.md was removed whole, as a session's strike takes every one: the "
+        "next hand-over makes it again from the record." in out
+    ), out
+    # A single message's strike still mends a page line by line.
+    path = tmp_path / "fedcba98-5555.jsonl"  # another session, whose words were not struck
+    says(path, "cccccccc", "A third message, of another session.")
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    (home_ / "hand-over.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n| R2 | One. | both | `cccccccc` |\n"
+    )
+    assert words_script(str(path), str(home_ / "hand-over.md")).returncode == 0
+    code, out = through("strike", "cccccccc", "--cwd", str(project))
+    assert code == 0 and "Its words were taken out of hand-over.words.md." in out, out
+    assert (home_ / "hand-over.words.md").exists()
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
