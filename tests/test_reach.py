@@ -937,6 +937,21 @@ def test_a_copy_a_cut_could_not_make_leaves_a_line_in_the_log(tmp_path):
     assert f"not copied: {BUSY}" in added, added
 
 
+def test_a_cut_makes_its_copy_in_the_hooks_own_process_on_any_system(tmp_path):
+    # Only a real hdiutil made a cut's copy in the tests, so on Linux no test walked a cut's copy that is made.
+    crossings, path = home(tmp_path)
+    cloud = tmp_path / "cloud"
+    (crossings / "copy").write_text(str(cloud) + "\n", encoding="utf-8")
+    tool = image_tools(tmp_path)
+    env = {"PATH": f"{tool}{os.pathsep}{os.environ['PATH']}", "IMAGE_MOUNTS": str(tmp_path / "mounts")}
+    log = Path(os.environ["CLAUDE_PLUGIN_DATA"]) / "errors.log"
+    before = log.read_text(encoding="utf-8") if log.exists() else ""
+    done = ran("hook.py", stdin=json.dumps(a_cut(path, crossings.parent)), CLAUDE_CODE_ENTRYPOINT="cli", **env)
+    assert (done.returncode, done.stderr) == (0, ""), done
+    assert b"by the caf" in (cloud / f"{second.named(crossings.parent.resolve())}.dmg").read_bytes()
+    assert "not copied" not in (log.read_text(encoding="utf-8") if log.exists() else "")[len(before) :]
+
+
 def test_a_sessions_end_makes_its_copy_in_a_process_of_its_own(tmp_path):
     # Two lock waits and the image itself do not fit in the five seconds a session's end has (pass 5, F3).
     crossings, path = home(tmp_path)
