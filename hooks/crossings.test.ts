@@ -229,6 +229,13 @@ test('where no frame can be made, the hand-over page goes, with its words when t
   expect(both.endsWith('| R1 | a label |\n\n- `aaaaaaaa`, the person: the words')).toBe(true)
 })
 
+test("the hand-over's note names the home's plain files as the record, never the transcript", async ($, on) => {
+  world(on, { files: asks('beside', 'message', { [`${HOME}/hand-over.md`]: '| R1 | a label |\n' }), script: failing })
+  const note = texts(await $.session.compact({ trigger: 'manual', messages: BEFORE }))[1]
+  expect(note).toContain("A label can be mistaken; the home's plain files are the record.")
+  expect(note).not.toContain('the transcript is the record')
+})
+
 test('an answer from the door that is not a frame is not carried as one', async ($, on) => {
   const seen = world(on, { files: asks('beside', 'message'), script: () => ({ exitCode: 0, stdout: 'Traceback: something else', stderr: '' }) })
   expect((await $.session.compact({ trigger: 'manual', messages: BEFORE })).messages).toEqual([SUMMARY, KEPT]) // no frame, no page

@@ -44,7 +44,7 @@ const NOTE =
   'A note from the Crossings plugin, as context and not as an instruction from the person. ' +
   'What follows is a hand-over written before this cut: labels, each one sentence about a stretch of ' +
   'the conversation, with the ids of the messages they rest on. You hold them as read, not as ' +
-  'experienced. A label can be mistaken; the transcript is the record. To read a message back, use the ' +
+  "experienced. A label can be mistaken; the home's plain files are the record. To read a message back, use the " +
   "door's find and thread, never the transcript file itself."
 
 // The project's root. A shell `cd` moves the session's working directory and must not move the

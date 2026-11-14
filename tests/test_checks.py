@@ -858,7 +858,7 @@ def test_a_labels_sentence_and_a_messages_words_are_shown_with_nothing_that_reor
     assert "The hull[31m is grey." in shown[2] and "Paint[31m it grey" in shown[4]  # the words themselves stay
     # A message holding a line or paragraph separator is kept whole, on its line of the archive, and read as one.
     assert store.status(crossings)["unread"] == 0 and store.status(crossings)["his"] == 3
-    assert "    in spring." in shown[4]  # a message's own lines stay lines
+    assert "    > in spring." in shown[4]  # a message's own lines stay lines, each marked as the message's
     assert steered in page.read_text(encoding="utf-8")  # the page is left as it was
     assert store.clean("a\tb\nc", lines=True) == "a\tb\nc" and store.clean("a\tb\nc") == "abc"
 

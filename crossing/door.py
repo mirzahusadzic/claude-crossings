@@ -381,6 +381,9 @@ def gap(span: dict) -> str:
     )
 
 
+QUOTED = "    > "  # before each line of a message in a thread: no line of the door's own begins so
+
+
 def show_thread(out: dict, named: bool = False) -> str:
     asked = store.clean(out["asked"])
     if out.get("twins"):
@@ -403,7 +406,8 @@ def show_thread(out: dict, named: bool = False) -> str:
             + (f" (labels: {', '.join(s['labels'])})" if s["labels"] else "")
             + ":"
         )
-        lines += ["    " + part for part in store.clean(s["text"], lines=True).splitlines()] + [""]
+        # Each of the message's own lines is marked as its own, so that none can be taken for a line of the door's.
+        lines += [QUOTED + part for part in store.clean(s["text"], lines=True).splitlines()] + [""]
     shown = {s["seq"] for s in out["said"]}
     lines += [gap(g) for g in gaps if g["before"] not in shown]  # after the newest of them
     if out["labels"]:
