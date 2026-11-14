@@ -1351,10 +1351,11 @@ def test_the_printout_of_the_cuts_passes_over_a_record_of_an_odd_shape_and_shows
         "abcdef01-cut-3.json": json.dumps({**good, "cut": 3, "tokens_before": "many"}),
         "abcdef01-cut-4.json": json.dumps({**good, "cut": 4, "person": {**voice, "messages": "some"}}),
         "abcdef01-cut-5.json": "not json",
+        "abcdef01-cut-6.json": None,  # a folder by a sidecar's name, which cannot be opened as a file
     }
     (home_ / "abcdef01-cut-1.json").write_text(json.dumps(good), encoding="utf-8")
     for name, text in odd.items():
-        (home_ / name).write_text(text, encoding="utf-8")
+        (home_ / name).mkdir() if text is None else (home_ / name).write_text(text, encoding="utf-8")
     shown = show.block(project)
     assert shown.startswith("Crossings\n  1 cut on record in this project\n"), shown
     for name in odd:
@@ -1376,7 +1377,7 @@ def test_the_printout_of_the_cuts_passes_over_a_record_of_an_odd_shape_and_shows
         "  A cut's record could not be read, so it was passed over: fedcba98-cut-2.json\n"
     )
     for name in [*odd, "abcdef01-cut-1.json", "fedcba98-cut-1.json"]:
-        (home_ / name).write_text("[]")
+        (home_ / name).write_text("[]") if odd.get(name, "") is not None else None
     assert show.block(project).startswith("Crossings\n  no cut on record in this project\n  A cut's record could")
 
 
