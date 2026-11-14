@@ -728,7 +728,11 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         if record.lies_in(dest, top):
             print(INSIDE)
             return 1
-        out = second.make(folder, dest, second.named(top), top)
+        try:
+            out = second.make(folder, dest, second.named(top), top)
+        except second.Failed as err:  # one sentence, and no command: the Keychain's holds the passphrase
+            print(f"not copied: {err}")
+            return 1
         print(
             f"copied {out['files']} plain files, encrypted, to {out['image']} ({out['bytes']} bytes), "
             "and read back the same"

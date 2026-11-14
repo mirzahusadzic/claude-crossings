@@ -29,6 +29,11 @@ from crossing import record, store  # noqa: E402
 SERVICE = "crossing-archive"
 
 
+class Failed(Exception):
+    """The Keychain or hdiutil failed, said in words of the plugin's own: the command it ran is
+    never part of it, since the Keychain's holds the passphrase."""
+
+
 def destination(folder: Path) -> Path | None:
     """Where this home's second copy goes: the folder named in its plain `copy` file, if any. A
     leading `~`, alone or before a `/`, is the person's own folder as the system's record of their
@@ -83,28 +88,35 @@ def passphrase() -> str:
 def keychain() -> str:
     """The passphrase kept in the person's Keychain, made and put there the first time."""
     user = getpass.getuser()
-    found = subprocess.run(
-        ["security", "find-generic-password", "-s", SERVICE, "-a", user, "-w"], capture_output=True, text=True
-    )
+    try:
+        found = subprocess.run(
+            ["security", "find-generic-password", "-s", SERVICE, "-a", user, "-w"], capture_output=True, text=True
+        )
+    except OSError:
+        raise Failed("the Keychain could not be asked for the copy's passphrase") from None
     if found.returncode == 0 and found.stdout.strip():
         return found.stdout.strip()
     made = secrets.token_urlsafe(32)
-    subprocess.run(
-        [
-            "security",
-            "add-generic-password",
-            "-s",
-            SERVICE,
-            "-a",
-            user,
-            "-w",
-            made,
-            "-j",
-            "The passphrase of Crossing's encrypted second copy",
-        ],
-        check=True,
-        capture_output=True,
-    )
+    try:
+        added = subprocess.run(
+            [
+                "security",
+                "add-generic-password",
+                "-s",
+                SERVICE,
+                "-a",
+                user,
+                "-w",
+                made,
+                "-j",
+                "The passphrase of Crossing's encrypted second copy",
+            ],
+            capture_output=True,
+        )
+    except OSError:
+        added = None
+    if added is None or added.returncode != 0:  # said without the command: it holds the passphrase
+        raise Failed("the Keychain would not keep the copy's passphrase")
     return made
 
 
@@ -195,7 +207,7 @@ def make(folder: Path, dest: Path, name: str, top: Path | None = None) -> dict:
             made.append(target)
         dest.mkdir(parents=True, exist_ok=True)
         fresh = dest / f".{name}.new.dmg"
-        subprocess.run(
+        made_image = _ran(
             [
                 "hdiutil",
                 "create",
@@ -212,10 +224,10 @@ def make(folder: Path, dest: Path, name: str, top: Path | None = None) -> dict:
                 "-ov",
                 str(fresh),
             ],
-            input=key,
-            check=True,
-            capture_output=True,
+            key,
         )
+        if made_image is None or made_image.returncode != 0:
+            raise Failed("hdiutil could not make the encrypted image")
         checked = verify(fresh, {str(p.relative_to(stage)): digest(p) for p in made}, key)
         if not checked:
             fresh.unlink()
@@ -230,14 +242,20 @@ def make(folder: Path, dest: Path, name: str, top: Path | None = None) -> dict:
     return {"copied": True, "image": str(image), "files": len(files), "bytes": image.stat().st_size}
 
 
+def _ran(argv: list[str], given: bytes) -> subprocess.CompletedProcess | None:
+    """hdiutil, with the passphrase on its input; nothing where it cannot be started."""
+    try:
+        return subprocess.run(argv, input=given, capture_output=True)
+    except OSError:
+        return None
+
+
 def verify(image: Path, expected: dict[str, str], key: bytes) -> bool:
     """Open the image read-only, compare every file with what went in, and close it."""
-    attached = subprocess.run(
-        ["hdiutil", "attach", "-stdinpass", "-nobrowse", "-readonly", "-mountrandom", "/tmp", str(image)],
-        input=key,
-        capture_output=True,
+    attached = _ran(
+        ["hdiutil", "attach", "-stdinpass", "-nobrowse", "-readonly", "-mountrandom", "/tmp", str(image)], key
     )
-    if attached.returncode != 0:
+    if attached is None or attached.returncode != 0:
         return False
     mount = attached.stdout.decode().strip().splitlines()[-1].split("\t")[-1].strip()
     try:

@@ -108,6 +108,7 @@ If the home's `copy` file names a folder, the plain files go there as one encryp
 | that folder lies inside the home, the copy's folder or the project | no copy is made |
 | the `copy` file names a place inside the project | no copy is made: the door says so in a sentence, and a cut's hook in a line of the error log |
 | the image does not read back the same | it replaces nothing |
+| the Keychain will not keep the passphrase, or `hdiutil` cannot make the image | no copy is made: the door says so in one sentence, with exit status 1, and a cut's hook in a line of the error log; neither names the command it ran, whose Keychain call holds the passphrase |
 | the passphrase | a random one, made the first time and kept in the Keychain under `crossing-archive` |
 | `CROSSING_COPY_KEY` is set and the door stands at a real terminal | it is the passphrase instead, and `status` from a shell says that every program the session starts can read it |
 | `CROSSING_COPY_KEY` is set anywhere else | it is passed over, with one line in the error log |

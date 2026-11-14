@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from test_checks import ON  # noqa: E402
 from test_count import set_to  # noqa: E402
-from test_edges import ran, through, words_script  # noqa: E402
+from test_edges import as_the_module, ran, through, words_script  # noqa: E402
 from test_homes import public  # noqa: E402
 from test_off import says  # noqa: E402
 from test_serve import said  # noqa: E402
@@ -516,6 +516,54 @@ def test_a_row_of_an_unknown_shape_is_passed_over_and_the_rows_beside_it_are_kep
         (home_ / "abcdef01-cut-2.json").read_text(encoding="utf-8")
     )  # the boundary of odd figures is a cut
     assert side["person"]["messages"] == 1 and side["trigger"] == "auto", side
+
+
+# --- a second copy that fails ---------------------------------------------------------------------------
+
+
+def a_home_with_a_copy(tmp_path: Path) -> tuple[Path, Path]:
+    """A home switched on whose copy file names a folder outside the project, and its transcript."""
+    crossings, path = home(tmp_path)
+    (crossings / "copy").write_text(str(tmp_path / "cloud") + "\n", encoding="utf-8")
+    return crossings, path
+
+
+def test_a_keychain_that_refuses_is_said_in_one_sentence_and_no_command(tmp_path):
+    crossings, path = a_home_with_a_copy(tmp_path)  # the Keychain's stand-in refuses every call
+    done = as_the_module("copy", "--cwd", str(crossings.parent))
+    assert (done.returncode, done.stdout, done.stderr) == (
+        1,
+        "not copied: the Keychain would not keep the copy's passphrase\n",
+        "",
+    ), done
+    # A cut's hook renews the copy as well: its line in the log names no command, and so no passphrase.
+    log = Path(os.environ["CLAUDE_PLUGIN_DATA"]) / "errors.log"
+    before = log.read_text(encoding="utf-8") if log.exists() else ""
+    event = {"hook_event_name": "PostCompact", "transcript_path": str(path), "cwd": str(crossings.parent)}
+    event.update(session_id=path.stem, trigger="auto", compact_summary="A summary.")
+    done = ran("hook.py", stdin=json.dumps(event), CLAUDE_CODE_ENTRYPOINT="cli")
+    assert (done.returncode, done.stdout, done.stderr) == (0, "", ""), done
+    added = (log.read_text(encoding="utf-8") if log.exists() else "")[len(before) :]
+    assert "not copied: the Keychain would not keep the copy's passphrase" in added, added
+    assert "add-generic-password" not in added and "Traceback" not in added and " -w" not in added, added
+
+
+def test_an_image_that_cannot_be_made_is_said_in_one_sentence(tmp_path):
+    crossings, _ = a_home_with_a_copy(tmp_path)
+    keychain = tmp_path / "bin" / "security"  # a Keychain that holds a passphrase; hdiutil's stand-in still refuses
+    keychain.parent.mkdir()
+    keychain.write_text("#!/bin/sh\necho made-up-passphrase-for-a-test\n", encoding="utf-8")
+    keychain.chmod(0o755)
+    done = as_the_module(
+        "copy", "--cwd", str(crossings.parent), PATH=f"{keychain.parent}{os.pathsep}{os.environ['PATH']}"
+    )
+    assert (done.returncode, done.stdout, done.stderr) == (
+        1,
+        "not copied: hdiutil could not make the encrypted image\n",
+        "",
+    ), done
+    assert not (tmp_path / "cloud").exists() or not list((tmp_path / "cloud").glob("*.dmg"))
+    assert not (crossings / "copy-stage.txt").exists()  # and the stage was taken away
 
 
 if __name__ == "__main__":

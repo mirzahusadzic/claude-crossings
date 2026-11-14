@@ -581,7 +581,10 @@ def keep(path: Path, cwd: Path, wait: bool, whole: bool = False) -> subprocess.P
         if record.lies_in(dest, top):  # a copy's folder inside the project would put the words in it
             record.log(f"refused: the home's copy file names a place inside the project: {dest}")
         else:
-            second.make(folder, dest, second.named(top), top)
+            try:
+                second.make(folder, dest, second.named(top), top)
+            except second.Failed as err:  # a line in the log, and no command: the Keychain's holds the passphrase
+                record.log(f"not copied: {err}")
     return None
 
 
