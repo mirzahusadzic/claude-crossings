@@ -52,8 +52,8 @@ Every file is reached through one check, `within` in `crossing/record.py`: no fi
 | `off-places.jsonl` | while the switch is off: where each transcript the markers name stood as it was turned off | switching off; switching on again reads it and takes it away | no |
 | `welcomed.txt`, `told.txt` | the sessions welcomed, and those told the switch was turned | the hooks, the person's command | no |
 | `shelled.txt` | labels marked from a shell for the person, until their `status` says them | `door.py mark` | no |
-| `labelled.txt` | every label the home has met, by its key and its sentence's digest | a mark, and every build | no |
-| `arrived.txt` | labels a build found in the pages that came by no mark through the door, until the person's `status` names them | builds | no |
+| `labelled.txt` | every label the home has met, by its key and its sentence's digest | a mark, and every build; `adopt` writes it again with none | no |
+| `arrived.txt` | labels a build found in the pages that came by no mark through the door, until the person's `status` names them | builds, and `adopt` | no |
 | `collided.txt` | ids of eight characters that two messages of the archive share, until the person's `status` says them | the archive | no |
 | `passed-over.txt`, `ignore-told.txt`, `copy-told.txt`, `damaged-told.txt` | that a sentence meant once was said | the hooks, `status` | no |
 | `reached.jsonl` | what was pulled through the door: when, which verb, which ids | `thread`, `mark` and `leave` through the server, or with `--touch` from a shell | no |
@@ -109,7 +109,7 @@ A label is one row of a page in `labels/`, named by the day it was marked:
 
 A label whose anchor the archive does not hold is refused, and so is one with no sentence or no anchor, or a sentence longer than 4,000 characters.
 
-A label that comes into the pages by no mark through the door (a pull, a branch switch, a hand) crosses cuts as any other. Every label the home has met is kept in `labelled.txt` by its key and its sentence's digest; a build that finds one it has not met, or one reworded since, notes it in `arrived.txt`, and the person's next `status` names it once. The first build of a home with no `labelled.txt` meets every label there is, and notes none. A line left at the door rests on messages alone, and one left through the door's `leave` is always the session's.
+A label that comes into the pages by no mark through the door (a pull, a branch switch, a hand) crosses cuts as any other. Every label the home has met is kept in `labelled.txt` by its key and its sentence's digest; a build that finds one it has not met, or one reworded since, notes it in `arrived.txt`, and the person's next `status` names it once. The first build of a home with no `labelled.txt` meets every label there is, and notes none. A home that is adopted (`/crossings adopt`) has met none of the labels its pages hold then, whatever a `labelled.txt` that came with it says: each is noted as it is adopted, and the person's next `status` names it once, a standing line and one that speaks for the person (`his` or `both`) said as such. A line left at the door rests on messages alone, and one left through the door's `leave` is always the session's.
 
 ---
 

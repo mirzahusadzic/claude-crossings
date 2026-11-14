@@ -368,7 +368,7 @@ def test_a_label_that_arrives_without_a_mark_is_named_once_by_the_persons_next_s
     store.build(crossings)
     assert "Arrived" not in shell("status", "--bare", "--cwd", project)[1]
     told = through("status", "--cwd", project)[1]
-    assert ARRIVED.format("R2") in told, told
+    assert ARRIVED.format("R2 (a standing line about the two of you, speaking for the person)") in told, told
     assert "without a mark" not in through("status", "--cwd", project)[1]  # once
     store.build(crossings)
     assert "without a mark" not in through("status", "--cwd", project)[1]
@@ -377,7 +377,10 @@ def test_a_label_that_arrives_without_a_mark_is_named_once_by_the_persons_next_s
         page.read_text(encoding="utf-8").replace("Arrived with a pull.", "Arrived, and reworded."), encoding="utf-8"
     )
     store.build(crossings)
-    assert ARRIVED.format("R2") in through("status", "--cwd", project)[1]
+    assert (
+        ARRIVED.format("R2 (a standing line about the two of you, speaking for the person)")
+        in through("status", "--cwd", project)[1]
+    )
 
 
 # --- 13: the person's record, one switch at a time -----------------------------------------------------------------

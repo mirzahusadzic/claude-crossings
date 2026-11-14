@@ -81,7 +81,7 @@ A word the command does not know changes nothing and says what it takes. The wor
 | `look`, `labels`, `find`, `thread` | as the tools; `find` also takes `--limit N` |
 | `mark --kind --whose --anchors id,id <sentence>` | writes a label; a label for the person or a standing line marked so is kept in `shelled.txt` and said by the person's next `status` |
 | `frame [--size N]` | prints the frame |
-| `status` | what the store holds, and from a shell more than the server says ([Privacy](privacy.md)): once each, the labels that came into the pages by no mark through the door, an id two messages share, and a file that holds a line that cannot be read as text |
+| `status` | what the store holds, and from a shell more than the server says ([Privacy](privacy.md)): once each, the labels that came into the pages by no mark through the door (those an adopted home held among them), a standing line and one that speaks for the person said as such, an id two messages share, and a file that holds a line that cannot be read as text |
 | `build` | makes the index whole from the plain files |
 | `home` | prints the folder of the project's home, or nothing; the hooks module asks it as a session starts, after `/crossings` turns the switch, and at a cut, for its guard on the archive's files |
 | `switch on\|off\|toggle\|adopt` | the switch, as `/crossings` turns it |

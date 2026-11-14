@@ -783,7 +783,7 @@ def told_once(args: argparse.Namespace, folder: Path, held: dict) -> str:
             " "
             + (f"{len(came)} labels" if some else "A label")
             + f" {ARRIVED} cross{'' if some else 'es'} every cut as "
-            f"any other: {', '.join(came)}."
+            f"any other: {', '.join(as_such(folder, came))}."
         )
     signs = held["signs_arrived"]
     if signs:
@@ -801,6 +801,20 @@ def told_once(args: argparse.Namespace, folder: Path, held: dict) -> str:
     out += "".join(" " + COLLIDED.format(each) for each in held["collided"])
     hurt = store.damaged(folder)
     return out + (" " + DAMAGED.format(", ".join(hurt)) if hurt else "")
+
+
+def as_such(folder: Path, keys: list[str]) -> list[str]:
+    """Labels by their keys, a standing line and one that speaks for the person (`his` or `both`)
+    each said as such."""
+    by = {label["id"]: label for label in store.labels(folder)}
+    out = []
+    for key in keys:
+        label = by.get(key, {})
+        such = (["a standing line about the two of you"] if label.get("kind") == "relation" else []) + (
+            ["speaking for the person"] if label.get("whose") in ("his", "both") else []
+        )
+        out.append(f"{key} ({', '.join(such)})" if such else key)
+    return out
 
 
 OLDER = (

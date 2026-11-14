@@ -1632,6 +1632,55 @@ def test_a_line_is_added_to_a_file_whose_last_line_has_no_line_feed_as_a_line_of
     assert log.read_text(encoding="utf-8").splitlines() == ["an earlier line with no line feed", "a line of its own"]
 
 
+# --- the labels an adopted home holds ---------------------------------------------------------------------
+
+
+def test_the_labels_an_adopted_home_holds_are_named_once_as_come_by_no_mark_a_standing_line_as_such(tmp_path):
+    """A home adopted with labels in its pages, and with or without a labelled.txt that came with it
+    and would hide them: the person's next status names each once as come by no mark through the
+    door, a standing line and one that speaks for the person said as such, with a build first or
+    none; and the labels are carried as before."""
+    sentence = "The person agrees with the plan."
+    for receipt, build in ((False, False), (True, True)):
+        project = tmp_path / f"{receipt}" / "project"
+        crossings = project / "crossings"
+        (crossings / "said").mkdir(parents=True)
+        (crossings / "labels").mkdir()
+        (project / ".git").mkdir()
+        (crossings / "said" / "deadbeef.jsonl").write_text(
+            json.dumps(
+                {"uuid": f"aaaaaaaa{WHOLE}", "id": "aaaaaaaa", "session": "deadbeef", "voice": "his", "text": "A."}
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (crossings / "labels" / "2026-11-11.md").write_text(
+            "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n"
+            f"| R1 | {sentence} | his | `aaaaaaaa` |\n| W1 | Where the work stands. | session | `aaaaaaaa` |\n"
+            "| W2 | What the person asked for. | both | `aaaaaaaa` |\n",
+            encoding="utf-8",
+        )
+        if receipt:
+            (crossings / "labelled.txt").write_text(
+                "".join(
+                    f"{key}@{store.digest(text)}\n"
+                    for key, text in (("R1", sentence), ("W1", "Where the work stands."))
+                )
+            )
+        assert through("switch", "adopt", "--cwd", str(project)) == (0, ON)
+        if build:
+            assert through("build", "--cwd", str(project))[0] == 0  # as a hook makes it
+        told = through("status", "--cwd", str(project))[1]
+        assert (
+            f"3 labels {door.ARRIVED} cross every cut as any other: R1 (a standing line about the two of you, "
+            "speaking for the person), W1, W2 (speaking for the person)." in told
+        ), (receipt, told)
+        assert door.ARRIVED not in through("status", "--cwd", str(project))[1]  # once
+        assert through("build", "--cwd", str(project))[0] == 0
+        assert door.ARRIVED not in through("status", "--cwd", str(project))[1]  # and a build does not note them again
+        assert sentence in through("frame", "--cwd", str(project))[1]  # carried as before
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

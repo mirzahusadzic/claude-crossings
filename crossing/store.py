@@ -526,9 +526,11 @@ def switch(cwd: Path, to: str) -> str:
 
 def _switched(cwd: Path, folder: Path, on: bool, adopted: bool = False) -> str:
     """`switch`, from its span on, with the home's lock held. A home `adopted` has met no line of
-    its `models.txt`: none of them was signed through the door (see `_signs_unmet`)."""
-    if adopted:
-        _signs_unmet(folder)
+    its `models.txt` and no label of its pages: none of them was signed or marked through the door
+    (see `_signs_unmet` and `_labels_unmet`), and each is noted as come by no other way, for the
+    person's next `status`."""
+    if adopted and (_signs_unmet(folder) | _labels_unmet(folder)):  # both are asked, and either may note
+        _noticed(folder)
     if not on:
         reached = _reached_now(folder)  # where each transcript the archive knows stands, before the span opens
         if off.opened(folder) or not within(folder, PLACES).exists():  # from this moment nothing said is kept
@@ -2275,7 +2277,8 @@ def once(folder: Path, name: str, line: str) -> bool:
 # Which labels came into the pages by the door's own mark is kept beside them: LABELLED holds every
 # label the home has met, by its key and its sentence's digest, and a build that finds one it has
 # not met (a pull, a checkout, a hand) notes it in ARRIVED, for the person's next `status`. The first
-# build of a home that has no LABELLED meets every label there is, and notes none.
+# build of a home that has no LABELLED meets every label there is, and notes none; a home that is
+# adopted has met none of the labels its pages hold (see `_labels_unmet`).
 LABELLED, ARRIVED = "labelled.txt", "arrived.txt"
 
 
@@ -2353,19 +2356,36 @@ def _signs_known(folder: Path, entries: list[str]) -> list[str]:
     return new
 
 
-def _signs_unmet(folder: Path) -> None:
+def _signs_unmet(folder: Path) -> bool:
     """As a home is adopted: where it holds `models.txt`, it has met none of its lines, whatever a
     SIGNS_MET that came with it says, so that the next build notes every one in SIGNS_ARRIVED for the
     person's `status`, as any line that came by no signing through the door. SIGNS_MET is written
-    whole, beside itself, with its header alone."""
+    whole, beside itself, with its header alone. Gives whether it was."""
     if not within(folder, MODELS).exists():
-        return
+        return False
     fresh = within(folder, SIGNS_MET + ".new")
     fresh.write_text(
         "# The lines of models.txt this home has met: a build notes any other in models-arrived.txt.\n",
         encoding="utf-8",
     )
     os.replace(fresh, within(folder, SIGNS_MET))
+    return True
+
+
+def _labels_unmet(folder: Path) -> bool:
+    """As a home is adopted: where its pages hold a label, or it came with LABELLED, it has met none
+    of them, whatever that LABELLED says, so that each is noted in ARRIVED for the person's `status`,
+    as any label that came by no mark through the door. LABELLED is written whole, beside itself,
+    with its header alone. Gives whether it was."""
+    if not (labels(folder) or within(folder, LABELLED).exists()):
+        return False
+    fresh = within(folder, LABELLED + ".new")
+    fresh.write_text(
+        "# The labels this home has met, by key and digest: a build notes any other in arrived.txt.\n",
+        encoding="utf-8",
+    )
+    os.replace(fresh, within(folder, LABELLED))
+    return True
 
 
 def signs_arrived(folder: Path) -> list[str]:
