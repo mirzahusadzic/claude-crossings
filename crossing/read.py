@@ -32,7 +32,11 @@ def said(path: Path, lines: set[int], ids: set[str] = frozenset(), out: set[str]
     """What was said on these lines of the transcript, and on the row each id's start names, in the
     file's order; an id whose start names more than one row gives none of them, and a line after the
     rest says so. A row whose id is among `out` (by its first eight characters: what the home keeps
-    out, see handover.kept_out) is said to be kept out, and nothing of it is shown."""
+    out, see handover.kept_out) is said to be kept out, and nothing of it is shown. Each line is
+    cleaned as the door shows a message (store.clean): a transcript's row can hold an escape or a
+    direction override that would reorder or hide what stands beside it on the person's terminal."""
+    from crossing import store
+
     rows = list(transcript.rows(path))
     named = {i: [line for line, row in rows if str(row.get("uuid") or "").startswith(i)] for i in ids}
     wanted = set(lines) | {found[0] for found in named.values() if len(found) == 1}
@@ -52,7 +56,7 @@ def said(path: Path, lines: set[int], ids: set[str] = frozenset(), out: set[str]
             shown += [f"{where}, the session: {text}" for text in own]
         else:
             shown.append(f"{where}: nothing was said here")
-    return shown + [
+    return [store.clean(line) for line in shown] + [
         f"{i}: names {len(found)} messages in this transcript; name more of its id"
         for i, found in named.items()
         if len(found) > 1

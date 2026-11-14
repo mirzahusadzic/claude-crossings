@@ -2309,6 +2309,21 @@ def test_a_nul_in_a_path_of_the_persons_record_or_beside_it_is_passed_over(tmp_p
             side.write_bytes(was)
 
 
+def test_the_reader_shows_a_message_cleaned_as_thread_does(tmp_path):
+    """read.py gives a message's words cleaned by the one rule (store.clean): no direction override,
+    no escape, no other control character reaches the person's terminal, and the words are those
+    `thread` gives."""
+    project, home_, path = public(tmp_path)
+    said = "Tern sails \u202eby night\u202c and \x1b[31mred\x1b[0m at dawn."
+    path.write_text(json.dumps(row("user", "aaaaaaaa", 1, said)) + "\n", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    out = reader(str(path), "aaaaaaaa", "--cwd", str(project)).stdout
+    assert out == f"aaaaaaaa (line 1), the person: {store.clean(said)}\n", repr(out)
+    assert "\u202e" not in out and "\x1b" not in out
+    assert store.clean(said) in through("thread", "aaaaaaaa", "--cwd", str(project))[1]
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
