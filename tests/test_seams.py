@@ -34,7 +34,7 @@ from test_off import says  # noqa: E402
 from test_serve import said  # noqa: E402
 from test_store import DATA, ROWS, A, B, D, E, at_terminal, home, own_folder, row, started_by  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import count, door, frame, handover, hook, layer, off, record, second, store  # noqa: E402
+from crossing import count, door, frame, handover, hook, layer, off, record, second, store, transcript  # noqa: E402
 
 # No test here reaches a disk image either: a stand-in for macOS's hdiutil comes first on the path,
 # beside the one for the Keychain, and refuses. A test of a disk image's own use puts its own first.
@@ -2052,6 +2052,41 @@ def test_the_plugins_own_logs_left_wide_are_narrowed_to_their_owner_the_next_tim
     )
     assert refused.returncode == 1 and oct((data / "errors.log").stat().st_mode & 0o777) == "0o600", refused
     assert (data / "errors.log").read_text(encoding="utf-8").startswith("an earlier line\n")
+
+
+# --- the small paths of the third pass's mends ------------------------------------------------------------
+
+
+def test_a_record_of_ids_that_cannot_be_read_is_lost_and_a_spans_file_that_turns_unreadable_mid_act_keeps_all_off(
+    tmp_path,
+):
+    """unsaid.txt that is there and cannot be read (a folder in its place) is a record that cannot be
+    told; a switch that keeps the counts meanwhile keeps none for it. And where off.txt cannot be read
+    by the time an archive or a words page reads its spans, after the record was found whole, nothing
+    is archived and every row is kept out."""
+    project, home_, path = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert through("switch", "off", "--cwd", str(project))[0] == 0
+    assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["again"] + "\n")
+    (home_ / off.UNSAID).mkdir()  # there, and no file to read
+    assert store.lost(home_) and door.LOST in through("status", "--cwd", str(project))[1]
+    assert through("switch", "off", "--cwd", str(project))[0] == 0  # the counts are kept, none for what cannot be read
+    assert store._held(home_)["unsaid"] == 0 and store.lost(home_)
+    (home_ / off.UNSAID).rmdir()
+    assert not store.lost(home_)
+    assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["again"] + "\n")
+    real_lost, real_spans = store.lost, off.spans
+
+    def unreadable(folder: Path):
+        raise PermissionError("made unreadable after the record was read")
+
+    store.lost, off.spans = (lambda folder: False), unreadable
+    try:
+        assert store.archive(path, home_) == 0
+        rows = list(transcript.rows(path))
+        assert handover.kept_out(home_, path, rows) == {transcript.ident(row) for _, row in rows}
+    finally:
+        store.lost, off.spans = real_lost, real_spans
 
 
 if __name__ == "__main__":
