@@ -53,8 +53,19 @@ def words(
     path: Path, ids: list[str], most: int = MOST, folder: Path | None = None
 ) -> tuple[list[tuple[str, str, str]], list[str]]:
     """(id, voice, what was said) for each id found, and the ids the transcript does not hold.
-    With the home `folder`, an id it keeps out (see `kept_out`) is in neither list."""
-    found: dict[str, tuple[str, str]] = {}
+    With the home `folder`, an id it keeps out (see `kept_out`) is in neither list, nor is an id
+    two messages of the transcript share (see `_words`)."""
+    found, missing, _ = _words(path, ids, most, folder)
+    return found, missing
+
+
+def _words(
+    path: Path, ids: list[str], most: int = MOST, folder: Path | None = None
+) -> tuple[list[tuple[str, str, str]], list[str], list[str]]:
+    """`words`, and the ids two messages of the transcript share: rows of two whole ids that both
+    hold words under the same eight characters. Such an id is no one message, and neither is given,
+    as `door.py page` gives neither (store.worded); a row written twice under one whole id is one."""
+    found: dict[str, dict[str, tuple[str, str]]] = {}
     wanted, out = set(ids), set()
     rows = list(transcript.rows(path))
     if folder is not None:
@@ -62,15 +73,21 @@ def words(
         wanted -= out
     for _, row in rows:
         name = transcript.ident(row)
-        if name not in wanted or name in found:
+        uuid = str(row.get("uuid") or "")
+        if name not in wanted or uuid in found.get(name, {}):
             continue
         his, own = transcript.person(row), transcript.session(row)
         if his or own:
             text = " ".join(his or own)
             if len(text) > most:
                 text = text[:most].rstrip() + " […]"
-            found[name] = ("the person" if his else "the session", text)
-    return [(i, *found[i]) for i in ids if i in found], [i for i in ids if i not in found and i not in out]
+            found.setdefault(name, {})[uuid] = ("the person" if his else "the session", text)
+    shared = [i for i in ids if len(found.get(i, {})) > 1]
+    return (
+        [(i, *next(iter(found[i].values()))) for i in ids if len(found.get(i, {})) == 1],
+        [i for i in ids if i not in found and i not in out],
+        shared,
+    )
 
 
 def kept_out(folder: Path, path: Path, rows: list) -> set[str]:
@@ -106,7 +123,7 @@ def page(path: Path, hand_over: Path) -> str:
     what the home the page lies in keeps out left out (see `kept_out`)."""
     from crossing import record  # here alone: the store reads this file's `named`
 
-    kept, missing = words(path, named("\n".join(record.lines_in(hand_over))), folder=hand_over.parent)
+    kept, missing, shared = _words(path, named("\n".join(record.lines_in(hand_over))), folder=hand_over.parent)
     lines = [
         "## The anchored words, from the record",
         "",
@@ -117,6 +134,13 @@ def page(path: Path, hand_over: Path) -> str:
     lines += [f"- `{name}`, {voice}: {text}" for name, voice, text in kept]
     if missing:
         lines += ["", "Named by a label and not in this transcript: " + ", ".join(f"`{m}`" for m in missing) + "."]
+    if shared:
+        lines += [
+            "",
+            "Named by a label and shared by more than one message of this transcript, so none is given: "
+            + ", ".join(f"`{m}`" for m in shared)
+            + ".",
+        ]
     return "\n".join(lines) + "\n"
 
 

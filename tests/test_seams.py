@@ -2324,6 +2324,34 @@ def test_the_reader_shows_a_message_cleaned_as_thread_does(tmp_path):
     assert store.clean(said) in through("thread", "aaaaaaaa", "--cwd", str(project))[1]
 
 
+def test_the_words_helper_gives_no_message_under_an_id_two_messages_share(tmp_path):
+    """A hand-over page whose label rests on eight characters two messages of the transcript share
+    (an older page, or one written by hand): crossing/handover.py gives neither message, as
+    `door.py page` gives neither, and says the id is shared; a message named alone is given, and a
+    row written twice under one whole id is one message."""
+    project, home_, path = public(tmp_path)
+    first, second = (
+        row("user", "aaaaaaaa", 1, "The first under the shared id."),
+        row("user", "aaaaaaaa", 2, "The second."),
+    )
+    second["uuid"] = "aaaaaaaa-1111-4000-8000-000000000000"
+    alone = row("user", "bbbbbbbb", 3, "Said alone.")
+    path.write_text("".join(json.dumps(r) + "\n" for r in (first, second, alone, alone)), encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    (home_ / "hand-over.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n| R1 | Two lines. | his | `aaaaaaaa`, `bbbbbbbb` |\n",
+        encoding="utf-8",
+    )
+    assert words_script(str(path), str(home_ / "hand-over.md")).returncode == 0
+    page = (home_ / "hand-over.words.md").read_text(encoding="utf-8")
+    assert "The first under" not in page and "The second." not in page, page
+    assert page.count("Said alone.") == 1 and "so none is given: `aaaaaaaa`." in page, page
+    assert handover.words(path, ["aaaaaaaa", "bbbbbbbb"]) == ([("bbbbbbbb", "the person", "Said alone.")], [])
+    shown = as_the_module("page", "--cwd", str(project), CLAUDE_CODE_ENTRYPOINT="cli").stdout
+    assert "The first under" not in shown and "The second." not in shown
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
