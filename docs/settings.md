@@ -17,7 +17,7 @@ A project's own settings file can set a session's environment. So the four setti
 | `CROSSING_LIVE` | the folder of the empty files that mark the sessions the plugin is loaded in | `~/.claude/crossing/live` | not checked |
 | `CROSSING_COPY_KEY` | the second copy's passphrase | a random one in the Keychain | passed over, with a line in the error log, wherever the door does not stand at a real terminal |
 | `CROSSING_DEBUG` | `0` writes no line to `calls.log` | two lines a hook call | |
-| `CROSSING_WAIT` | `1`: a session's end archives its transcript, and renews the second copy, in the hook's own process rather than in one of its own that does not hold the session up | unset | |
+| `CROSSING_WAIT` | `1`: a session's end archives its transcript in the hook's own process rather than in one of its own that does not hold the session up, and renews the second copy in a process of its own | unset | |
 | `CROSSING_SCALE` | `0` leaves out the scale test of `tests/test_reading.py` | unset | for the tests alone |
 
 Where one of the first four is not followed, the project is one where Crossings was never switched on: the error log has one line for it, and every verb of the door and every tool of its server says in one sentence which setting was not followed, with exit status 1. Inside is decided by the files, not by their names: the place, its links followed, and each folder above it are compared with the project's top by device and inode (`lies_in`, in `crossing/record.py`). Neither the case of a letter nor another path to the same folder makes a place inside read as one outside. A setting that names a place outside the project is followed.

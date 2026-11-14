@@ -779,7 +779,11 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             out = second.make(folder, dest, second.named(top), top)
         except second.Failed as err:  # one sentence, and no command: the Keychain's holds the passphrase
             print(f"not copied: {err}")
+            if args.by_hook:  # a session's end: no one reads what it prints, so the log keeps it
+                record.log(f"not copied: {err}")
             return 1
+        if args.by_hook and not out["copied"] and out["why"] != second.NOTHING:
+            record.log(f"not copied: {out['why']}")
         print(
             f"copied {many(out['files'], 'plain file')}, encrypted, to {out['image']} ({many(out['bytes'], 'byte')}), "
             "and read back the same"

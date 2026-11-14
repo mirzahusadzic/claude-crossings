@@ -410,7 +410,7 @@ def run(event: dict) -> str | None:
         store.unattended(path, folder)
     if name == "SessionEnd":
         if path.exists() and person:  # the whole transcript, as a safety net for anything a marker stepped over
-            keep(path, cwd, wait=os.environ.get("CROSSING_WAIT") == "1", whole=True)
+            keep(path, cwd, wait=os.environ.get("CROSSING_WAIT") == "1", whole=True, apart=True)
         return None
     if name == "PreToolUse":
         # Wired to the door's own tools alone. The door's server is not told which session is
@@ -554,12 +554,15 @@ def carried(event: dict) -> str | None:
     )
 
 
-def keep(path: Path, cwd: Path, wait: bool, whole: bool = False) -> subprocess.Popen | None:
+def keep(path: Path, cwd: Path, wait: bool, whole: bool = False, apart: bool = False) -> subprocess.Popen | None:
     """Bring the archive and the store up to date from this transcript, and renew the second
     copy where the home names a folder for one; nothing at all where Crossings is not on. A
     session that is ending is not held up: there the work goes on in a process of its own,
     which is given back so that whoever must be sure of its end can wait for it. That process
-    is the door's `build`, which reads the transcript whole; `whole` asks the same here."""
+    is the door's `build`, which reads the transcript whole; `whole` asks the same here. With
+    `apart`, as at a session's end that waits for its archive, the copy is that process instead:
+    the door's `copy`, since the seconds such a hook has hold no image. A copy not made is a line
+    in the error log, as a failed one is."""
     folder = store.kept(cwd)
     if folder is None or not store.active(folder):
         return None
@@ -579,11 +582,22 @@ def keep(path: Path, cwd: Path, wait: bool, whole: bool = False) -> subprocess.P
         top = record.located(cwd)[1]
         if record.lies_in(dest, top):  # a copy's folder inside the project would put the words in it
             record.log(f"refused: the home's copy file names a place inside the project: {dest}")
+        elif apart:
+            return subprocess.Popen(
+                [sys.executable, "-I", str(DOOR), "copy", "--cwd", str(cwd), "--by-hook"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+                env={**os.environ, "CLAUDE_PLUGIN_ROOT": str(record.ROOT)},
+            )
         else:
             try:
-                second.make(folder, dest, second.named(top), top)
+                out = second.make(folder, dest, second.named(top), top)
             except second.Failed as err:  # a line in the log, and no command: the Keychain's holds the passphrase
                 record.log(f"not copied: {err}")
+            else:
+                if not out["copied"] and out["why"] != second.NOTHING:
+                    record.log(f"not copied: {out['why']}")
     return None
 
 

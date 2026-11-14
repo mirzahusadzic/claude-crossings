@@ -689,13 +689,15 @@ def test_an_image_made_while_a_strike_took_words_is_not_put_in_place_and_one_mad
 IMAGE_TOOL = r'''"""hdiutil as a stand-in, for the tests alone and on every system: `create` keeps a folder's files
 in one zip with a digest of the passphrase it is handed, `attach` lays them out in a fresh folder
 under IMAGE_MOUNTS and names it on its last line as hdiutil does, and `detach` leaves it be. It
-encrypts nothing. With IMAGE_TAMPERS set, what it lays out is not what went in."""
-import hashlib, os, sys, tempfile, zipfile
+encrypts nothing. With IMAGE_TAMPERS set, what it lays out is not what went in; IMAGE_PAUSE
+makes `create` take that many seconds."""
+import hashlib, os, sys, tempfile, time, zipfile
 from pathlib import Path
 
 argv = sys.argv[1:]
 key = hashlib.sha256(sys.stdin.buffer.read() if "-stdinpass" in argv else b"").hexdigest()
 if argv[0] == "create":
+    time.sleep(float(os.environ.get("IMAGE_PAUSE") or 0))  # an image that takes its time
     source = Path(argv[argv.index("-srcfolder") + 1])
     with zipfile.ZipFile(argv[-1], "w") as image:
         image.writestr(".key", key)
@@ -747,6 +749,68 @@ def test_the_image_is_opened_again_and_one_that_reads_back_otherwise_replaces_no
     assert (cloud / "project.dmg").read_bytes() == image  # the earlier good copy stands
     assert sorted(p.name for p in cloud.iterdir()) == ["project.dmg"]  # and the new one went
     assert unread is False  # a file that is no image does not pass for one
+
+
+def image_tools(tmp_path: Path) -> Path:
+    """A folder for the front of the path: the image stand-in, and a Keychain that holds a passphrase."""
+    tool = tmp_path / "image-tool"
+    tool.mkdir()
+    (tool / "hdiutil.py").write_text(IMAGE_TOOL, encoding="utf-8")
+    (tool / "hdiutil").write_text(
+        f'#!/bin/sh\nexec "{sys.executable}" -I "{tool / "hdiutil.py"}" "$@"\n', encoding="utf-8"
+    )
+    (tool / "security").write_text("#!/bin/sh\necho made-up-passphrase-for-a-test\n", encoding="utf-8")
+    for name in ("hdiutil", "security"):
+        (tool / name).chmod(0o755)
+    (tmp_path / "mounts").mkdir()
+    return tool
+
+
+def a_cut(path: Path, project: Path, name: str = "PostCompact") -> dict:
+    event = {"hook_event_name": name, "transcript_path": str(path), "cwd": str(project), "session_id": path.stem}
+    return {**event, "trigger": "auto", "compact_summary": "A summary."} if name == "PostCompact" else event
+
+
+def test_a_copy_a_cut_could_not_make_leaves_a_line_in_the_log(tmp_path):
+    # A cut whose copy was given up for another copy, or a home held, left nothing anywhere (pass 5, F3).
+    crossings, path = home(tmp_path)
+    (crossings / "copy").write_text(str(tmp_path / "cloud") + "\n", encoding="utf-8")
+    log = Path(os.environ["CLAUDE_PLUGIN_DATA"]) / "errors.log"
+    before = log.read_text(encoding="utf-8") if log.exists() else ""
+    other = store._held_at(crossings / COPYING)  # another copy of this home is being made
+    try:
+        done = ran("hook.py", stdin=json.dumps(a_cut(path, crossings.parent)), CLAUDE_CODE_ENTRYPOINT="cli")
+    finally:
+        store._let_go(crossings / COPYING, other)
+    assert (done.returncode, done.stderr) == (0, ""), done
+    added = (log.read_text(encoding="utf-8") if log.exists() else "")[len(before) :]
+    assert f"not copied: {BUSY}" in added, added
+
+
+def test_a_sessions_end_makes_its_copy_in_a_process_of_its_own(tmp_path):
+    # Two lock waits and the image itself do not fit in the five seconds a session's end has (pass 5, F3).
+    crossings, path = home(tmp_path)
+    cloud = tmp_path / "cloud"
+    (crossings / "copy").write_text(str(cloud) + "\n", encoding="utf-8")
+    tool = image_tools(tmp_path)
+    env = {
+        "PATH": f"{tool}{os.pathsep}{os.environ['PATH']}",
+        "IMAGE_MOUNTS": str(tmp_path / "mounts"),
+        "IMAGE_PAUSE": "3",
+        "CROSSING_WAIT": "1",
+        "CLAUDE_CODE_ENTRYPOINT": "cli",
+    }
+    began = time.monotonic()
+    done = ran("hook.py", stdin=json.dumps(a_cut(path, crossings.parent, "SessionEnd")), **env)
+    took = time.monotonic() - began
+    assert (done.returncode, done.stdout, done.stderr) == (0, "", ""), done
+    assert took < 2.5, took  # the image takes three seconds: the hook did not wait for it
+    image = cloud / f"{second.named(crossings.parent.resolve())}.dmg"
+    until = time.monotonic() + 30
+    while not image.exists():
+        assert time.monotonic() < until, "the copy was never made"
+        time.sleep(0.1)
+    assert b"by the caf" in image.read_bytes()
 
 
 def test_status_from_a_shell_says_once_that_the_passphrase_is_in_the_environment(tmp_path):

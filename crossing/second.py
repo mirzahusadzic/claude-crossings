@@ -177,6 +177,7 @@ def cleared(folder: Path) -> None:
     note.unlink()
 
 
+NOTHING = "nothing to copy yet"
 COPYING = "copy.lock"  # held by one copy of a home at a time, from its first file read to its image's place
 HELD = "another act was writing this home, so no copy was made this time"
 BUSY = "another copy of this home was being made at that moment, so none was made this time"
@@ -220,7 +221,7 @@ def _make(folder: Path, dest: Path, name: str, top: Path | None) -> dict:
     cleared(folder)
     files = plain(folder)
     if not files:
-        return {"copied": False, "why": "nothing to copy yet"}
+        return {"copied": False, "why": NOTHING}
     where = staging()
     if any(where == place or place in where.parents for place in (folder.resolve(), dest.resolve())):
         return {"copied": False, "why": "the system's temporary folder lies inside the home or the copy's folder"}
