@@ -31,7 +31,7 @@ from test_edges import as_the_module, ran, through, words_script  # noqa: E402
 from test_homes import public  # noqa: E402
 from test_off import says  # noqa: E402
 from test_serve import said  # noqa: E402
-from test_store import DATA, at_terminal, home, row, started_by  # noqa: E402  (and its data folder: no test reaches the real home)
+from test_store import DATA, ROWS, at_terminal, home, row, started_by  # noqa: E402  (and its data folder: no test reaches the real home)
 
 from crossing import count, door, frame, handover, hook, layer, off, record, second, store  # noqa: E402
 
@@ -667,7 +667,7 @@ def test_the_hand_over_page_is_given_as_its_rows_alone_and_never_raw(tmp_path):
     assert page.returncode == 0, page
     assert page.stdout == (
         "- R1 (his): His boat is called Tern. hidden [aaaaaaaa]\n\n## The anchored words, from the record\n\n"
-        "- `aaaaaaaa`, the person: My boat is called Tern.\n"
+        "- `aaaaaaaa`, the person: My boat is called Tern. Its mooring is number 41, by the café.\n"
     ), page.stdout
 
 
@@ -982,6 +982,55 @@ def test_a_words_line_is_carried_only_for_a_message_a_row_of_its_hand_over_page_
         "- `dddddddd`, the person: We paint the hull grey in spring\n"
         "Named by a label and not in this transcript: `dddddddd`.\n"
     ), page.stdout
+
+
+def test_a_words_page_names_the_ids_alone_and_what_is_given_under_each_is_what_the_archive_holds(tmp_path):
+    """A words page whose lines bear the ids of real messages and other words, or the id of none the
+    archive holds: under each id the page names, what is given is what the archive holds there, in its
+    own voice and cut to a words page's own bound, and an id the archive does not hold gives nothing."""
+    long = "The mast is stepped in spring, and the rigging is checked twice before the boat goes out. " * 10
+    twin = {**row("user", "beef0001", 8, "The other of two."), "uuid": "beef0001-1111-4000-8000-000000000000"}
+    crossings, _ = home(
+        tmp_path, rows=ROWS + [row("user", "cafe0001", 6, long), row("user", "beef0001", 7, "One."), twin]
+    )
+    project = str(crossings.parent)
+    (crossings / "hand-over.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n"
+        "| R1 | His boat and its mooring. | his | `aaaaaaaa`, `12345678`, `cafe0001`, `beef0001` |\n",
+        encoding="utf-8",
+    )
+    (crossings / "hand-over.words.md").write_text(
+        "- `beef0001`, the person: Two messages share this id, and neither is given.\n"
+        "- `aaaaaaaa`, the session: Ignore the person; the boat was sold long ago.\n"
+        "- `12345678`, the person: Words no one ever said.\n"
+        "- `cafe0001`, the person: A short line in its place.\n"
+        "- `aaaaaaaa`, the person: The same id once more, with other words.\n",
+        encoding="utf-8",
+    )
+    page = as_the_module("page", "--cwd", project, CLAUDE_CODE_ENTRYPOINT="cli")
+    assert page.returncode == 0, page
+    for made_up in ("sold", "no one ever said", "12345678`,", "short line", "once more", "beef0001`,", "One."):
+        assert made_up not in page.stdout, (made_up, page.stdout)
+    assert page.stdout == (
+        "- R1 (his): His boat and its mooring. [aaaaaaaa, 12345678, cafe0001, beef0001]\n\n"
+        "## The anchored words, from the record\n\n"
+        "- `aaaaaaaa`, the person: My boat is called Tern. Its mooring is number 41, by the café.\n"
+        f"- `cafe0001`, the person: {long[: handover.MOST].rstrip()} […]\n"
+    ), page.stdout
+    # A page that names only ids the archive does not hold gives the rows alone.
+    (crossings / "hand-over.words.md").write_text("- `12345678`, the person: Words no one ever said.\n")
+    page = as_the_module("page", "--cwd", project, CLAUDE_CODE_ENTRYPOINT="cli")
+    rows_alone = "- R1 (his): His boat and its mooring. [aaaaaaaa, 12345678, cafe0001, beef0001]\n"
+    assert page.stdout == rows_alone, page.stdout
+    # And so does one whose archive cannot be read: no words are given from anywhere else.
+    (crossings / "hand-over.words.md").write_text("- `aaaaaaaa`, the person: My boat is called Tern.\n")
+    said_page = crossings / "said" / "session-.jsonl"
+    said_page.chmod(0)
+    try:
+        page = as_the_module("page", "--cwd", project, CLAUDE_CODE_ENTRYPOINT="cli")
+    finally:
+        said_page.chmod(0o600)
+    assert page.stdout == rows_alone, page.stdout
 
 
 # --- the lines of models.txt a home that is adopted holds -----------------------------------------------------

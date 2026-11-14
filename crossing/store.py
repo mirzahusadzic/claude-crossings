@@ -64,6 +64,7 @@ except ImportError:  # Windows: the lock is a file made only where none is there
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from crossing import off, record, transcript  # noqa: E402
+from crossing.handover import MOST as SAID_MOST  # noqa: E402  (a words page's bound for one message)
 from crossing.handover import named  # noqa: E402
 from crossing.record import Linked, within  # noqa: E402,F401  (every file of a home is reached through `within`)
 
@@ -3084,6 +3085,34 @@ BY_SESSION = ("welcomed.txt", "told.txt", "there.txt")
 # that names what a transcript did not hold.
 WORDS = re.compile(r"^- `([0-9a-f]{8})`, the (?:person|session): ")
 MISSING = "Named by a label and not in this transcript: "
+
+
+def worded(folder: Path, ids: set[str]) -> dict[str, str]:
+    """For each of these ids of eight characters, the line a words page gives for it, made from
+    what the home's own archive holds under it and from nothing else: its voice, and its words on
+    one line, a paste left as the note of its size, cut to a words page's own bound
+    (handover.MOST). An id the archive does not hold gives nothing, nor does one two messages
+    share, one struck, or one the home keeps out (see `kept_out_ids`). The plain pages alone are
+    read: nothing is written, and no index is made."""
+    gone, out = struck(folder), kept_out_ids(folder)
+    held: dict[str, dict[str, dict]] = {}
+    try:
+        rows = _archived(folder)
+    except OSError:  # an archive that cannot be read holds nothing to give
+        return {}
+    for row in rows:
+        if row["id"] in ids and row["id"] not in out and not _is_struck(row, gone):
+            held.setdefault(row["id"], {})[row["uuid"]] = row
+    found = {}
+    for name, by_uuid in held.items():
+        if len(by_uuid) != 1:
+            continue  # an id two messages share is no one message: neither is given
+        row = _voices(next(iter(by_uuid.values())))[0]
+        text = re.sub(r"\s*\n\s*", " ", row["text"]).strip()
+        if len(text) > SAID_MOST:
+            text = text[:SAID_MOST].rstrip() + " […]"
+        found[name] = f"- `{name}`, {'the person' if row['voice'] == HIS else 'the session'}: {text}"
+    return found
 
 
 def _rewritten(folder: Path, name: str, gone) -> bool:

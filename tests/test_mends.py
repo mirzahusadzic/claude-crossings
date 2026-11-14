@@ -107,8 +107,8 @@ def test_the_door_gives_no_words_page_that_names_what_was_struck_or_kept_off(tmp
     assert "Grey it is" not in as_the_module("page", "--cwd", project, CLAUDE_CODE_ENTRYPOINT="cli").stdout
     (crossings / "hand-over.words.md").write_text(f"- `{B}`, the session: Noted: Tern.\n", encoding="utf-8")
     assert (
-        "Noted: Tern." in as_the_module("page", "--cwd", project, CLAUDE_CODE_ENTRYPOINT="cli").stdout
-    )  # one that names neither is given
+        "Noted: Tern, at mooring 41." in as_the_module("page", "--cwd", project, CLAUDE_CODE_ENTRYPOINT="cli").stdout
+    )  # one that names neither is given, in the words the archive holds
 
 
 # --- 3: a model a shell names -----------------------------------------------------------------------

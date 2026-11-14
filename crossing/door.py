@@ -900,10 +900,12 @@ WORDS_HEAD = "## The anchored words, from the record"
 def handed_over(folder: Path) -> str:
     """The hand-over page as the module carries it where no frame can be made: never raw. Its label
     rows alone, read as every label page is read (store.labels), each in the frame's own form and
-    cleaned (store.clean); and of its words page only the lines of the form crossing/handover.py
-    writes for a message one of those rows rests on, cleaned, where it names nothing the home keeps
-    out; the line of what the transcript did not hold is written again from the ids of it those
-    rows rest on. The whole within frame.MOST; nothing where the page holds no row."""
+    cleaned (store.clean); and of its words page only the ids of the lines of the form
+    crossing/handover.py writes for a message one of those rows rests on, where it names nothing the
+    home keeps out: each is given with the words the home's own archive holds under it (store.worded),
+    never with the words the page holds, and an id the archive does not hold is not given; the line
+    of what the transcript did not hold is written again from the ids of it those rows rest on. The
+    whole within frame.MOST; nothing where the page holds no row."""
     gone = store.struck(folder)
     rows = [label for label in store.labels(folder) if label["page"] == "hand-over.md" and label["id"] not in gone]
     lines = [
@@ -915,12 +917,13 @@ def handed_over(folder: Path) -> str:
     words = plain(folder, "hand-over.words.md")
     if words and any(each in words for each in store.kept_out_ids(folder)):
         words = ""  # a words page that names what was struck or kept off is not given: handover.py makes it again
-    said = []
-    for line in words.split("\n"):
-        found = store.WORDS.match(line)
-        if found and found.group(1) in rested:
-            said.append(store.clean(line))
-        elif line.startswith(store.MISSING):
+    written = words.split("\n")
+    # The page names the ids alone: what is given under each is what the archive holds there, never the page's text.
+    carried = list(dict.fromkeys(m.group(1) for m in map(store.WORDS.match, written) if m and m.group(1) in rested))
+    held = store.worded(folder, set(carried)) if carried else {}
+    said = [store.clean(held[each]) for each in carried if each in held]
+    for line in written:
+        if line.startswith(store.MISSING):
             missing = [each for each in re.findall(r"`([0-9a-f]{8})`", line) if each in rested]
             said += [store.MISSING + ", ".join(f"`{each}`" for each in missing) + "."] if missing else []
     out, used = [], 0
