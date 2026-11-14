@@ -74,6 +74,7 @@ reach; a strike that struck nothing says why in one sentence, with exit status 1
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -103,6 +104,10 @@ SWITCHED = {
 UNKEPT = (
     "The record of when Crossings was off could not be written in this project's home ({}), so the switch may "
     "not stand as asked: status says how it stands."
+)
+UNBUILT = (
+    "The home was held by another act for five seconds, so the index was not made again this time; "
+    "the plain files are as they were, and the next read or build makes it."
 )
 NOT_ON = "Crossings is not switched on for this project."
 LINKED = "A file of this project's home is a link, so nothing was written."
@@ -527,7 +532,8 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             if state != "on" and source is not None and source.is_file() and record.attended():
                 # A span just closed: what this session said inside it is noted by id (see store.archive).
                 if store.archive(source, folder):
-                    store.refresh(folder)
+                    with contextlib.suppress(OSError):  # held by another act: the next read makes the index
+                        store.refresh(folder)
             if not store.searchable():  # said as it is switched on, before any search is asked for
                 print(f"{SWITCHED[state]} {store.NO_SEARCH}")
                 return 0
@@ -607,10 +613,14 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             whole=args.verb == "build",
             taken=bool(args.transcript) and not (args.by_hook or args.by_module),
         )
-    if args.verb == "build" and folder.is_dir():  # the home on this computer is not made by a build
-        store.build(folder)  # whole, always: the person's way to make the index again from the plain files
-    elif fresh:
-        store.refresh(folder)  # what was archived is added to the index, where nothing else changed
+    try:
+        if args.verb == "build" and folder.is_dir():  # the home on this computer is not made by a build
+            store.build(folder)  # whole, always: the person's way to make the index again from the plain files
+        elif fresh:
+            store.refresh(folder)  # what was archived is added to the index, where nothing else changed
+    except OSError:  # the home was held by another act all the while (see store._built)
+        print(UNBUILT)
+        return 1
 
     # The model that is there for this call: as the door's server was handed it (see crossing/layer.py),
     # or, where the session is named, what its hooks were told and what it said last. Not known, and

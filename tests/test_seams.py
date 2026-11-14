@@ -16,6 +16,7 @@ import io
 import json
 import os
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import threading
@@ -2453,6 +2454,76 @@ def test_a_record_with_counts_and_no_digests_is_read_by_its_counts_alone(tmp_pat
     assert not store.lost(home_)
     lines_of_file(home_ / off.FILE, lambda line: "" if line == changed else line)
     assert store.lost(home_)
+
+
+def test_two_reads_that_make_a_stale_index_again_at_once_both_answer(tmp_path):
+    """Two status processes read a home whose index bears a mark that is not the one kept (a pull, a
+    copy, an older make), and each makes it again: one at a time, under the home's lock, so that
+    neither makes it over the other's, both answer, and the index is believed after. A rebuild in a
+    process that holds the home's lock already makes it without waiting for itself."""
+    project, home_, path = public(tmp_path)
+    path.write_text(
+        "".join(json.dumps(row("user", f"{n:08x}", n % 60, f"A made-up row {n}.")) + "\n" for n in range(3000)),
+        encoding="utf-8",
+    )
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    for _ in range(3):
+        with contextlib.closing(sqlite3.connect(home_ / "store.db")) as db:
+            db.execute("update minted set mark = 'not-the-kept-mark'")
+            db.commit()
+        started = [
+            subprocess.Popen(
+                [
+                    sys.executable,
+                    "-I",
+                    str(ROOT / "crossing" / "door.py"),
+                    "status",
+                    "--by-module",
+                    "--cwd",
+                    str(project),
+                ],
+                env={**os.environ, "CLAUDE_PLUGIN_ROOT": str(ROOT)},
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            for _ in range(2)
+        ]
+        done = [(each.communicate(timeout=60), each.returncode) for each in started]
+        assert all(code == 0 and not err for (_, err), code in done), done
+    with contextlib.closing(sqlite3.connect(home_ / "store.db")) as db:
+        assert store._believed_index(db, home_)
+    held = store._locked(home_)
+    try:
+        store.build(home_)  # the archive, a mark or a strike holds the lock and builds: no wait for itself
+    finally:
+        store._unlocked(home_, held)
+    was = store.WAIT
+    store.WAIT = 0.2
+    try:
+        held, result = store._locked(home_), {}
+
+        def building() -> None:
+            try:
+                store.build(home_)
+                result["built"] = True
+            except OSError as err:
+                result["error"] = str(err)
+
+        other = threading.Thread(target=building)
+        other.start()
+        other.join(timeout=10)
+        store._unlocked(home_, held)
+        assert "held by another act" in result.get("error", ""), result  # another holds it: no build over it
+        held, result = store._locked(home_), {}
+        other = threading.Thread(target=lambda: result.update(answer=through("build", "--cwd", str(project))))
+        other.start()
+        other.join(timeout=10)
+        store._unlocked(home_, held)
+        assert result["answer"] == (1, door.UNBUILT + "\n"), result  # the person's build says so in a sentence
+    finally:
+        store.WAIT = was
 
 
 if __name__ == "__main__":

@@ -53,6 +53,7 @@ import re
 import secrets
 import sqlite3
 import sys
+import threading
 import time
 import unicodedata
 from pathlib import Path
@@ -1055,13 +1056,33 @@ STALE = 120.0
 
 def _locked(folder: Path):
     """The home's lock, held; or nothing, where another process held it for WAIT seconds. Held by
-    an archive, a mark, a strike, `layered` and the switch, each from what it reads to the last file
-    it writes. It is taken before the person's record's lock (`_recording`), never after it."""
-    return _held_at(within(folder, LOCK))
+    an archive, a mark, a strike, `layered`, the switch and a build of the index (see `_built`),
+    each from what it reads to the last file it writes. It is taken before the person's record's
+    lock (`_recording`), never after it."""
+    held = _held_at(within(folder, LOCK))
+    if held is not None:
+        _locks_here().add(_lock_name(folder))
+    return held
 
 
 def _unlocked(folder: Path, held) -> None:
+    _locks_here().discard(_lock_name(folder))
     _let_go(within(folder, LOCK), held)
+
+
+# The homes whose lock this thread holds, by the lock's path: a build asked for under it (an archive's,
+# a mark's, a strike's) is made without waiting for the lock it holds itself.
+_held_here = threading.local()
+
+
+def _locks_here() -> set[str]:
+    if not hasattr(_held_here, "names"):
+        _held_here.names = set()
+    return _held_here.names
+
+
+def _lock_name(folder: Path) -> str:
+    return os.path.realpath(within(folder, LOCK))
 
 
 def _held_at(path: Path):
@@ -1736,8 +1757,26 @@ def build(folder: Path) -> dict:
 
 def _built(folder: Path) -> None:
     """`build`, without what it gives back: made, put in its place, marked (see MINTED), and with
-    the labels and the lines of models.txt that arrived noted."""
+    the labels and the lines of models.txt that arrived noted. One build at a time is made in a home,
+    under its lock: two reads that each make a stale index again (see `_open`), or two sessions'
+    hooks, would otherwise write one `store.db.new` at once. Where this thread holds the lock
+    already, the build is made under it; where another holds it for WAIT seconds, it is said as an
+    OSError, and nothing is written."""
     folder.mkdir(parents=True, exist_ok=True)
+    if _lock_name(folder) in _locks_here():
+        _made(folder)
+        return
+    held = _locked(folder)
+    if held is None:
+        raise OSError(f"the home was held by another act for {WAIT:.0f} seconds")
+    try:
+        _made(folder)
+    finally:
+        _unlocked(folder, held)
+
+
+def _made(folder: Path) -> None:
+    """`_built`, with the home's lock held."""
     fresh, made = within(folder, "store.db.new"), within(folder, "store.db")
     if fresh.exists():
         fresh.unlink()
@@ -2231,10 +2270,14 @@ def _open(folder: Path) -> sqlite3.Connection:
         # An index no build here made, or an older make's: made again on disk, and read. Not in a home
         # switched off, where a read writes nothing: no index is put in its place and no mark is kept.
         if stranger and active(folder):
-            _built(folder)
-            db = sqlite3.connect(made)
-            db.row_factory = sqlite3.Row
-            return db
+            try:
+                _built(folder)
+            except OSError:  # another act held the home all the while: this read makes it in memory
+                pass
+            else:
+                db = sqlite3.connect(made)
+                db.row_factory = sqlite3.Row
+                return db
     db = sqlite3.connect(":memory:")
     _index(folder, db)
     db.row_factory = sqlite3.Row
