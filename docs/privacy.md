@@ -109,7 +109,7 @@ Where the home's `copy` file names a folder, the plain files go there as one enc
 
 - No copy is made where the copy's folder lies inside the project, or the temporary folder it stages in lies inside the home, the copy's folder or the project.
 - The plain files are staged outside the home, for the owner alone, and taken away file by file; a stage a killed run left is taken away by the next.
-- The plain files are read and staged while no other act writes the home, so a copy holds the home as it stood between two acts, never halfway through a strike. One copy of a home is made at a time; one that finds another under way, or the home held for five seconds, makes none, and `door.py copy` says so.
+- The plain files are read and staged while no other act writes the home, so a copy holds the home as it stood between two acts, never halfway through a strike. The image is put in place under the same lock, only where every file still begins as it was staged: where a strike took or rewrote words meanwhile, the image before stands, and the next copy takes the home as it stands. One copy of a home is made at a time; one that finds another under way, or the home held for five seconds, makes none, and `door.py copy` says so.
 - `CROSSING_COPY_KEY` is the passphrase instead only at the person's own terminal; anywhere else it is passed over, with a line in the error log.
 - A failure is said in one sentence that names no command, since the Keychain's call holds the passphrase.
 - An older image, named by the project's folder alone, is left as it is, and `status` names it once.

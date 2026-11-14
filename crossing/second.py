@@ -180,6 +180,7 @@ def cleared(folder: Path) -> None:
 COPYING = "copy.lock"  # held by one copy of a home at a time, from its first file read to its image's place
 HELD = "another act was writing this home, so no copy was made this time"
 BUSY = "another copy of this home was being made at that moment, so none was made this time"
+CHANGED = "the home changed while the copy was made, so it was not put in place; the next copy takes it as it stands"
 
 
 def make(folder: Path, dest: Path, name: str, top: Path | None = None) -> dict:
@@ -197,8 +198,12 @@ def make(folder: Path, dest: Path, name: str, top: Path | None = None) -> dict:
     One copy of a home is made at a time: it holds `copy.lock` all the while, so the next never
     takes a live stage for one a killed run left, and one that cannot have it within the lock's
     wait makes none. The plain files are read and staged under the home's lock (store._locked), so
-    that no archive, mark or strike writes them halfway through and a strike's text cannot stay in
-    the newest copy; the image is made once it is let go, so that no act waits for hdiutil."""
+    that no archive, mark or strike writes them halfway through; the image is made once it is let
+    go, so that no act waits for hdiutil; and it is put in place under that lock again, only where
+    each staged file is still the start of the file there now. A home that only grew meanwhile (an
+    archive, a mark) has its image put in place, older by those lines; one where a strike or any
+    other act took or rewrote words keeps the image before, so that the newest copy never holds a
+    text struck before it was put in place."""
     record.private()
     lock = store.within(folder, COPYING)
     copying = store._held_at(lock)
@@ -226,6 +231,7 @@ def _make(folder: Path, dest: Path, name: str, top: Path | None) -> dict:
     note = store.within(folder, STAGED)
     note.write_text(f"{stage}\n", encoding="utf-8")
     made: list[Path] = []
+    staged: dict[Path, tuple[int, str]] = {}  # each source as it was staged: its length and digest
     try:
         held = store._locked(folder)
         if held is None:
@@ -237,6 +243,7 @@ def _make(folder: Path, dest: Path, name: str, top: Path | None) -> dict:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(source, target)
                 made.append(target)
+                staged[source] = (target.stat().st_size, digest(target))
         finally:
             store._unlocked(folder, held)
         dest.mkdir(parents=True, exist_ok=True)
@@ -262,11 +269,21 @@ def _make(folder: Path, dest: Path, name: str, top: Path | None) -> dict:
         )
         if made_image is None or made_image.returncode != 0:
             raise Failed("hdiutil could not make the encrypted image")
-        checked = verify(fresh, {str(p.relative_to(stage)): digest(p) for p in made}, key)
-        if not checked:
+        expected = {str(target.relative_to(stage)): staged[source][1] for source, target in zip(files, made)}
+        if not verify(fresh, expected, key):
             fresh.unlink()
             return {"copied": False, "why": "the image did not read back the same"}
-        os.replace(fresh, dest / f"{name}.dmg")
+        held = store._locked(folder)  # the image is put in place only while no other act writes the home
+        if held is None:
+            fresh.unlink()
+            return {"copied": False, "why": HELD}
+        try:
+            if not all(begins(source, *was) for source, was in staged.items()):
+                fresh.unlink()
+                return {"copied": False, "why": CHANGED}
+            os.replace(fresh, dest / f"{name}.dmg")
+        finally:
+            store._unlocked(folder, held)
     finally:
         for target in made:  # the staged plain copies, one by one
             target.unlink()
@@ -274,6 +291,17 @@ def _make(folder: Path, dest: Path, name: str, top: Path | None) -> dict:
         note.unlink()
     image = dest / f"{name}.dmg"
     return {"copied": True, "image": str(image), "files": len(files), "bytes": image.stat().st_size}
+
+
+def begins(path: Path, length: int, sha: str) -> bool:
+    """Whether a file still begins with what was staged of it: its first `length` bytes have that
+    digest. A file that grew since does; one cut short, rewritten or gone does not."""
+    try:
+        with open(path, "rb") as handle:
+            start = handle.read(length)
+    except OSError:
+        return False
+    return len(start) == length and hashlib.sha256(start).hexdigest() == sha
 
 
 def _ran(argv: list[str], given: bytes) -> subprocess.CompletedProcess | None:

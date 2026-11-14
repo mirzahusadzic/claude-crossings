@@ -48,6 +48,7 @@ NOTE, STAGE, LOCK = "copy-stage.txt", "crossing-copy-", "archive.lock"
 COPYING = "copy.lock"
 HELD = "another act was writing this home, so no copy was made this time"
 BUSY = "another copy of this home was being made at that moment, so none was made this time"
+CHANGED = "the home changed while the copy was made, so it was not put in place; the next copy takes it as it stands"
 
 
 def staging() -> Path:
@@ -628,6 +629,61 @@ def test_one_copy_of_a_home_at_a_time_and_the_next_leaves_a_live_stage_alone(tmp
     with set_to(CROSSING_COPY_KEY=KEY):  # once that copy is done or gone, the next takes a stage it left away
         assert second.make(crossings, tmp_path / "cloud", "project")["copied"]
     assert not live.exists() and not (crossings / NOTE).exists() and second.COPYING == COPYING
+
+
+def making(during):
+    """For the length of a test, an image is made by a stand-in that holds the staged files' bytes, so
+    a test can tell which image stands; `during()` runs as it is made, after the home's lock is let go."""
+
+    def run(test):
+        def made(argv, **_):
+            folder = Path(argv[argv.index("-srcfolder") + 1])
+            during[0]()
+            files = sorted(p for p in folder.rglob("*") if p.is_file())
+            Path(argv[-1]).write_bytes(b"".join(p.read_bytes() for p in files))
+            return subprocess.CompletedProcess(argv, 0, b"", b"")
+
+        def ran(tmp_path):
+            tool, checks = second.subprocess, second.verify
+            second.subprocess, second.verify = types.SimpleNamespace(run=made), lambda *_: True
+            try:
+                with at_terminal(), set_to(CROSSING_COPY_KEY=KEY):
+                    return test(tmp_path)
+            finally:
+                second.subprocess, second.verify = tool, checks
+
+        ran.__name__ = test.__name__
+        return ran
+
+    return run
+
+
+DURING = [lambda: None]  # what happens in the home while an image is made, for the test that sets it
+
+
+@making(DURING)
+def test_an_image_made_while_a_strike_took_words_is_not_put_in_place_and_one_made_while_words_came_is(tmp_path):
+    # A copy staged before a strike and put in place after it kept the struck text in the newest image (pass 5, F1).
+    crossings, path = home(tmp_path)
+    STRUCK = "by the café".encode()  # the message a strike takes, and no label holds
+    cloud = tmp_path / "cloud"
+    image = cloud / "project.dmg"
+    try:
+        assert second.make(crossings, cloud, "project")["copied"] and STRUCK in image.read_bytes()
+        later = transcript(tmp_path, "session-0002", [row("user", "77777777", 30, "A later word about the jib.")])
+        DURING[0] = lambda: store.archive(later, crossings)  # words came while it was made: appended, it stands
+        assert second.make(crossings, cloud, "project")["copied"], "an image of a home that only grew stands"
+        assert STRUCK in image.read_bytes() and b"jib" not in image.read_bytes()
+        DURING[0] = lambda: store.strike(crossings, A)  # a strike took words while it was made
+        out = second.make(crossings, cloud, "project")
+        assert out == {"copied": False, "why": CHANGED}, out
+        assert STRUCK in image.read_bytes()  # the earlier image stands, as a strike says of an earlier copy
+        assert sorted(p.name for p in cloud.iterdir()) == ["project.dmg"]  # and the one made meanwhile went
+        DURING[0] = lambda: None
+        assert second.make(crossings, cloud, "project")["copied"]  # the next takes the home as it stands
+        assert STRUCK not in image.read_bytes() and b"jib" in image.read_bytes()
+    finally:
+        DURING[0] = lambda: None
 
 
 IMAGE_TOOL = r'''"""hdiutil as a stand-in, for the tests alone and on every system: `create` keeps a folder's files
