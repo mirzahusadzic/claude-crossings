@@ -203,6 +203,8 @@ NOTHING = "nothing to copy yet"
 COPYING = "copy.lock"  # held by one copy of a home at a time, from its first file read to its image's place
 HELD = "another act was writing this home, so no copy was made this time"
 BUSY = "another copy of this home was being made at that moment, so none was made this time"
+UNUSABLE = "the home's copy lock is not a file this account can write"
+UNREAD = "the note of a copy's stage in the home cannot be read"
 CHANGED = "the home changed while the copy was made, so it was not put in place; the next copy takes it as it stands"
 
 
@@ -229,7 +231,10 @@ def make(folder: Path, dest: Path, name: str, top: Path | None = None) -> dict:
     text struck before it was put in place."""
     record.private()
     lock = store.within(folder, COPYING)
-    copying = store._held_at(lock)
+    try:
+        copying = store._held_at(lock)
+    except OSError:  # a folder, or a file this account cannot write: said, never a traceback
+        raise Failed(UNUSABLE) from None
     if copying is None:
         return {"copied": False, "why": BUSY}
     try:
@@ -240,7 +245,10 @@ def make(folder: Path, dest: Path, name: str, top: Path | None = None) -> dict:
 
 def _make(folder: Path, dest: Path, name: str, top: Path | None) -> dict:
     """`make`, with the home's copy lock held."""
-    cleared(folder)
+    try:
+        cleared(folder)
+    except OSError:  # a note that is no file
+        raise Failed(UNREAD) from None
     files = plain(folder)
     if not files:
         return {"copied": False, "why": NOTHING}

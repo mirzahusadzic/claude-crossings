@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
-from test_edges import ran, set_to, through  # noqa: E402
+from test_edges import as_the_module, ran, set_to, through  # noqa: E402
 from test_serve import said  # noqa: E402
 from test_store import A, B, D, E, at_terminal, home, row, started_by, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
 
@@ -48,6 +48,8 @@ NOTE, STAGE, LOCK = "copy-stage.txt", "crossing-copy-", "archive.lock"
 COPYING = "copy.lock"
 HELD = "another act was writing this home, so no copy was made this time"
 BUSY = "another copy of this home was being made at that moment, so none was made this time"
+UNUSABLE = "the home's copy lock is not a file this account can write"
+UNREAD = "the note of a copy's stage in the home cannot be read"
 CHANGED = "the home changed while the copy was made, so it was not put in place; the next copy takes it as it stands"
 
 
@@ -866,6 +868,21 @@ def test_a_sessions_end_makes_its_copy_in_a_process_of_its_own(tmp_path):
         assert time.monotonic() < until, "the copy was never made"
         time.sleep(0.1)
     assert b"by the caf" in image.read_bytes()
+
+
+def test_a_copy_lock_or_note_this_account_cannot_use_is_said_in_one_sentence(tmp_path):
+    # A copy lock that was a folder, or could not be written, gave the person a traceback (pass 5, F4).
+    crossings, _ = home(tmp_path)
+    (crossings / "copy").write_text(str(tmp_path / "cloud") + "\n", encoding="utf-8")
+    lock, note = crossings / COPYING, crossings / NOTE
+    for how in ("a folder", "not writable"):
+        lock.mkdir() if how == "a folder" else (lock.write_text("", encoding="utf-8"), lock.chmod(0o400))
+        done = as_the_module("copy", "--cwd", str(crossings.parent))
+        assert (done.returncode, done.stdout, done.stderr) == (1, f"not copied: {UNUSABLE}\n", ""), (how, done)
+        lock.rmdir() if how == "a folder" else (lock.chmod(0o600), lock.unlink())
+    note.mkdir()  # the note of a stage that is no file
+    done = as_the_module("copy", "--cwd", str(crossings.parent))
+    assert (done.returncode, done.stdout, done.stderr) == (1, f"not copied: {UNREAD}\n", ""), done
 
 
 def test_status_from_a_shell_says_once_that_the_passphrase_is_in_the_environment(tmp_path):
