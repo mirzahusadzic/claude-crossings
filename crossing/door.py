@@ -663,6 +663,9 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         print(frame.compose(folder, frame.bounded(args.size) if args.size else None, model=facing), end="")
     elif args.verb in ("status", "build"):
         held = store.status(folder)
+        # What is said once is said only where it can be noted as told: a home switched off is read, and nothing
+        # is written to it, so those sentences wait until it is on (see store.once).
+        quiet = args.bare or not on
         print(
             f"The store{'' if args.bare else f' at {folder}'} holds {many(held['his'], 'message')} of the person's and "
             f"{held['session']} of the session's ({many(held['characters'], 'character')}, "
@@ -721,28 +724,28 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
                     many(len(held["shelled"]), "label") + (" was" if len(held["shelled"]) == 1 else " were"),
                     ", ".join(held["shelled"]),
                 )
-                if held["shelled"] and not args.bare
+                if held["shelled"] and not quiet
                 else ""
             )
-            + (" " + store.PASSING if not args.bare and not ours and store.passed_note(cwd, folder, "status") else "")
+            + (" " + store.PASSING if not quiet and not ours and store.passed_note(cwd, folder, "status") else "")
             + (
                 " " + IGNORE_SAID
-                if not args.bare
+                if not quiet
                 and not ours
                 and store.leaves_said(folder)
                 and store.once(folder, store.IGNORED_TOLD, "said")
                 else ""
             )
-            + older_copy(args, cwd, folder, ours)
-            + told_once(args, folder, held)
+            + older_copy(args, cwd, folder, ours or quiet)
+            + told_once(args, folder, held, quiet)
         )
-        if held["shelled"] and not args.bare and personal(args):
+        if held["shelled"] and not quiet and personal(args):
             store.shelled_told(folder)  # told the person: the next status says only what is marked since
-        if held["arrived"] and args.verb == "status" and not args.bare and personal(args):
+        if held["arrived"] and args.verb == "status" and not quiet and personal(args):
             store.arrived_told(folder)
-        if held["signs_arrived"] and args.verb == "status" and not args.bare and personal(args):
+        if held["signs_arrived"] and args.verb == "status" and not quiet and personal(args):
             store.signs_arrived_told(folder)
-        if held["collided"] and args.verb == "status" and not args.bare and personal(args):
+        if held["collided"] and args.verb == "status" and not quiet and personal(args):
             store.collided_told(folder)
     elif args.verb == "strike":
         out = store.strike(folder, said, args.why)
@@ -773,13 +776,14 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
     return 0
 
 
-def told_once(args: argparse.Namespace, folder: Path, held: dict) -> str:
+def told_once(args: argparse.Namespace, folder: Path, held: dict, quiet: bool = False) -> str:
     """The sentences of the person's own status that are said once each: the labels that came into
     the pages by no mark through the door (store.arrived), the lines of models.txt that came by no
     signing through the door (store.signs_arrived), the ids two messages share
     (store.collided), and the files that hold a line that is no text (store.damaged). The door's
-    server is told none of them, and neither is a build, which the hooks run with no one to read it."""
-    if args.bare or args.verb != "status":
+    server is told none of them, and neither is a build, which the hooks run with no one to read it; nor
+    is a status that is `quiet`, of a home switched off, where nothing can be noted as told."""
+    if args.bare or quiet or args.verb != "status":
         return ""
     came = held["arrived"]
     out = ""

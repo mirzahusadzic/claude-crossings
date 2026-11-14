@@ -2120,9 +2120,10 @@ def _open(folder: Path) -> sqlite3.Connection:
     """The database. Where there is none, or another make of the plugin left one (an older one
     has no states in it to read), it is made in memory from the plain files, and nothing is
     written: no read of a home makes a folder or a database. A build makes the one on disk,
-    as the hooks, a mark and a strike do. A `store.db` that is no database at all (cut short, or
-    written over) is read as none: the index is made in memory, and the next build or archive
-    makes the one on disk again."""
+    as the hooks, a mark and a strike do. One no build here made is made again on disk, and its
+    mark kept, but in a home switched off, where it is made in memory as well. A `store.db` that
+    is no database at all (cut short, or written over) is read as none: the index is made in
+    memory, and the next build or archive makes the one on disk again."""
     made = within(folder, "store.db")
     within(folder, "store.db-journal")  # where the index keeps a change while it is made
     if made.exists():
@@ -2137,7 +2138,9 @@ def _open(folder: Path) -> sqlite3.Connection:
         except sqlite3.DatabaseError:  # not a database: made again from the plain files, here in memory
             pass
         db.close()
-        if stranger:  # an index no build here made, or an older make's: made again on disk, and read
+        # An index no build here made, or an older make's: made again on disk, and read. Not in a home
+        # switched off, where a read writes nothing: no index is put in its place and no mark is kept.
+        if stranger and active(folder):
             _built(folder)
             db = sqlite3.connect(made)
             db.row_factory = sqlite3.Row

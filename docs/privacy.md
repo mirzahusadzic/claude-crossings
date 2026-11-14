@@ -39,7 +39,7 @@ The person's switch is kept where no repository can hold it: `~/.claude/crossing
 | a project's own `crossings` that is a link, to a folder or to nothing | is no home: `/crossings on` and `adopt` refuse it in one sentence that names where it leads, nothing is believed, read or written through it, and no home is made outside the project in its place |
 | a home named outright (`CROSSING_HOME`) that is a link | believed only where the line names the place it leads to |
 | a setting names a place inside the project, or no absolute path | is not followed: the project is one where Crossings was never switched on ([Settings](settings.md)) |
-| switched off | the line stays; the home is read through the door, and nothing is added to it |
+| switched off | the line stays; the home is read through the door, and nothing is added to it: a read writes nothing (an index this computer did not mark is made in memory, and no mark is kept), and what `status` says once waits until it is on again |
 
 ---
 

@@ -1840,6 +1840,46 @@ def test_status_and_look_from_a_sessions_shell_answer_as_the_server_does_and_tak
     assert "marked from a shell" in told and ": R1." in told, told
 
 
+# --- a read of a home switched off ------------------------------------------------------------------------
+
+
+def files_of(folder: Path) -> dict[str, bytes]:
+    """Every file below a folder, by its path from there, with what it holds."""
+    return {str(each.relative_to(folder)): each.read_bytes() for each in sorted(folder.rglob("*")) if each.is_file()}
+
+
+def test_a_read_of_a_home_switched_off_writes_nothing_and_what_is_said_once_waits_until_it_is_on(tmp_path):
+    """Switched off, a home whose index this computer's record no longer marks is read with an index
+    made in memory: no index is put in its place, no mark is kept, and nothing is noted as told, so the
+    sentence said once about a damaged file is said once it is switched on again."""
+    project, home_, path = public(tmp_path)
+    path.write_text(json.dumps(row("user", "aaaaaaaa", 1, "A message to find.")) + "\n", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    assert through("switch", "off", "--cwd", str(project))[0] == 0
+    marks = store._minted_path()
+    marks.unlink()  # this computer's record of the index's mark is gone: the index on disk is a stranger
+    page = next((home_ / "said").glob("*.jsonl"))
+    page.write_bytes(page.read_bytes() + b"\xff\n")
+    before = files_of(home_)
+    for argv in (
+        ("status",),
+        ("status", "--bare"),
+        ("look",),
+        ("find", "message"),
+        ("thread", "aaaaaaaa"),
+        ("labels",),
+    ):
+        out = through(*argv, "--cwd", str(project))
+        assert out[0] == 0 and "A file of this home holds a line" not in out[1], (argv, out)
+    assert "1 message of the person's" in through("status", "--cwd", str(project))[1]  # read, all the same
+    assert files_of(home_) == before and not marks.exists()
+    assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["again"] + "\n")
+    told = through("status", "--cwd", str(project))[1]
+    assert door.DAMAGED.format(f"said/{page.name}") in told, told
+    assert "A file of this home holds a line" not in through("status", "--cwd", str(project))[1]  # once
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
