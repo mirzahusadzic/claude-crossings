@@ -352,7 +352,7 @@ def test_a_clock_set_back_while_crossing_is_off_keeps_all_that_was_said_then_off
         home_, _ = off_and_on(tmp_path / str(int(steady_on)), steady_on)
         assert "20000002" not in ids(home_), steady_on
         spans, unread = off.spans(home_)
-        assert unread == 0 and spans[-1][1] >= off.moment("2026-11-11T10:00:05Z"), (spans, steady_on)
+        assert unread == 0 and off.inside(off.moment("2026-11-11T10:00:05Z"), spans), (spans, steady_on)
 
 
 # --- 12: labels that arrive with no mark -------------------------------------------------------------------------

@@ -410,8 +410,8 @@ def switch(cwd: Path, to: str) -> str:
     crossing/off.py). Nothing said inside a span is ever archived. The span is opened before the
     switch is turned off, and closed only after it is turned on: an act cut short between the
     two leaves the span the wider. Switching on gives `again` where it closed a span. Switching
-    off also keeps the steady clock's reading in the person's record, so that a span is closed
-    whole where the clock was set back while it was off (see off.closed).
+    off also keeps the steady clock's reading in the person's record, so that what was said while
+    it was off is kept off where the clock was set back meanwhile (see off.closed).
 
     The person's record keeps how many lines `off.txt` has each time the switch writes it (see
     `lost`). Where that file is since missing or shorter, switching on keeps everything before

@@ -49,7 +49,7 @@ The person's switch is kept where no repository can hold it: `~/.claude/crossing
 | --- | --- |
 | the switch is turned off | keeps the moment in the home's `off.txt`, in UTC, before the `switch` file is turned; a span opens |
 | it is turned on again | closes the span after the `switch` file is turned; the session it is turned from has what it said meanwhile noted by id in `unsaid.txt` |
-| the clock reads earlier as it is turned on than as it was turned off (it was set back meanwhile) | closes the span as far past its opening as the steady clock has run since it was switched off, or, where that cannot be told (the computer was started again), as far past its opening as the clock went back; what is said in the first moments after may be kept off too |
+| the clock reads earlier as it is turned on than as it was turned off (it was set back meanwhile) | closes the span as far past its opening as the steady clock has run since it was switched off, or, where that cannot be told (the computer was started again), as far past its opening as the clock went back; and keeps a second span, closed at this moment, that begins as far before it as the steady clock ran, or, where that cannot be told, at 1970, so that what was said after the clock went back is off too. What was said in the moments before it was switched off, or in the first moments after it is on, and is not archived yet, may be kept off as well, and `status` counts the two spans as two times off |
 | a reading meets a message inside a span, by the time the transcript wrote beside it | passes over it, and what was pasted in it, and keeps its id alone in `unsaid.txt` |
 | a message has no time, or one that cannot be read | keeps it only where the rows on either side of it in that file are outside every span and no span begins or ends between them; at the first or last row of a file it is not kept, and a session's end decides the last again once a row has come after it |
 | `off.txt` is there and cannot be read | archives nothing, and moves no marker, until it can be |
@@ -59,13 +59,13 @@ The person's switch is kept where no repository can hold it: `~/.claude/crossing
 | a cut comes while `off.txt` is missing or shorter than the record says | is counted with nothing said listed: its page says the record cannot be told |
 | `mark` or `leave` while it is off | refuse |
 
-The store shows that something may have been said, and nothing of what: `status` says how many times Crossings was off, `look` puts a line with the two moments among its days, `thread` puts one in the place of what was said, and `find` finds nothing of it. `unsaid.txt` keeps one id for each message a reading met inside a span, so how many they were can be counted from it; no count of them or of their characters is kept, a cut's count included, and the frame does not mention it.
+The store shows that something may have been said, and nothing of what: `status` says how many times Crossings was off (how many spans `off.txt` holds), `look` puts a line with the two moments among its days, `thread` puts one in the place of what was said, and `find` finds nothing of it. `unsaid.txt` keeps one id for each message a reading met inside a span, so how many they were can be counted from it; no count of them or of their characters is kept, a cut's count included, and the frame does not mention it.
 
 What it does not do:
 
 - It does not reach back. A span is kept from the moment the switch is turned, so what was archived before, or said in a time off that no span was kept for (a switch written by hand, or a time off with no span in `off.txt`), stays until it is struck.
 - It does not touch the harness's own transcript, which still holds everything said, for as long as the harness keeps it.
-- It judges a message by the time the harness wrote beside it in the transcript being read, by this computer's clock. A clock set back while it is off is met by the span's closing (above); one set forward and back again while it is off, or set back after it is on again, is not.
+- It judges a message by the time the harness wrote beside it in the transcript being read, by this computer's clock. A clock set back while it is off is met by the two spans switching on keeps (above); one set forward and back again while it is off, or set back after it is on again, is not.
 - It does not tell a session other than the one it was switched off from. Nothing that session says is kept, and its `mark` and `leave` refuse all the same.
 
 ---

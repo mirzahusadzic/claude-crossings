@@ -144,12 +144,16 @@ def closed(folder: Path, since: float | None = None) -> bool:
     whether there was one to close.
 
     Where the clock reads earlier now than when the span was opened, it was set back while the
-    switch was off, and what was said then may bear times after this moment's. The span is then
-    closed as far past its opening as the steady clock (see `steady`) has run since `since`, its
-    reading as the span was opened; where that cannot be told (none was kept, or the computer was
-    started again since), as far past its opening as the clock was found to have gone back. A span
-    closed so may keep off what is said in the next moments too: nothing said while it was off is
-    kept."""
+    switch was off. What was said before it went back bears times after this moment's, and what
+    was said after it bears times before the span's opening. The span is then closed as far past
+    its opening as the steady clock (see `steady`) has run since `since`, its reading as the span
+    was opened; where that cannot be told (none was kept, or the computer was started again
+    since), as far past its opening as the clock was found to have gone back. And a second span
+    is kept, closed at this moment, of the line's own form: from this moment less what the steady
+    clock ran, so that what was said after the clock went back is off as well; where that cannot
+    be told, from FIRST, as `everything_before` keeps it. Spans closed so may keep off what is
+    said in the moments before the switch was turned off, or after it is turned on: nothing said
+    while it was off is kept."""
     lines = _lines(folder)
     found, _ = _parsed(lines)
     if not found or found[-1][2] is not None:
@@ -157,13 +161,16 @@ def closed(folder: Path, since: float | None = None) -> bool:
     n, opened = found[-1][0], found[-1][1]
     stamp = now()
     end = moment(stamp)
+    more = []
     if end is not None and end < opened:  # the clock was set back while the switch was off
         ran = steady() - since if since is not None else -1.0
+        back = (end - datetime.timedelta(seconds=ran)).isoformat(timespec="microseconds") if ran >= 0 else FIRST
+        more = [f"{back} {stamp}"]  # what was said after the clock went back, by the clock as it reads now
         stamp = (opened + (datetime.timedelta(seconds=ran) if ran >= 0 else opened - end)).isoformat(
             timespec="microseconds"
         )
     lines[n] = f"{lines[n].strip()} {stamp}"
-    _write(folder, lines)
+    _write(folder, lines + more)
     return True
 
 
