@@ -20,9 +20,32 @@ from typing import Iterator
 # that hold one are read as they always were.
 CARRIED = "A note from the Crossings plugin"
 CARRIED_BEFORE = "A note from the Crossing plugin"
-HARNESS_OPENINGS = ("<", "[SYSTEM NOTIFICATION", "Another Claude session", "Caveat:", CARRIED, CARRIED_BEFORE)
+HARNESS_OPENINGS = ("[SYSTEM NOTIFICATION", "Another Claude session", "Caveat:", CARRIED, CARRIED_BEFORE)
+# A block the harness puts into the person's turn: `<name ...>...</name>`, its name of lower-case letters,
+# digits and hyphens (`system-reminder`, `local-command-stdout`, `command-name`). A text of the turn made of
+# such blocks alone, and white space, is the harness's (see `harness`); any other is the person's words.
+OPENED = re.compile(r"<([a-z0-9-]+)(?:\s[^<>]*)?>")
 # What the person pasted into a message. The harness wraps it in a pair of tags that carry one id.
 PASTE = re.compile(r'<pasted_content(?:\s+id="[^"]*")?\s*>(.*?)</pasted_content(?:\s+id="[^"]*")?\s*>', re.S)
+
+
+def harness(text: str) -> bool:
+    """Whether a text of the person's turn is the harness's: one whole block of the form
+    `<name ...>...</name>` whose name is of the harness's kind (OPENED), or several, with white space
+    alone around and between them. Each block ends at the first closing of its own name. A text of
+    any other shape (`<3`, a tag the person writes about, a sentence after a block) is the person's."""
+    at, blocks = 0, 0
+    while True:
+        while at < len(text) and text[at].isspace():
+            at += 1
+        if at == len(text):
+            return blocks > 0
+        opened = OPENED.match(text, at)
+        closing = f"</{opened.group(1)}>" if opened else ""
+        end = text.find(closing, opened.end()) if opened else -1
+        if end < 0:
+            return False
+        at, blocks = end + len(closing), blocks + 1
 
 
 def norm(text: str) -> str:
@@ -146,7 +169,7 @@ def person(row: dict, whole: bool = False) -> list[str]:
             continue
         sent = block.get("text", "")
         typed = norm(PASTE.sub(" ", sent))
-        if typed.startswith(HARNESS_OPENINGS) or "system-reminder" in typed[:60]:
+        if typed.startswith(HARNESS_OPENINGS) or harness(PASTE.sub(" ", sent)):
             continue
         if whole and (typed or PASTE.search(sent)):
             said.append(sent.strip())  # a message that is only a paste is still kept

@@ -1758,6 +1758,51 @@ def test_the_reader_is_the_persons_gives_one_message_an_id_names_alone_and_nothi
     assert (linked.returncode, linked.stdout) == (1, ""), linked
 
 
+# --- what the harness put into the person's turn, by its shape ---------------------------------------------
+
+
+def test_the_harness_blocks_in_the_persons_turn_are_told_by_their_shape_and_the_persons_words_are_kept(tmp_path):
+    """Through a hook's own process: a message that opens with `<` or speaks of a system reminder is
+    the person's, word for word; a block of the harness's alone is not kept, and a block followed by
+    the person's own sentence keeps the sentence: as a text of its own, the sentence alone, and in one
+    text with the block, that text as it was sent."""
+    project, home_, path = public(tmp_path)
+    kept = [
+        "<3 that works",
+        "<div> is the tag I mean",
+        "the system-reminder you got was wrong",
+        "<system-reminder>A block in one text with the person's.</system-reminder>\nThe person's sentence after it.",
+    ]
+    sent = [
+        *kept,
+        "<system-reminder>\nA reminder of the harness's.\n</system-reminder>",
+        "<local-command-stdout>made-up output</local-command-stdout>",
+        [
+            {"type": "text", "text": "<system-reminder>Another of the harness's.</system-reminder>"},
+            {"type": "text", "text": "And then the person's own sentence."},
+        ],
+        "<command-name>/made-up</command-name>\n<command-message>made-up</command-message>\n<command-args></command-args>",
+    ]
+    path.write_text(
+        "".join(json.dumps(row("user", f"{n + 1:08x}", n, text)) + "\n" for n, text in enumerate(sent)),
+        encoding="utf-8",
+    )
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    event = {
+        "hook_event_name": "PreToolUse",
+        "transcript_path": str(path),
+        "cwd": str(project),
+        "session_id": path.stem,
+    }
+    done = ran(
+        "hook.py",
+        stdin=json.dumps({**event, "tool_name": "mcp__plugin_crossing_door__find"}),
+        CLAUDE_CODE_ENTRYPOINT="cli",
+    )
+    assert (done.returncode, done.stderr) == (0, ""), done
+    assert kept_texts(home_) == [*kept, "And then the person's own sentence."], kept_texts(home_)
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
