@@ -177,6 +177,11 @@ def cleared(folder: Path) -> None:
     note.unlink()
 
 
+COPYING = "copy.lock"  # held by one copy of a home at a time, from its first file read to its image's place
+HELD = "another act was writing this home, so no copy was made this time"
+BUSY = "another copy of this home was being made at that moment, so none was made this time"
+
+
 def make(folder: Path, dest: Path, name: str, top: Path | None = None) -> dict:
     """Write `<dest>/<name>.dmg`, replacing the one there, and check it by opening it again. The
     staged files, the folder named for the copy where it is made here, and the image are the
@@ -186,9 +191,27 @@ def make(folder: Path, dest: Path, name: str, top: Path | None = None) -> dict:
     folder (see `staging`), never in the home, and taken away file by file once the image is
     made. The home keeps the stage's path in `copy-stage.txt` meanwhile, so that a run killed
     before its end (a tool that overran the hook's time) has its stage taken away by the next.
-    Two copies of one home made at the same moment are not kept apart. Where the temporary folder
-    lies inside the home, the copy's folder or the project being served (`top`), no copy is made."""
+    Where the temporary folder lies inside the home, the copy's folder or the project being served
+    (`top`), no copy is made.
+
+    One copy of a home is made at a time: it holds `copy.lock` all the while, so the next never
+    takes a live stage for one a killed run left, and one that cannot have it within the lock's
+    wait makes none. The plain files are read and staged under the home's lock (store._locked), so
+    that no archive, mark or strike writes them halfway through and a strike's text cannot stay in
+    the newest copy; the image is made once it is let go, so that no act waits for hdiutil."""
     record.private()
+    lock = store.within(folder, COPYING)
+    copying = store._held_at(lock)
+    if copying is None:
+        return {"copied": False, "why": BUSY}
+    try:
+        return _make(folder, dest, name, top)
+    finally:
+        store._let_go(lock, copying)
+
+
+def _make(folder: Path, dest: Path, name: str, top: Path | None) -> dict:
+    """`make`, with the home's copy lock held."""
     cleared(folder)
     files = plain(folder)
     if not files:
@@ -204,11 +227,18 @@ def make(folder: Path, dest: Path, name: str, top: Path | None = None) -> dict:
     note.write_text(f"{stage}\n", encoding="utf-8")
     made: list[Path] = []
     try:
-        for source in files:
-            target = stage.joinpath(*source.relative_to(folder).parts)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source, target)
-            made.append(target)
+        held = store._locked(folder)
+        if held is None:
+            return {"copied": False, "why": HELD}
+        try:
+            files = plain(folder)  # as they stand while no other act writes them
+            for source in files:
+                target = stage.joinpath(*source.relative_to(folder).parts)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+                made.append(target)
+        finally:
+            store._unlocked(folder, held)
         dest.mkdir(parents=True, exist_ok=True)
         fresh = dest / f".{name}.new.dmg"
         made_image = _ran(

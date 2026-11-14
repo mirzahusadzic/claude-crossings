@@ -720,9 +720,9 @@ test("a shell command that runs the reader is the person's, and one that reads i
 test('every small file a hook or the door alone writes is kept from a session that would write it, wherever a home stands', async ($, on) => {
   const reached = await tools($, on)
   // Neither written nor named in a shell: how far each transcript was read (a marker set by hand would hide what
-  // came before it), the sentences said once, what was pulled, the lock, a copy's stage and the traces.
+  // came before it), the sentences said once, what was pulled, the locks, a copy's stage and the traces.
   const kept = ['markers.jsonl', 'passed-over.txt', 'ignore-told.txt', 'copy-told.txt', 'damaged-told.txt', 'reached.jsonl',
-    'archive.lock', 'copy-stage.txt', 'last-carry.json', 'last-cut.json', 'models-met.txt', 'models-arrived.txt', 'off-places.jsonl']
+    'archive.lock', 'copy.lock', 'copy-stage.txt', 'last-carry.json', 'last-cut.json', 'models-met.txt', 'models-arrived.txt', 'off-places.jsonl']
   for (const home of HOMES) {
     for (const file of kept) {
       const file_path = `${home}/${file}`

@@ -62,6 +62,7 @@ The plugin's own bookkeeping, which the hooks and the door write alone:
 | `reached.jsonl` | what was pulled through the door: when, which verb, which ids |
 | `said/runs.key` | the home's key for the digests of a summary's runs, made at the first cut that needs it |
 | `archive.lock` | held by one act at a time (see below) |
+| `copy.lock` | held by one second copy at a time, from its first file read to its image's place |
 | `copy-stage.txt` | where a second copy stages its files, while it is made or after one was killed |
 | `last-carry.json`, `last-cut.json` | a trace of the last frame carried, and of what the module did at the last cut |
 
@@ -186,7 +187,7 @@ A transcript only grows, so each archive reads only what was added since the las
 
 A last line with no line feed yet is read once it is whole, and the marker moves only after what it steps over is in the archive. A session's end reads its transcript whole, so nothing a marker stepped over is lost. The hooks of a session no person sits in keep a marker of their own, under the transcript's path with `#unattended` after it.
 
-One act at a time writes a home, holding `archive.lock`: an archive, from reading the record of when Crossings was off to the marker's move; a mark, from what it reads to decide whether it may stand, through the choice of its key, to its build; a strike; `layer`; the switch; and every build of the index. So a switch waits for an archive under way, two marks take two keys, and two reads that each find a stale index make it one at a time.
+One act at a time writes a home, holding `archive.lock`: an archive, from reading the record of when Crossings was off to the marker's move; a mark, from what it reads to decide whether it may stand, through the choice of its key, to its build; a strike; `layer`; the switch; every build of the index; and a second copy, while it reads and stages the plain files, but not while its image is made. So a switch waits for an archive under way, two marks take two keys, and two reads that each find a stale index make it one at a time.
 
 An act that cannot have the lock within five seconds writes nothing, and says so in one sentence where someone asked for it; an archive reads on from its marker the next time, and a read whose build cannot have it makes the index in memory for itself.
 

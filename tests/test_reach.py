@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import signal
 import stat
 import subprocess
@@ -44,6 +45,9 @@ REACH = (
     "repository that holds this home."
 )
 NOTE, STAGE, LOCK = "copy-stage.txt", "crossing-copy-", "archive.lock"
+COPYING = "copy.lock"
+HELD = "another act was writing this home, so no copy was made this time"
+BUSY = "another copy of this home was being made at that moment, so none was made this time"
 
 
 def staging() -> Path:
@@ -451,7 +455,8 @@ def test_the_copy_stages_nothing_inside_the_home(tmp_path, seen):
     )
     assert stage.parent == staging() and stage.name.startswith("crossing-copy-")
     assert seen[0]["files"] == ["hand-over.md", "said/session-.jsonl"] and seen[0]["mode"] == 0o700
-    assert not stage.exists() and tree(crossings) == before  # taken away, and nothing of it is left in the home
+    # taken away, and nothing of it is left in the home but its lock, empty, as an archive's is
+    assert not stage.exists() and tree(crossings) == {**before, COPYING: b""}
     assert not (crossings / ".copy-stage").exists() and not (crossings / NOTE).exists()
 
 
@@ -557,6 +562,135 @@ def test_no_copy_is_staged_where_the_temporary_folder_lies_inside_the_home(tmp_p
     )
     assert seen == [] and list((crossings / "tmp").iterdir()) == [] and list((tmp_path / "cloud").iterdir()) == []
     assert not (crossings / NOTE).exists()
+
+
+@stood_in
+def test_a_copy_stages_its_files_under_the_homes_lock_and_makes_its_image_after_it(tmp_path, seen):
+    # A copy staged while a strike rewrote the archive could keep the struck text in the newest image (a review).
+    crossings, _ = home(tmp_path)
+    name, held_then, copy = store._lock_name(crossings), [], second.shutil.copyfile
+
+    def copying(source, target):  # each staged file: whether the home's lock is held as it is copied
+        held_then.append(name in store._locks_here())
+        return copy(source, target)
+
+    making = second.subprocess.run
+
+    def made(argv, **given):  # the image: whether the lock is held still as it is made
+        held_then.append(("image", name in store._locks_here()))
+        return making(argv, **given)
+
+    second.shutil = types.SimpleNamespace(copyfile=copying)
+    second.subprocess.run = made
+    try:
+        with set_to(CROSSING_COPY_KEY=KEY):
+            assert second.make(crossings, tmp_path / "cloud", "project")["copied"]
+    finally:
+        second.shutil, second.subprocess.run = shutil, making
+    assert held_then == [True, True, ("image", False)]  # the files under it, the image after it is let go
+    assert name not in store._locks_here()
+
+    stages = {p for p in staging().iterdir() if p.name.startswith(STAGE)}
+    wait, store.WAIT = store.WAIT, 0.2
+    held = store._locked(crossings)  # another act holds the home: an archive, a mark, a strike
+    try:
+        with set_to(CROSSING_COPY_KEY=KEY):
+            out = second.make(crossings, tmp_path / "cloud", "project")
+    finally:
+        store._unlocked(crossings, held)
+        store.WAIT = wait
+    assert out == {"copied": False, "why": HELD} and len(seen) == 1  # nothing staged, and no image made
+    assert not (crossings / NOTE).exists() and {p for p in staging().iterdir() if p.name.startswith(STAGE)} == stages
+    assert [p.name for p in (tmp_path / "cloud").iterdir()] == ["project.dmg"]
+    with set_to(CROSSING_COPY_KEY=KEY):
+        assert second.make(crossings, tmp_path / "cloud", "project")["copied"]  # once it is let go, a copy is made
+
+
+@stood_in
+def test_one_copy_of_a_home_at_a_time_and_the_next_leaves_a_live_stage_alone(tmp_path, seen):
+    # Two copies at once shared the note of a stage, and the second took away the first's while it was made (a review).
+    crossings, _ = home(tmp_path)
+    live = Path(tempfile.mkdtemp(prefix=STAGE, dir=staging()))  # the stage of a copy being made at this moment
+    (live / "said").mkdir()
+    (live / "said" / "session-.jsonl").write_text("staged\n", encoding="utf-8")
+    (crossings / NOTE).write_text(f"{live}\n", encoding="utf-8")
+    wait, store.WAIT = store.WAIT, 0.2
+    other = store._held_at(crossings / COPYING)  # that copy holds the home's copy lock
+    try:
+        with set_to(CROSSING_COPY_KEY=KEY):
+            out = second.make(crossings, tmp_path / "cloud", "project")
+    finally:
+        store._let_go(crossings / COPYING, other)
+        store.WAIT = wait
+    assert out == {"copied": False, "why": BUSY} and seen == []
+    assert (live / "said" / "session-.jsonl").read_text(encoding="utf-8") == "staged\n"  # its stage is left as it was
+    assert (crossings / NOTE).read_text(encoding="utf-8") == f"{live}\n"
+    with set_to(CROSSING_COPY_KEY=KEY):  # once that copy is done or gone, the next takes a stage it left away
+        assert second.make(crossings, tmp_path / "cloud", "project")["copied"]
+    assert not live.exists() and not (crossings / NOTE).exists() and second.COPYING == COPYING
+
+
+IMAGE_TOOL = r'''"""hdiutil as a stand-in, for the tests alone and on every system: `create` keeps a folder's files
+in one zip with a digest of the passphrase it is handed, `attach` lays them out in a fresh folder
+under IMAGE_MOUNTS and names it on its last line as hdiutil does, and `detach` leaves it be. It
+encrypts nothing. With IMAGE_TAMPERS set, what it lays out is not what went in."""
+import hashlib, os, sys, tempfile, zipfile
+from pathlib import Path
+
+argv = sys.argv[1:]
+key = hashlib.sha256(sys.stdin.buffer.read() if "-stdinpass" in argv else b"").hexdigest()
+if argv[0] == "create":
+    source = Path(argv[argv.index("-srcfolder") + 1])
+    with zipfile.ZipFile(argv[-1], "w") as image:
+        image.writestr(".key", key)
+        for path in sorted(source.rglob("*")):
+            if path.is_file():
+                image.write(path, path.relative_to(source).as_posix())
+elif argv[0] == "attach":
+    try:
+        image = zipfile.ZipFile(argv[-1])
+    except (OSError, zipfile.BadZipFile):
+        sys.exit("hdiutil: attach failed - image not recognized")
+    with image:
+        if image.read(".key").decode() != key:
+            sys.exit("hdiutil: attach failed - Authentication error")
+        mount = Path(tempfile.mkdtemp(dir=os.environ["IMAGE_MOUNTS"]))
+        for name in image.namelist():
+            if name != ".key":
+                (mount / name).parent.mkdir(parents=True, exist_ok=True)
+                (mount / name).write_bytes(image.read(name) + (b"otherwise" if os.environ.get("IMAGE_TAMPERS") else b""))
+    print(f"/dev/disk9\tGUID_partition_scheme\t\n/dev/disk9s1\tApple_HFS\t{mount}")
+'''
+
+
+def test_the_image_is_opened_again_and_one_that_reads_back_otherwise_replaces_nothing_on_any_system(tmp_path):
+    # The check by opening the image again ran only where macOS's hdiutil is: on Linux no line of it did.
+    crossings, _ = home(tmp_path)
+    tool, mounts, cloud = tmp_path / "image-tool", tmp_path / "mounts", tmp_path / "cloud"
+    tool.mkdir()
+    mounts.mkdir()
+    (tool / "hdiutil.py").write_text(IMAGE_TOOL, encoding="utf-8")
+    (tool / "hdiutil").write_text(
+        f'#!/bin/sh\nexec "{sys.executable}" -I "{tool / "hdiutil.py"}" "$@"\n', encoding="utf-8"
+    )
+    (tool / "hdiutil").chmod(0o755)
+    stray = tmp_path / "not-an-image.dmg"
+    stray.write_bytes(b"not an image")
+    with set_to(PATH=f"{tool}{os.pathsep}{os.environ['PATH']}", IMAGE_MOUNTS=str(mounts), CROSSING_COPY_KEY=KEY):
+        with at_terminal():
+            first = second.make(crossings, cloud, "project")
+            image = (cloud / "project.dmg").read_bytes()
+            with set_to(IMAGE_TAMPERS="1"):
+                otherwise = second.make(crossings, cloud, "project")
+        unread = second.verify(stray, {}, b"any key\0")
+    assert first["copied"] and first["files"] == 2, first
+    page = (crossings / "hand-over.md").read_bytes()
+    opened = [(p / "hand-over.md").read_bytes() for p in mounts.iterdir()]
+    assert sorted(opened) == sorted([page, page + b"otherwise"])  # each image opened again: as it went in, and not
+    assert otherwise == {"copied": False, "why": "the image did not read back the same"}
+    assert (cloud / "project.dmg").read_bytes() == image  # the earlier good copy stands
+    assert sorted(p.name for p in cloud.iterdir()) == ["project.dmg"]  # and the new one went
+    assert unread is False  # a file that is no image does not pass for one
 
 
 def test_status_from_a_shell_says_once_that_the_passphrase_is_in_the_environment(tmp_path):

@@ -342,9 +342,9 @@ const named = (e: Record<string, unknown>, home: string): string => {
 
 // The small files of a home a session is not to write or take away: the record of when Crossings
 // was off, of where each transcript stood as it was switched off, and of what was said then, which model wrote each label, the files of session ids, how far
-// each transcript was read, the sentences said once, what was pulled, the lock, a copy's stage, and
+// each transcript was read, the sentences said once, what was pulled, the locks, a copy's stage, and
 // the traces of the last cut and the last frame.
-const KEPT = String.raw`(?:(?:off|unsaid|models|welcomed|told|there|unattended|shelled|labelled|arrived|collided|passed-over|ignore-told|copy-told|damaged-told|copy-stage|models-met|models-arrived)\.txt\b|(?:markers|reached|off-places)\.jsonl\b|archive\.lock\b|last-(?:carry|cut)\.json\b)`
+const KEPT = String.raw`(?:(?:off|unsaid|models|welcomed|told|there|unattended|shelled|labelled|arrived|collided|passed-over|ignore-told|copy-told|damaged-told|copy-stage|models-met|models-arrived)\.txt\b|(?:markers|reached|off-places)\.jsonl\b|(?:archive|copy)\.lock\b|last-(?:carry|cut)\.json\b)`
 // A words page, by its name: what was said, word for word.
 const WORDS = String.raw`[^/\s'"\x60]+\.words\.md\b`
 // The files of a home the door alone writes, which a session may read: the label pages, the hand-over
