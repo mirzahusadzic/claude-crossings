@@ -103,17 +103,14 @@ def test_a_message_of_the_sessions_keeps_the_model_that_said_it_and_the_persons_
             spoken("30000004", 33, "A row that names no model."),
         ],
     )
-    assert store.archive(path, crossings) == 4
+    assert store.archive(path, crossings) == 3  # the harness's row is nobody's words, and is not kept
     rows = kept(crossings, "harbour0")
     assert [(r["id"], r["voice"], r.get("model")) for r in rows] == [
         ("30000001", "his", None),
         ("30000002", "session", NORTH),
-        ("30000003", "session", None),
         ("30000004", "session", None),
     ]
-    assert (
-        "model" not in rows[0] and "model" not in rows[2] and "model" not in rows[3]
-    )  # a row that names none keeps none
+    assert "model" not in rows[0] and "model" not in rows[2]  # a row that names none keeps none
     assert transcript.model(spoken("x", 1, "y", "  " + NORTH + " ")) == NORTH and transcript.model(person) == ""
     assert transcript.model(spoken("x", 1, "y", 7)) == ""
     store.build(crossings)

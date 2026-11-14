@@ -155,10 +155,20 @@ def person(row: dict, whole: bool = False) -> list[str]:
     return said
 
 
+SYNTHETIC = "<synthetic>"  # the model a row names where the harness wrote it in the session's place
+
+
+def synthetic(row: dict) -> bool:
+    """Whether the harness wrote this row in the session's place (its model is SYNTHETIC), as when it
+    says the person is not logged in: nobody's words."""
+    return _message(row).get("model") == SYNTHETIC
+
+
 def session(row: dict, whole: bool = False) -> list[str]:
     """What the session said to the person in this row (its prose, not its tool calls). A subagent's
-    row (`isSidechain`) is said to the session that started it, and not to the person."""
-    if row.get("type") != "assistant" or sidechain(row):
+    row (`isSidechain`) is said to the session that started it, and not to the person; a row the
+    harness wrote in the session's place (`synthetic`) is said by no one."""
+    if row.get("type") != "assistant" or sidechain(row) or synthetic(row):
         return []
     texts = [b.get("text", "") for b in _blocks(row) if b.get("type") == "text"]
     return [t.strip() if whole else norm(t) for t in texts if norm(t)]

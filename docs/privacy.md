@@ -13,6 +13,7 @@ What Crossings keeps, what it never reads, who can read what it keeps, what the 
 | the session's text to the person | yes, word for word, with the model its row names |
 | a reasoning block | parsed with its row, as every row is, and never used or kept |
 | a row the harness marks as a subagent's (`isSidechain`) | never kept or counted: its prompt is the session's, not the person's |
+| a row the harness wrote in the session's place (its model is `<synthetic>`, as when it says the person is not logged in) | never kept, counted or given on a words page: it is nobody's words |
 | a tool call or a tool result | never kept; the count of a cut measures its length in characters, and nothing else of it |
 | a text in the person's turn that begins with `<`, `Caveat:`, `[SYSTEM NOTIFICATION`, `Another Claude session`, `A note from the Crossings plugin` or `A note from the Crossing plugin` (the older words of the same note), or holds `system-reminder` in its first 60 characters: the harness's notes and reminders, and a note the plugin carried | never kept |
 | the harness's summary at a cut | never kept: its length, and its runs of 24 characters as keyed digests |

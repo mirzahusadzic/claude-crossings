@@ -1183,6 +1183,34 @@ def test_a_sidecar_written_by_another_hand_is_shown_cleaned_and_a_threads_id_is_
         assert "the one you named" in through("thread", asked, "--cwd", str(project))[1], asked
 
 
+# --- a row the harness wrote in the session's place -----------------------------------------------------------
+
+
+def test_a_row_the_harness_wrote_in_the_sessions_place_is_nobodys_words(tmp_path):
+    project, home_, path = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    harness = row("assistant", "bbbbbbbb", 2, [{"type": "text", "text": "Not logged in · Please run /login"}])
+    harness["message"]["model"] = "<synthetic>"
+    spoken = row("assistant", "cccccccc", 3, [{"type": "text", "text": "Grey it is, in the spring."}])
+    spoken["message"]["model"] = "made-up-model"
+    rows = [row("user", "aaaaaaaa", 1, "We paint the hull grey in spring."), harness, spoken]
+    path.write_text("".join(json.dumps(each) + "\n" for each in rows), encoding="utf-8")
+    for name in ("PreToolUse", "PostCompact"):
+        event = {"hook_event_name": name, "transcript_path": str(path), "cwd": str(project), "session_id": path.stem}
+        given = json.dumps({**event, "tool_name": "mcp__plugin_crossing_door__find", "trigger": "auto"})
+        done = ran("hook.py", stdin=given, CLAUDE_CODE_ENTRYPOINT="cli")
+        assert (done.returncode, done.stdout, done.stderr) == (0, "", ""), done
+    assert kept_texts(home_) == ["We paint the hull grey in spring.", "Grey it is, in the spring."]
+    side = json.loads((home_ / "abcdef01-cut-1.json").read_text(encoding="utf-8"))
+    assert [p["id"] for p in side["session"]["pointers"]] == ["cccccccc"], side["session"]
+    (home_ / "hand-over.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n| W1 | Both. | both | `bbbbbbbb`, `cccccccc` |\n"
+    )
+    assert words_script(str(path), str(home_ / "hand-over.md")).returncode == 0
+    words = (home_ / "hand-over.words.md").read_text(encoding="utf-8")
+    assert "Not logged in" not in words and "Grey it is" in words, words
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
