@@ -2089,6 +2089,43 @@ def test_a_record_of_ids_that_cannot_be_read_is_lost_and_a_spans_file_that_turns
         store.lost, off.spans = real_lost, real_spans
 
 
+# --- what a restore keeps off, by id ----------------------------------------------------------------------
+
+
+def test_a_restore_keeps_off_by_id_what_a_known_transcript_held_and_not_by_its_time_alone(tmp_path):
+    """The record of when Crossings was off is lost while it is off, the places with it, and a message
+    said meanwhile bears a time after the moment it is switched on again (the clock had been set
+    forward). Switching on keeps everything before that moment off: in a transcript the archive knows,
+    by the id of every row it does not hold, so that no later reading takes it, whatever its time. A
+    transcript the archive never met is judged by its rows' times alone, as privacy.md says."""
+    project, home_, path = public(tmp_path)
+    path.write_text("", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    says(path, "10000001", "Said on the record before switching off.", at="2026-11-11T09:58:00.000Z")
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0  # the archive knows it
+    other = tmp_path / "fedcba98-5555.jsonl"  # a session the archive never met
+    clock, was = {"now": "2026-11-11T10:00:00.000000+00:00"}, off.now
+    off.now = lambda: clock["now"]
+    try:
+        assert through("switch", "off", "--cwd", str(project))[0] == 0
+        says(path, "10000002", "Said while off, after the clock went forward.", at="2026-11-11T12:00:00.000Z")
+        says(other, "20000001", "Said while off in a session never met.", at="2026-11-11T12:00:00.000Z")
+        for name in (off.FILE, off.UNSAID, store.PLACES):  # the whole record of when it was off is lost
+            (home_ / name).unlink(missing_ok=True)
+        clock["now"] = "2026-11-11T10:30:00.000000+00:00"
+        assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["restored"] + "\n")
+        assert off.unsaid(home_) == {"10000002" + UID}  # by id, as it was switched on: what it held already is not
+        says(path, "10000003", "Said on the record after switching on.", at="2026-11-11T10:31:00.000Z")
+        for each in (path, other):
+            assert through("build", "--transcript", str(each), "--cwd", str(project))[0] == 0
+    finally:
+        off.now = was
+    kept = kept_texts(home_)
+    assert "Said while off, after the clock went forward." not in kept, kept
+    assert "Said on the record before switching off." in kept and "Said on the record after switching on." in kept
+    assert "Said while off in a session never met." in kept, kept  # judged by its time alone
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

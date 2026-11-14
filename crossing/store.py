@@ -488,7 +488,8 @@ def switch(cwd: Path, to: str) -> str:
     switch writes them (see `lost`). Where one of them since holds fewer, is missing where it held
     any, or cannot be read, or `off.txt` holds a line that is no span (see off.untold), switching on
     keeps everything before this moment as off the record, by a span from the first moment there is
-    to now, and archiving goes on from here; it gives `restored`.
+    to now, and, in every transcript the archive knows, by the id of each message it does not hold,
+    whatever time that bears (see `_unsaid_by_id`); archiving goes on from here; it gives `restored`.
 
     Where the home lies inside a repository and holds no ignore file, switching on writes one
     (see `ignored`)."""
@@ -543,8 +544,10 @@ def _switched(cwd: Path, folder: Path, on: bool, adopted: bool = False) -> str:
     ignored(folder)
     was_lost = lost(folder)  # a home adopted with a damaged record is restored as it is switched on, too
     closed = off.closed(folder, since=steadied(folder))
+    placed = list(_places(folder)) if was_lost else []  # the transcripts it knew as it was turned off
     _unsaid_by_place(folder)  # what the transcripts it knew gained meanwhile is off, by its place, whatever its time
     if was_lost:
+        _unsaid_by_id(folder, placed)  # in a transcript it knows, what it does not hold is off by its id, too
         off.everything_before(folder)  # what the missing record may have held is kept off, all of it
     if closed or was_lost or within(folder, off.FILE).exists():
         _spans_kept(folder)
@@ -656,15 +659,7 @@ def _unsaid_by_place(folder: Path) -> None:
                 end = _reached(handle)
                 if end < at["offset"] or _check(handle, at["offset"]) != at["check"]:
                     continue  # another transcript in its place: its rows are judged by their times alone
-            gained = itertools.takewhile(
-                lambda item, end=end: item[0] <= end, transcript.appended(Path(name), at["offset"])
-            )
-            ids += [
-                uuid
-                for _, row in gained
-                for uuid in [str(row.get("uuid") or "") if row is not None else ""]
-                if record.nameable(uuid) and (transcript.person(row, whole=True) or transcript.session(row, whole=True))
-            ]
+            ids += _said_ids(name, at["offset"], end)
         except (OSError, ValueError):  # gone since, or a path that names none: nothing more is said in it
             continue
     off.keep_unsaid(folder, ids)
@@ -672,6 +667,39 @@ def _unsaid_by_place(folder: Path) -> None:
         within(folder, PLACES).unlink()
     except FileNotFoundError:
         pass
+
+
+def _said_ids(name: str, start: int, end: int) -> list[str]:
+    """The ids of the messages, of either voice, a transcript holds from the byte `start` up to the
+    byte `end`, a line's end: those a reading would take as said, by id alone."""
+    gained = itertools.takewhile(lambda item: item[0] <= end, transcript.appended(Path(name), start))
+    return [
+        uuid
+        for _, row in gained
+        for uuid in [str(row.get("uuid") or "") if row is not None else ""]
+        if record.nameable(uuid) and (transcript.person(row, whole=True) or transcript.session(row, whole=True))
+    ]
+
+
+def _unsaid_by_id(folder: Path, placed: list[str]) -> None:
+    """As a home whose record of when Crossing was off was lost is switched on (see `lost`): keep in
+    unsaid.txt the id of every message, of either voice, that a transcript the archive knows holds up
+    to its last whole line now and the archive does not hold, whatever time it bears. A transcript
+    is known by its marker (one a session no person sat in has as well) and by `placed`, the paths
+    PLACES named; a row whose clock was set forward is then kept off by its id, as the span from
+    FIRST keeps the rest off by its time. A transcript the archive never met is judged by its rows'
+    times alone, as before."""
+    names = [key[: -len("#unattended")] if key.endswith("#unattended") else key for key in markers(folder)]
+    held = {row["uuid"] for row in _archived(folder)}
+    ids = []
+    for name in dict.fromkeys(names + placed):
+        try:
+            with open(name, "rb") as handle:
+                end = _reached(handle)
+            ids += [uuid for uuid in _said_ids(name, 0, end) if uuid not in held]
+        except (OSError, ValueError):  # gone, or a path that names none: nothing more is said in it
+            continue
+    off.keep_unsaid(folder, ids)
 
 
 # What a home inside a repository is given as its ignore file, where it has none: everything in it
