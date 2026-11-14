@@ -534,7 +534,7 @@ def test_a_home_whose_files_carry_the_older_headers_is_read_and_behaves_as_befor
         OLDER_HEAD + "2026-11-11T09:03:30.000000+00:00 2026-11-11T09:04:30.000000+00:00\n", encoding="utf-8"
     )
     (folder / "unsaid.txt").write_text(f"{OLDER_UNSAID}{E}-0000-4000-8000-000000000000\n", encoding="utf-8")
-    assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["on"] + "\n")
+    assert through("switch", "adopt", "--cwd", str(project)) == (0, door.SWITCHED["on"] + "\n")  # a home with files
     # D was said at 09:04, inside the span; E is named by unsaid.txt; A and B were said on the record.
     path = tmp_path / "abcdef01-5555.jsonl"
     path.write_text("".join(json.dumps(r) + "\n" for r in ROWS), encoding="utf-8")

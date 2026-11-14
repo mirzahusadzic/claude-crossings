@@ -32,8 +32,9 @@ The person's switch is kept where no repository can hold it: `~/.claude/crossing
 | Event | Crossings |
 | --- | --- |
 | a project with no line in the record | is one where Crossings was never switched on, though a `crossings/` folder or a home made earlier is there; nothing is kept for it |
-| `/crossings on` where the home is there and holds messages or labels with no line for it | says how many, and where; switches nothing on |
+| `/crossings on` where the home is there and holds any file but a `.gitignore`, with no line for it | says how many messages and labels it holds, and what else is there (an index, a hand-over page, a setting file, `models.txt`, how many other files), and where; switches nothing on |
 | `/crossings adopt` | takes that home as the person's own and switches it on |
+| `/crossings on` or `adopt` where the home holds an index | makes the index anew from the plain files: no database that came with the folder is read |
 | a project's own `crossings` that is a link, to a folder or to nothing | is no home: `/crossings on` and `adopt` refuse it in one sentence that names where it leads, nothing is believed, read or written through it, and no home is made outside the project in its place |
 | a home named outright (`CROSSING_HOME`) that is a link | believed only where the line names the place it leads to |
 | a setting names a place inside the project, or no absolute path | is not followed: the project is one where Crossings was never switched on ([Settings](settings.md)) |

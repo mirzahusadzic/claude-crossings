@@ -71,7 +71,7 @@ Crossings keeps nothing for a project until the person switches it on there. The
 | Command | Does |
 | --- | --- |
 | `/crossings on` | switches the project on: makes its home where it has none, and keeps the line in the person's record |
-| `/crossings adopt` | switches on a home that already holds messages or labels this computer has no record of switching on |
+| `/crossings adopt` | switches on a home that already holds files this computer has no record of switching on |
 | `/crossings off` | speaks off the record: nothing either voice says from now until it is switched on again is kept |
 | `/crossings` | turns the switch over |
 | `/crossings status`, `look`, `find <words>`, `labels`, `frame` | show what the store holds |

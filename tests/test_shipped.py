@@ -238,7 +238,8 @@ def test_switching_on_a_home_made_earlier_only_adds_the_line_and_the_switch(tmp_
         ("switch", "off\n"),
     ):
         (outside / name).write_text(value, encoding="utf-8")
-    assert store.kept(loose) is None and through("switch", "toggle", "--cwd", str(loose)) == (0, ON)
+    assert store.kept(loose) is None and through("switch", "toggle", "--cwd", str(loose))[0] == 1  # it holds files
+    assert through("switch", "adopt", "--cwd", str(loose)) == (0, ON)
     assert {p.name: p.read_text(encoding="utf-8") for p in outside.iterdir()} == {
         "archive.lock": "",  # the home's lock, which the switch holds as it turns
         "mode": "own\n",
@@ -457,7 +458,7 @@ def test_a_home_made_before_the_digest_is_used_only_by_the_project_it_names(tmp_
     (old / "project").write_text(f"{ours_.resolve()}\n", encoding="utf-8")
     (old / "mode").write_text("own\n", encoding="utf-8")
     assert record.home(ours_) == old and record.home(theirs) != old  # the other path is not this home's
-    switched_on(ours_)
+    adopted(ours_)  # a home that holds files is taken by the word adopt
     assert store.kept(ours_) == old and (old / "mode").read_text(encoding="utf-8") == "own\n"
     (old / "project").write_text(
         f"{ours_.resolve()}/more\n", encoding="utf-8"

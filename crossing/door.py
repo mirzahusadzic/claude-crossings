@@ -50,9 +50,10 @@ A project's home is its own `crossings/` folder, or, where it has none, a folder
 that `switch on` makes. Either is believed only once the person has switched Crossing on in
 that project, which `switch on` keeps in a record of the person's own, outside every project.
 Until then Crossing was never switched on there: every other verb says so in a sentence, with
-exit status 1, and makes nothing. A home that is there already and holds messages or labels
-this record has no line for is not switched on by `switch on`: it says what is there, and
-`switch adopt` takes it. A setting (CROSSING_HOME, CROSSING_HOMES, CROSSING_OURS,
+exit status 1, and makes nothing. A home that is there already and holds any file but a
+`.gitignore`, which this record has no line for, is not switched on by `switch on`: it says what
+is there, and `switch adopt` takes it. Switching on and adopting make the index anew from the
+plain files, whatever database the folder held. A setting (CROSSING_HOME, CROSSING_HOMES, CROSSING_OURS,
 CROSSING_SWITCHED) that names a place inside the project is not followed: every verb says so
 in a sentence, with exit status 1. `switch on` and `status` narrow a home that is readable by
 other accounts to its owner alone. `switch` is the person's, from their terminal or through their command, and
@@ -161,12 +162,31 @@ def many(n: int, word: str) -> str:
     return f"{n} {word}{'' if n == 1 else 's'}"
 
 
+def joined(items: list[str], last: str = " and ") -> str:
+    """Items in a row: `a, b and c`, or with another word before the last."""
+    return ", ".join(items[:-1]) + last + items[-1] if len(items) > 1 else "".join(items)
+
+
 def unclaimed(held: dict) -> str:
     """What `switch on` says of a home that holds what this computer has no record of switching
-    on (see store.unclaimed), in place of switching it on."""
+    on (see store.unclaimed), in place of switching it on: its messages and labels, and what else
+    is there."""
+    more = (
+        (["an index"] if held["index"] else [])
+        + (["a hand-over page"] if held["page"] else [])
+        + (
+            [f"the setting file{'s' if len(held['settings']) > 1 else ''} {joined(held['settings'])}"]
+            if held["settings"]
+            else []
+        )
+        + (["models.txt"] if held["models"] else [])
+        + ([many(held["others"], "other file")] if held["others"] else [])
+    )
+    beside = joined(more, ", and " if len(more) > 2 else " and ")
     return (
         f"This project's home already holds {many(held['messages'], 'message')} and "
-        f"{many(held['labels'], 'label')} that this computer has no record of switching on, in {held['folder']}. "
+        f"{many(held['labels'], 'label')}" + (f", and {beside}," if beside else "") + " that this computer has no "
+        f"record of switching on, in {held['folder']}. "
         "Run the same command again with the word adopt (/crossings adopt, or door.py switch adopt from a shell) "
         "to take them as your own, or remove that folder first to start clean. Crossings was not switched on."
     )

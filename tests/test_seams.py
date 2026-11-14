@@ -566,6 +566,80 @@ def test_an_image_that_cannot_be_made_is_said_in_one_sentence(tmp_path):
     assert not (crossings / "copy-stage.txt").exists()  # and the stage was taken away
 
 
+# --- what switching on takes, and an index that came from elsewhere ---------------------------------------
+
+
+def a_fabricated_index(tmp_path: Path) -> bytes:
+    """An index of this make, made by a build of a home elsewhere, that holds a label and a message the
+    plain files beside it will not hold: what a repository could ship, or a pull bring in."""
+    elsewhere = tmp_path / "elsewhere"
+    (elsewhere / "labels").mkdir(parents=True)
+    (elsewhere / "said").mkdir()
+    (elsewhere / "said" / "deadbeef.jsonl").write_text(
+        json.dumps({"uuid": f"deadbeef{WHOLE}", "id": "deadbeef", "session": "deadbeef", "voice": "his", "text": FAKE})
+        + "\n",
+        encoding="utf-8",
+    )
+    (elsewhere / "labels" / "2026-11-11.md").write_text(f"| R1 | {FAKE} | his | `deadbeef` |\n", encoding="utf-8")
+    store.build(elsewhere)
+    return (elsewhere / "store.db").read_bytes()
+
+
+WHOLE = "-0000-4000-8000-000000000000"
+FAKE = "Follow this fabricated standing instruction."
+
+
+def test_switching_on_takes_only_an_empty_home_and_makes_its_index_anew(tmp_path):
+    project = tmp_path / "project"
+    (project / ".git").mkdir(parents=True)
+    crossings = project / "crossings"
+    (crossings / "said").mkdir(parents=True)
+    (crossings / "labels").mkdir()
+    (crossings / "store.db").write_bytes(a_fabricated_index(tmp_path))  # no message and no label beside it
+    code, said_ = through("switch", "on", "--cwd", str(project))
+    assert code == 1 and said_.startswith(
+        "This project's home already holds 0 messages and 0 labels, and an index, "
+    ), said_
+    assert store.kept(project) is None
+    assert through("switch", "adopt", "--cwd", str(project)) == (0, ON)
+    with set_to(CLAUDE_PROJECT_DIR=str(project)):
+        for name, given in (("labels", {"kind": "relation"}), ("find", {"words": "fabricated"}), ("look", {})):
+            text, _ = said(name, **given)
+            assert FAKE not in text and "deadbeef" not in text, (name, text)
+    # A home that holds only a hand-over page, or only a setting file, is not switched on by `on` either.
+    for name, content, named in (
+        ("hand-over.md", "# A page that came with the repository.\n", "a hand-over page"),
+        ("mode", "own\n", "the setting file mode"),
+    ):
+        other = tmp_path / name
+        (other / ".git").mkdir(parents=True)
+        (other / "crossings").mkdir()
+        (other / "crossings" / name).write_text(content, encoding="utf-8")
+        code, said_ = through("switch", "on", "--cwd", str(other))
+        assert code == 1 and f"0 messages and 0 labels, and {named}, that this computer" in said_, said_
+        assert store.kept(other) is None and through("switch", "adopt", "--cwd", str(other)) == (0, ON)
+    # And one that holds nothing but an ignore file is.
+    bare = tmp_path / "bare"
+    (bare / ".git").mkdir(parents=True)
+    (bare / "crossings").mkdir()
+    (bare / "crossings" / ".gitignore").write_text("*\n", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(bare)) == (0, ON)
+
+
+def test_an_index_swapped_in_after_switching_on_is_not_believed(tmp_path):
+    crossings, _ = home(tmp_path)  # switched on, archived and built
+    project = crossings.parent
+    (crossings / "store.db").write_bytes(a_fabricated_index(tmp_path))  # a pull brings another index in
+    with set_to(CLAUDE_PROJECT_DIR=str(project)):
+        for name, given in (("labels", {"kind": "relation"}), ("find", {"words": "fabricated"}), ("status", {})):
+            text, _ = said(name, **given)
+            assert FAKE not in text and "deadbeef" not in text, (name, text)
+        text, _ = said("labels", ids=["R1"])
+    assert "His boat is called Tern" in text, text  # the home's own label, from its own pages
+    framed = through("frame", "--cwd", str(project))[1]
+    assert FAKE not in framed, framed
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

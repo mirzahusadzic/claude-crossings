@@ -243,8 +243,8 @@ def test_switching_on_a_home_that_came_with_the_repository_says_what_is_there_an
     project, crossings, _ = cloned(tmp_path)
     before = inside(crossings)
     account = (
-        f"This project's home already holds 1 message and 1 label that this computer has no record of switching "
-        f"on, in {crossings.resolve()}. Run the same command again with the word adopt (/crossings adopt, or "
+        f"This project's home already holds 1 message and 1 label, and the setting files mode and carry, that this "
+        f"computer has no record of switching on, in {crossings.resolve()}. Run the same command again with the word adopt (/crossings adopt, or "
         "door.py switch adopt from a shell) to take them as your own, or remove that folder first to start clean. "
         "Crossings was not switched on.\n"
     )
@@ -268,7 +268,7 @@ def test_a_shipped_home_that_holds_only_labels_or_only_messages_is_asked_about_a
     (only / ".git").mkdir(parents=True)
     standing(only / "crossings", "A line someone else wrote.")
     code, text = through("switch", "on", "--cwd", str(only))
-    assert code == 1 and text.startswith("This project's home already holds 0 messages and 1 label that ")
+    assert code == 1 and text.startswith("This project's home already holds 0 messages and 1 label")
     spoken = tmp_path / "only-messages"
     (spoken / ".git").mkdir(parents=True)
     (spoken / "crossings" / "said").mkdir(parents=True)
@@ -281,18 +281,18 @@ def test_a_shipped_home_that_holds_only_labels_or_only_messages_is_asked_about_a
         encoding="utf-8",
     )
     code, text = through("switch", "on", "--cwd", str(spoken))
-    assert code == 1 and text.startswith("This project's home already holds 2 messages and 0 labels that ")
+    assert code == 1 and text.startswith("This project's home already holds 2 messages and 0 labels")
     empty = tmp_path / "empty"
     (empty / ".git").mkdir(parents=True)
-    (empty / "crossings" / "said").mkdir(parents=True)  # a folder with nothing said or marked in it
-    (empty / "crossings" / "mode").write_text("beside\n", encoding="utf-8")
+    (empty / "crossings" / "said").mkdir(parents=True)  # a folder with nothing in it but an ignore file
+    (empty / "crossings" / ".gitignore").write_text("*\n", encoding="utf-8")
     assert through("switch", "on", "--cwd", str(empty)) == (0, ON)
     assert store.kept(empty) == (empty / "crossings").resolve()
     with set_to(CROSSING_HOME=str(tmp_path / "named")):  # a home named outright is asked about as any other (S3)
         standing(tmp_path / "named", "A line in a home named outright.")
         assert store.unclaimed(tmp_path)["labels"] == 1 and store.kept(tmp_path / "empty") is None
         code, text = through("switch", "on", "--cwd", str(tmp_path / "empty"))
-        assert code == 1 and text.startswith("This project's home already holds 0 messages and 1 label that ")
+        assert code == 1 and text.startswith("This project's home already holds 0 messages and 1 label")
         assert through("switch", "adopt", "--cwd", str(tmp_path / "empty")) == (0, ON)
         assert store.kept(tmp_path / "empty") == tmp_path / "named"
 
@@ -304,9 +304,9 @@ def switched(folder: Path) -> tuple[Path, Path]:
     """A project switched on by the person, with a home of its own that holds nothing yet."""
     project = repository(folder, "harbour")
     (project / "crossings").mkdir()
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
     for name, value in (("mode", "beside"), ("carry", "note")):
         (project / "crossings" / name).write_text(value + "\n", encoding="utf-8")
-    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
     return project, project / "crossings"
 
 

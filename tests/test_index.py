@@ -208,7 +208,7 @@ def test_what_is_said_off_the_record_is_kept_neither_way(tmp_path):
     assert store.archive(path, crossings) == 0  # nothing of it is kept
     time.sleep(0.01)
     append(path, [spoken(92, off.now()), spoken(93, off.now(), "assistant")])
-    assert kept(crossings, path, 2) is False  # off.txt changed since the index was made: made whole
+    assert kept(crossings, path, 2) is True  # the index was made anew as it was switched on, with off.txt as it is
     append(path, [spoken(94, off.now())])
     assert kept(crossings, path, 1) is True
     same_as_whole(project, crossings, ids(1, 92, 94))

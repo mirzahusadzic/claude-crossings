@@ -48,6 +48,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import sqlite3
 import sys
 import time
@@ -375,18 +376,40 @@ def active(folder: Path) -> bool:
     return folder.is_dir() and word(folder, "switch") != "off"
 
 
+SETTINGS = ("mode", "carry", "frame-size", "copy")  # the setting files `unclaimed` names by name
+
+
 def unclaimed(cwd: Path) -> dict | None:
-    """Where the home of the project `cwd` stands in is there already and holds messages or
-    labels, and the person's record has no line for it: a `crossings/` folder that came with a
-    repository, or a home made by hand. What it holds, and where; or nothing. A home named
-    outright (CROSSING_HOME) is asked about as any other."""
+    """Where the home of the project `cwd` stands in is there already, holds any file but a
+    `.gitignore`, and the person's record has no line for it: a `crossings/` folder that came with
+    a repository, or a home made by hand. What it holds, and where; or nothing. Beside its messages
+    and labels: whether it holds an index (`store.db`), a hand-over page, which setting files of
+    SETTINGS, whether `models.txt`, and how many other files. A home named outright
+    (CROSSING_HOME) is asked about as any other."""
     folder, _ = place(cwd)
     top = record.located(cwd)[1]
     if not folder.is_dir() or believed(top, folder):
         return None
     record.sound(folder)
-    held = {"folder": folder, "messages": len(_archived(folder)), "labels": len(labels(folder))}
-    return held if held["messages"] or held["labels"] else None
+    files = [path.relative_to(folder).as_posix() for path in folder.rglob("*") if path.is_file()]
+    files = [name for name in files if name != ".gitignore"]
+    if not files:
+        return None
+    named = {"store.db", "hand-over.md", MODELS, *SETTINGS}
+    held = {
+        "folder": folder,
+        "messages": len(_archived(folder)),
+        "labels": len(labels(folder)),
+        "index": "store.db" in files,
+        "page": "hand-over.md" in files,
+        "settings": [name for name in SETTINGS if name in files],
+        "models": MODELS in files,
+    }
+    kept = {f"said/{page.name}" for page in said_pages(folder)} | {
+        f"labels/{page.name}" for page in pages(folder) if page.parent.name == "labels"
+    }
+    held["others"] = sum(1 for name in files if name not in named and name not in kept)
+    return held
 
 
 def switch(cwd: Path, to: str) -> str:
@@ -469,6 +492,11 @@ def _switched(cwd: Path, folder: Path, on: bool, believed: bool) -> str:
         off.everything_before(folder)  # what the missing record may have held is kept off, all of it
     if closed or was_lost or within(folder, off.FILE).exists():
         _spans_kept(folder)
+    if within(folder, "store.db").exists():  # whatever index the folder held, it is made anew from the plain files
+        if searchable():
+            build(folder)
+        else:  # it cannot be made here, and one that came from elsewhere is not read: it goes, as it may at any time
+            within(folder, "store.db").unlink()
     return "restored" if was_lost else "again" if closed else "on"
 
 
@@ -1253,7 +1281,7 @@ def _current(folder: Path, before: dict) -> sqlite3.Connection | None:
                 r[0]: (r[1], r[2])
                 for r in db.execute("select name, size, changed from source where name not like 'said/%'")
             }
-            if _trusted(db)
+            if _trusted(db) and _believed_index(db, folder)
             else None
         )
         found = _since(folder, db) if recorded == before else None
@@ -1441,13 +1469,89 @@ def build(folder: Path) -> dict:
     if fresh.exists():
         fresh.unlink()
     db = sqlite3.connect(fresh)
+    minted = secrets.token_hex(16)
     try:
         _index(folder, db)
+        db.execute("create table minted(mark text)")
+        db.execute("insert into minted values (?)", (minted,))
+        db.commit()
     finally:
         db.close()
     _put(fresh, made)
+    _mint(folder, minted)
     _noticed(folder)
     return status(folder)
+
+
+# Which index a home's builds made is kept outside every project, beside the person's record (see
+# `switched`): a line a home, {"home": ..., "index": <mark>}, and the same mark in the index itself
+# (its table `minted`). An index whose mark is not the one kept there did not come from a build on
+# this computer (a pull into a home that lies in a repository, a copy, a hand): it is not believed,
+# and is made again before it is read. An index an older make wrote has no mark, and is made again
+# once.
+MINTED = "indexes"
+
+
+def _minted_path() -> Path:
+    return switched().with_name(switched().name + "." + MINTED)
+
+
+def _minted_lines() -> list[dict]:
+    try:
+        lines = record.lines_in(_minted_path())
+    except OSError:
+        return []
+    found = []
+    for line in lines:
+        try:
+            given = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(given, dict) and isinstance(given.get("home"), str) and isinstance(given.get("index"), str):
+            found.append(given)
+    return found
+
+
+def _kept_mark(folder: Path) -> str:
+    """The mark kept for this home's index, by its folder as the record names it or by another
+    spelling of the same folder; nothing where none is kept."""
+    home = spelled(folder)
+    marks = [
+        given["index"]
+        for given in _minted_lines()
+        if given["home"] == home or record._same(Path(given["home"]), folder)
+    ]
+    return marks[-1] if marks else ""
+
+
+def _mint(folder: Path, mark: str) -> None:
+    """Keep the mark of the index just made for this home, under the record's lock (see
+    `_recording`, taken after the home's); its other lines stay as they are. Where it cannot be
+    written, the log says so, and the index is made again at its next reading."""
+    home = spelled(folder)
+    try:
+        with _recording():
+            lines = [
+                json.dumps(given, ensure_ascii=False)
+                for given in _minted_lines()
+                if not (given["home"] == home or record._same(Path(given["home"]), folder))
+            ]
+            lines.append(json.dumps({"home": home, "index": mark}, ensure_ascii=False))
+            fresh = _minted_path().with_name(_minted_path().name + ".new")
+            fresh.write_text("".join(line + "\n" for line in lines), encoding="utf-8")
+            os.replace(fresh, _minted_path())
+    except OSError as err:
+        record.log(f"the mark of a home's index could not be kept: {err}")
+
+
+def _believed_index(db: sqlite3.Connection, folder: Path) -> bool:
+    """Whether an index is the one this computer's last build of the home made: its mark is the one
+    kept beside the person's record (see MINTED)."""
+    try:
+        found = db.execute("select mark from minted").fetchone()
+    except sqlite3.Error:
+        return False
+    return found is not None and bool(found[0]) and found[0] == _kept_mark(folder)
 
 
 def _put(fresh: Path, made: Path) -> None:
@@ -1494,7 +1598,7 @@ def refresh(folder: Path) -> bool:
             db = sqlite3.connect(made, timeout=WAIT)
             db.execute("begin immediate")  # one addition at a time, and a build waits for it (see `_put`)
             # A build that put another database in its place since it was opened: this one is no longer the index.
-            if os.stat(made).st_ino == stood and _trusted(db) and _add(folder, db):
+            if os.stat(made).st_ino == stood and _trusted(db) and _believed_index(db, folder) and _add(folder, db):
                 db.commit()
                 return True
     except (sqlite3.Error, OSError, ValueError):
@@ -1658,7 +1762,11 @@ def _holding(folder: Path):
         db = None
         try:
             db = sqlite3.connect(f"{made.resolve().as_uri()}?mode=ro", uri=True)  # read alone: no database is made
-            if _trusted(db) and not db.execute("select struck from ordered").fetchone()[0]:
+            if (
+                _trusted(db)
+                and _believed_index(db, folder)
+                and not db.execute("select struck from ordered").fetchone()[0]
+            ):
                 found = _since(folder, db)
                 if found is not None:
                     added = {row["uuid"] for row in found[0]}
@@ -1822,13 +1930,21 @@ def _open(folder: Path) -> sqlite3.Connection:
     within(folder, "store.db-journal")  # where the index keeps a change while it is made
     if made.exists():
         db = sqlite3.connect(made)
+        stranger = False
         try:
             if db.execute("pragma user_version").fetchone()[0] == MADE and _trusted(db):
-                db.row_factory = sqlite3.Row
-                return db
+                if _believed_index(db, folder):
+                    db.row_factory = sqlite3.Row
+                    return db
+                stranger = True
         except sqlite3.DatabaseError:  # not a database: made again from the plain files, here in memory
             pass
         db.close()
+        if stranger:  # an index no build here made, or an older make's: made again on disk, and read
+            build(folder)
+            db = sqlite3.connect(made)
+            db.row_factory = sqlite3.Row
+            return db
     db = sqlite3.connect(":memory:")
     _index(folder, db)
     db.row_factory = sqlite3.Row

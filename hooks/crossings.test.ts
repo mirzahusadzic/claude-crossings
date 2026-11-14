@@ -709,3 +709,14 @@ test("a command's quotes and backslashes are taken out before its paths are look
   }
   expect(reached.length).toBe(2)
 })
+
+test("the marks of the homes' indexes, beside the person's record, are kept from a session's hand", async ($, on) => {
+  const reached = tools(on, { ...PLACES, CROSSING_SWITCHED: '/elsewhere/record/switched' })
+  for (const command of ['rm ~/.claude/crossing/switched.indexes', 'echo x >> /elsewhere/record/switched.indexes']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(PERSONS)
+  }
+  for (const file_path of ['/Users/someone/.claude/crossing/switched.indexes', '/elsewhere/record/switched.indexes']) {
+    expect(refused(await $.tool.call({ tool: 'Write', file_path, content: '' }))).toBe(PERSONS)
+  }
+  expect(reached).toEqual([])
+})
