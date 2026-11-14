@@ -35,7 +35,7 @@ Every cut is counted by script, from the session's transcript, and written to a 
 
 | Event | The page |
 | --- | --- |
-| the count runs out of its eight seconds | says not all of it was counted, and gives the numbers for the messages reached |
+| the count runs out of its eight seconds, between two messages or inside the matching of one, however long a run of it the summary holds | says not all of it was counted, and gives the numbers for the messages reached |
 | the stretch holds no message of either voice (a session just forked) | says it was not counted, and guesses nothing |
 | no summary was handed over | says there is nothing to compare against, and how many messages stood before the cut |
 | the home's `off.txt` is missing, shorter than the person's record says, or holds a line that is no span ([Privacy](privacy.md)) | lists nothing said, by id or by length, and says that what was said off the record cannot be told from the rest |

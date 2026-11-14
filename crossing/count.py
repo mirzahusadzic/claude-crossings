@@ -28,7 +28,8 @@ class Late(Exception):
 def covered(text: str, summary: str, run: int = RUN, deadline: float | None = None) -> int:
     """Characters of text lying in some run of `run` or more that the summary holds. Each step
     searches the whole summary, so a long message against a long summary is slow: past `deadline`
-    (by time.monotonic) it stops, and says so (`Late`)."""
+    (by time.monotonic) it stops, and says so (`Late`), between two runs as at each step that
+    lengthens one."""
     total = at = 0
     while at + run <= len(text):
         if deadline is not None and time.monotonic() > deadline:
@@ -36,6 +37,8 @@ def covered(text: str, summary: str, run: int = RUN, deadline: float | None = No
         if text[at : at + run] in summary:
             end = at + run
             while end < len(text) and text[at : end + 1] in summary:
+                if deadline is not None and time.monotonic() > deadline:
+                    raise Late
                 end += 1
             total += end - at
             at = end

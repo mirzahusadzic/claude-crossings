@@ -1057,6 +1057,37 @@ def test_a_cut_whose_figures_are_of_an_unexpected_shape_is_written_with_no_figur
     assert "| Size | not given by the harness |" in written.read_text(encoding="utf-8")
 
 
+# --- a long run the summary holds ---------------------------------------------------------------------------
+
+
+def test_a_count_whose_time_runs_out_while_one_held_run_is_lengthened_is_unfinished(tmp_path):
+    """A stand-in for the count's clock that reads nought for its first four looks, and long past
+    the deadline after: the count, the first message and the two steps that find a held run have
+    those four, and the run of a thousand characters the summary holds is lengthened after them."""
+    looked = {"n": 0}
+
+    def late() -> float:
+        looked["n"] += 1
+        return 0.0 if looked["n"] <= 4 else 1_000_000.0
+
+    long = "x" + "a" * 1000 + "y"
+    was = count.time
+    count.time = types.SimpleNamespace(monotonic=late)
+    try:
+        project, home_, path = public(tmp_path)
+        assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+        path.write_text(json.dumps(row("user", "aaaaaaaa", 1, long)) + "\n", encoding="utf-8")
+        event = {"hook_event_name": "PostCompact", "transcript_path": str(path), "cwd": str(project), "trigger": "auto"}
+        with started_by("cli"):
+            assert hook.run({**event, "session_id": path.stem, "compact_summary": "a" * 1000}) is None
+    finally:
+        count.time = was
+    side = json.loads((home_ / "abcdef01-cut-1.json").read_text(encoding="utf-8"))
+    assert side["person"]["finished"] is False and side["person"]["pointers"] == [], side["person"]
+    assert looked["n"] < 10  # it stopped at the first look inside the run
+    assert "**Not all of it was counted:**" in (home_ / "abcdef01-cut-1.md").read_text(encoding="utf-8")
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
