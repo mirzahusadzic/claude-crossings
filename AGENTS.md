@@ -7,7 +7,9 @@ Crossings is a small Claude Code plugin that keeps what was said in a project, w
 ### Map
 
 - Docs: `README.md` (what it is, install, the switch, develop), `docs/store.md` (homes, files, messages, labels, stacks, states, the index, markers), `docs/door.md` (tools, the command, the person's verbs, what a session is told, the frame), `docs/cuts.md` (the count, modes, the retelling line, the hand-over), `docs/layers.md` (models), `docs/privacy.md` (what is kept, off the record, striking, the guard, what it cannot keep out), `docs/settings.md` (variables and one-line files).
-- Dev: a `python3` with FTS5 in its `sqlite3`, and nothing else. `python3 tests/test_<name>.py` runs one file, offline, on made-up transcripts and temporary homes; pytest runs them all. `claude plugin test .` runs `hooks/crossings.test.ts`. `sh scripts/coverage.sh` measures branch coverage of `crossing/` with the hooks' own processes, against the floor in `.coveragerc`; it needs `uv`. `claude plugin validate .` checks the manifests. `tsconfig.json` extends the types the harness lays in `.claude-plugin/types/` when the plugin is loaded, which git ignores on purpose.
+- Dev: a `python3` with FTS5 in its `sqlite3`, and nothing else. `python3 tests/test_<name>.py` runs one file, offline, on made-up transcripts and temporary homes; pytest runs them all. `claude plugin test .` runs `hooks/crossings.test.ts`.
+
+  `sh scripts/coverage.sh` measures branch coverage of `crossing/` with the hooks' own processes, against the floor in `.coveragerc`; it needs `uv`. `claude plugin validate .` checks the manifests. `tsconfig.json` extends the types the harness lays in `.claude-plugin/types/` when the plugin is loaded, which git ignores on purpose.
 
 | Task | Source |
 | --- | --- |

@@ -14,7 +14,9 @@ What changes when more than one model works in a home. A session can change its 
 | a message of the person's, and a plain label whose `whose` is `his` | no layer: there for whichever model faces the person |
 | a line with no model named, a label reworded since it was signed, or one a subagent marked | no known layer: read as a line of whichever model faces the person, and stood over by any |
 
-`models.txt` is the one place the plugin keeps who wrote a label. The pages read as they always did, and the frame does not carry a model. Every line a signing through the door or `door.py layer` writes is met by the home, as the receipts kept beside the person's record outside every project know it (`switched.receipts`, see [The store](store.md)); `models-met.txt` inside the home is written too, and is no proof alone. A line a build finds that those receipts do not know (a pull, a checkout, a hand, also one that came with its line of `models-met.txt`) is followed all the same, and the person's next `status` names it once, by the label's key and the model it names, as it names a label that came by no mark. A home that is adopted (`/crossings adopt`) has met none of the lines its `models.txt` holds then, whatever a `models-met.txt` that came with it says, so its first build notes every one.
+`models.txt` is the one place the plugin keeps who wrote a label. The pages read as they always did, and the frame does not carry a model.
+
+Every line a signing through the door or `door.py layer` writes is met by the home, as the receipts kept beside the person's record outside every project know it (`switched.receipts`, see [The store](store.md)); `models-met.txt` inside the home is written too, and is no proof alone. A line a build finds that those receipts do not know (a pull, a checkout, a hand, also one that came with its line of `models-met.txt`) is followed all the same, and the person's next `status` names it once, by the label's key and the model it names, as it names a label that came by no mark. A home that is adopted (`/crossings adopt`) has met none of the lines its `models.txt` holds then, whatever a `models-met.txt` that came with it says, so its first build notes every one.
 
 A label marked through the door is signed with the model of the session that marks it. The server is not told which session calls it, so the hook before a call of `mark` hands over the model, and the hook after `mark` or `leave` signs the label where it was not signed as it was written. Only the label of that key and that sentence is signed, and only once. A label a subagent marks is left unsigned: the hook is told the subagent and not its model.
 
@@ -67,7 +69,9 @@ A label or a message with no model named is read as of no known layer until the 
 python3 crossing/door.py layer <model-key>
 ```
 
-It runs from the person's own terminal; the door's server does not offer it. While the project is switched off it signs nothing and writes nothing: it says in one sentence that Crossings is switched off and nothing was signed, with exit status 1. Switched on, it signs, as made with that model, every label whose sentence has no line in `models.txt` and every message of the session's voice that has no model, says how many of each it signed, and, where it signed any, makes the index whole. A line that has a model is never changed. A key with a space or a `#` in it, one that begins with `<`, or none, is refused.
+It runs from the person's own terminal; the door's server does not offer it. While the project is switched off it signs nothing and writes nothing: it says in one sentence that Crossings is switched off and nothing was signed, with exit status 1.
+
+Switched on, it signs, as made with that model, every label whose sentence has no line in `models.txt` and every message of the session's voice that has no model, says how many of each it signed, and, where it signed any, makes the index whole. A line that has a model is never changed. A key with a space or a `#` in it, one that begins with `<`, or none, is refused.
 
 ---
 
