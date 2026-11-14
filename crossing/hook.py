@@ -124,8 +124,7 @@ def welcomed(folder: Path, session_id: str, agent: object = None) -> str | None:
     except OSError:
         pass  # no session was told yet
     try:
-        with open(told, "a", encoding="utf-8") as handle:
-            handle.write(session_id + "\n")
+        record.add(told, session_id + "\n")
     except OSError:
         return None
     return welcome()
@@ -178,8 +177,7 @@ def switched(folder: Path, session_id: str) -> str | None:
     if now == "off" or last == "off":
         try:
             if now != last:
-                with open(book, "a", encoding="utf-8") as handle:
-                    handle.write(f"{session_id} {now}\n")
+                record.add(book, f"{session_id} {now}\n")
             notes.append(unkept() if now == "off" else kept_again())
         except OSError:
             notes += [unkept()] if now == "off" else []  # the one that matters most is said all the same
@@ -605,33 +603,33 @@ def note(event: dict, **more) -> None:
         size, changed = seen.st_size, round(seen.st_mtime, 3)
     except (OSError, ValueError):  # no transcript yet, or a path that is none
         size = changed = None
-    with open(data() / "calls.log", "a", encoding="utf-8") as handle:
-        handle.write(
-            json.dumps(
-                {
-                    "at": round(time.time(), 3),
-                    "event": event.get("hook_event_name"),
-                    "source": event.get("source"),
-                    "trigger": event.get("trigger"),
-                    "summary_chars": len(event.get("compact_summary") or ""),
-                    # what the harness itself says about the cache when a session resumes or forks
-                    **{
-                        k: event[k]
-                        for k in (
-                            "context_tokens",
-                            "prompt_cache_likely_expired",
-                            "estimated_cache_write_usd",
-                            "seconds_since_last_response",
-                        )
-                        if k in event
-                    },
-                    "transcript_bytes": size,
-                    "transcript_changed": changed,
-                    **more,
-                }
-            )
-            + "\n"
+    record.add(
+        data() / "calls.log",
+        json.dumps(
+            {
+                "at": round(time.time(), 3),
+                "event": event.get("hook_event_name"),
+                "source": event.get("source"),
+                "trigger": event.get("trigger"),
+                "summary_chars": len(event.get("compact_summary") or ""),
+                # what the harness itself says about the cache when a session resumes or forks
+                **{
+                    k: event[k]
+                    for k in (
+                        "context_tokens",
+                        "prompt_cache_likely_expired",
+                        "estimated_cache_write_usd",
+                        "seconds_since_last_response",
+                    )
+                    if k in event
+                },
+                "transcript_bytes": size,
+                "transcript_changed": changed,
+                **more,
+            }
         )
+        + "\n",
+    )
 
 
 def main() -> int:
@@ -649,8 +647,7 @@ def main() -> int:
         record.refused(err)
     except Exception:  # never break a session over a count
         try:
-            with open(data() / "errors.log", "a", encoding="utf-8") as handle:
-                handle.write(traceback.format_exc() + "\n")
+            record.add(data() / "errors.log", traceback.format_exc() + "\n")
         except OSError:
             pass
     return 0

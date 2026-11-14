@@ -20,7 +20,7 @@ import time
 from pathlib import Path
 from typing import Iterable, Iterator
 
-from .record import lines_in, lines_of, nameable, within
+from .record import add, lines_in, lines_of, nameable, within
 
 FILE = "off.txt"
 HEAD = (
@@ -247,12 +247,11 @@ def keep_unsaid(folder: Path, ids: list[str]) -> None:
     new = [each for each in dict.fromkeys(ids) if each not in there and nameable(each)]
     if not new:
         return
-    path = within(folder, UNSAID)
-    fresh = not path.exists()
-    with open(path, "a", encoding="utf-8") as handle:
-        if fresh:
-            handle.write("# What was said while Crossings was off, by id alone: never archived.\n")
-        handle.write("".join(each + "\n" for each in new))
+    add(
+        within(folder, UNSAID),
+        "".join(each + "\n" for each in new),
+        head="# What was said while Crossings was off, by id alone: never archived.\n",
+    )
 
 
 def inside(at: datetime.datetime, kept: list[Span]) -> Span | None:

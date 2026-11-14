@@ -24,7 +24,7 @@ import os
 import re
 from pathlib import Path
 
-from crossing import off, store
+from crossing import off, record, store
 from crossing.record import lines_in, within
 
 THERE = "there.txt"
@@ -60,11 +60,11 @@ def there(folder: Path, session: str) -> tuple[str, str]:
 
 def arrive(folder: Path, session: str, model: str) -> None:
     """Keep that this session runs this model from now. A file that cannot be written says so."""
-    fresh = not within(folder, THERE).exists()
-    with open(within(folder, THERE), "a", encoding="utf-8") as handle:
-        if fresh:
-            handle.write("# The model each session runs, as its hooks were told it: session, model, when (UTC).\n")
-        handle.write(f"{session} {model} {off.now()}\n")
+    record.add(
+        within(folder, THERE),
+        f"{session} {model} {off.now()}\n",
+        head="# The model each session runs, as its hooks were told it: session, model, when (UTC).\n",
+    )
 
 
 def current(folder: Path, session: str) -> str:
@@ -93,8 +93,7 @@ def hand(folder: Path, name: str, given: dict, model: str) -> None:
     model = named(model)
     if not model:
         return
-    with open(within(folder, CALLING), "a", encoding="utf-8") as handle:
-        handle.write(f"{digest(name, given)} {model}\n")
+    record.add(within(folder, CALLING), f"{digest(name, given)} {model}\n")
 
 
 def handed(folder: Path, name: str, given: dict) -> str:

@@ -223,8 +223,7 @@ def consent(cwd: Path) -> None:
     with _recording():
         if believed(top, folder):
             return
-        with open(switched(), "a", encoding="utf-8") as handle:
-            handle.write(json.dumps({"project": str(top), "home": spelled(folder)}, ensure_ascii=False) + "\n")
+        record.add(switched(), json.dumps({"project": str(top), "home": spelled(folder)}, ensure_ascii=False) + "\n")
 
 
 @contextlib.contextmanager
@@ -836,24 +835,17 @@ def _archived(folder: Path) -> list[dict]:
     return _kept(folder)[0]
 
 
-def _ends_a_line(path: Path) -> bool:
-    """Whether a file that is not empty ends with a line feed."""
-    with open(path, "rb") as handle:
-        handle.seek(-1, os.SEEK_END)
-        return handle.read(1) == b"\n"
-
-
 def _twinned(folder: Path, ids: list[str]) -> None:
     """Keep in COLLIDED the ids of eight characters that a message just archived shares with
     another the archive holds: each once, by id alone, for the person's next `status`."""
     there = set(collided(folder))
     new = [each for each in dict.fromkeys(ids) if each not in there and record.nameable(each)]
     if new:
-        fresh = not within(folder, COLLIDED).exists()
-        with open(within(folder, COLLIDED), "a", encoding="utf-8") as handle:
-            if fresh:
-                handle.write("# Ids of eight characters that two messages share, by id alone: status says them.\n")
-            handle.write("".join(each + "\n" for each in new))
+        record.add(
+            within(folder, COLLIDED),
+            "".join(each + "\n" for each in new),
+            head="# Ids of eight characters that two messages share, by id alone: status says them.\n",
+        )
 
 
 COLLIDED = "collided.txt"
@@ -1087,11 +1079,11 @@ def unattended(path: Path, folder: Path) -> int:
             new.append(uuid)
             listed.add(uuid)
     if new:
-        fresh = not within(folder, UNHELD).exists()
-        with open(within(folder, UNHELD), "a", encoding="utf-8") as handle:
-            if fresh:
-                handle.write("# What sessions no person sat in held, by id: never archived.\n")
-            handle.write("".join(uuid + "\n" for uuid in new))
+        record.add(
+            within(folder, UNHELD),
+            "".join(uuid + "\n" for uuid in new),
+            head="# What sessions no person sat in held, by id: never archived.\n",
+        )
     if end != start or (stored or {}).get("offset") != end:
         _moved(folder, key, path, end)
     return len(new)
@@ -1203,23 +1195,19 @@ def _archive(path: Path, folder: Path, whole: bool, taken: bool, kept_off: list,
     if new:
         page = within(folder, "said", f"{session}.jsonl")
         page.parent.mkdir(parents=True, exist_ok=True)
-        with open(page, "a", encoding="utf-8") as handle:
-            if handle.tell() and not _ends_a_line(page):  # a last line cut short is ended first, and left as it is
-                handle.write("\n")
-            for said in new:
-                handle.write(json.dumps(said, ensure_ascii=False) + "\n")
+        record.add(
+            page, "".join(json.dumps(said, ensure_ascii=False) + "\n" for said in new)
+        )  # a last line cut short is ended first
         noted = [
             said["id"] for said in new if said["voice"] == HIS and secret(said["text"]) and record.nameable(said["id"])
         ]
         if noted:  # by id alone: nothing of what the message holds is copied
-            fresh = not within(folder, FLAGGED).exists()
-            with open(within(folder, FLAGGED), "a", encoding="utf-8") as handle:
-                if fresh:
-                    handle.write(
-                        "# Messages kept that look like they hold a key or a password, by id alone: "
-                        "door.py strike <id> removes one.\n"
-                    )
-                handle.write("".join(said + "\n" for said in noted))
+            record.add(
+                within(folder, FLAGGED),
+                "".join(said + "\n" for said in noted),
+                head="# Messages kept that look like they hold a key or a password, by id alone: "
+                "door.py strike <id> removes one.\n",
+            )
         _twinned(folder, twins)
     off.keep_unsaid(folder, offs)  # by id alone: nothing of what was said then is written
     # The marker moves only once what it steps over is in the archive: cut short before this,
@@ -1298,13 +1286,11 @@ def _signed_all(folder: Path, signed: list[tuple[str, str]], model: str) -> None
     if not lines:
         return
     _signs_known(folder, lines)
-    fresh = not within(folder, MODELS).exists()
-    with open(within(folder, MODELS), "a", encoding="utf-8") as handle:
-        if fresh:
-            handle.write(
-                "# Which model wrote each label: its key, six characters of its sentence's digest, the model.\n"
-            )
-        handle.write("".join(line + "\n" for line in lines))
+    record.add(
+        within(folder, MODELS),
+        "".join(line + "\n" for line in lines),
+        head="# Which model wrote each label: its key, six characters of its sentence's digest, the model.\n",
+    )
 
 
 def newest(folder: Path, session: str) -> dict:
@@ -2250,14 +2236,11 @@ SHELLED = "shelled.txt"
 
 def shell_marked(folder: Path, key: str) -> None:
     """Keep that the label of this key was marked from a shell."""
-    path = within(folder, SHELLED)
-    fresh = not path.exists()
-    with open(path, "a", encoding="utf-8") as handle:
-        if fresh:
-            handle.write(
-                "# Labels marked from a shell as the person's or about the two of them, by key: status says them.\n"
-            )
-        handle.write(key + "\n")
+    record.add(
+        within(folder, SHELLED),
+        key + "\n",
+        head="# Labels marked from a shell as the person's or about the two of them, by key: status says them.\n",
+    )
 
 
 def shelled(folder: Path) -> list[str]:
@@ -2283,8 +2266,7 @@ def once(folder: Path, name: str, line: str) -> bool:
     except OSError:
         return False
     try:
-        with open(path, "a", encoding="utf-8") as handle:
-            handle.write(line + "\n")
+        record.add(path, line + "\n")
     except OSError:
         return False
     return True
@@ -2316,14 +2298,15 @@ def _known(folder: Path, entries: list[str]) -> list[str]:
     met = _met(folder)
     if met is None:
         held = [f"{label['id']}@{digest(label['text'])}" for label in labels(folder)]
-        with open(within(folder, LABELLED), "a", encoding="utf-8") as handle:
-            handle.write("# The labels this home has met, by key and digest: a build notes any other in arrived.txt.\n")
-            handle.write("".join(each + "\n" for each in dict.fromkeys(held)))
+        record.add(
+            within(folder, LABELLED),
+            "".join(each + "\n" for each in dict.fromkeys(held)),
+            head="# The labels this home has met, by key and digest: a build notes any other in arrived.txt.\n",
+        )
         met = set(held)
     new = [each for each in dict.fromkeys(entries) if each not in met]
     if new:
-        with open(within(folder, LABELLED), "a", encoding="utf-8") as handle:
-            handle.write("".join(each + "\n" for each in new))
+        record.add(within(folder, LABELLED), "".join(each + "\n" for each in new))
     return new
 
 
@@ -2358,16 +2341,15 @@ def _signs_known(folder: Path, entries: list[str]) -> list[str]:
     met = _signs_met(folder)
     if met is None:
         held = _model_lines(folder)
-        with open(within(folder, SIGNS_MET), "a", encoding="utf-8") as handle:
-            handle.write(
-                "# The lines of models.txt this home has met: a build notes any other in models-arrived.txt.\n"
-            )
-            handle.write("".join(each + "\n" for each in dict.fromkeys(held)))
+        record.add(
+            within(folder, SIGNS_MET),
+            "".join(each + "\n" for each in dict.fromkeys(held)),
+            head="# The lines of models.txt this home has met: a build notes any other in models-arrived.txt.\n",
+        )
         met = set(held)
     new = [each for each in dict.fromkeys(entries) if each not in met]
     if new:
-        with open(within(folder, SIGNS_MET), "a", encoding="utf-8") as handle:
-            handle.write("".join(each + "\n" for each in new))
+        record.add(within(folder, SIGNS_MET), "".join(each + "\n" for each in new))
     return new
 
 
@@ -2410,8 +2392,7 @@ def _noticed(folder: Path) -> None:
     else:
         came = _signs_known(folder, _model_lines(folder))
         if came:
-            with open(within(folder, SIGNS_ARRIVED), "a", encoding="utf-8") as handle:
-                handle.write("".join(each + "\n" for each in came))
+            record.add(within(folder, SIGNS_ARRIVED), "".join(each + "\n" for each in came))
     if _met(folder) is None:
         _known(folder, [])
         return
@@ -2420,8 +2401,7 @@ def _noticed(folder: Path) -> None:
         folder, [f"{label['id']}@{digest(label['text'])}" for label in labels(folder) if label["id"] not in gone]
     )
     if came:
-        with open(within(folder, ARRIVED), "a", encoding="utf-8") as handle:
-            handle.write("".join(each + "\n" for each in came))
+        record.add(within(folder, ARRIVED), "".join(each + "\n" for each in came))
 
 
 def arrived(folder: Path) -> list[str]:
@@ -2953,8 +2933,9 @@ def _marked(
             encoding="utf-8",
         )
     cell = [f"`{line}@{digest(beneath[line]['text'])}`" for line in lines] + [f"`{a}`" for a in anchors]
-    with open(page, "a", encoding="utf-8") as handle:
-        handle.write(f"| {key} | {text} | {whose} | {', '.join(cell)} |\n")
+    record.add(
+        page, f"| {key} | {text} | {whose} | {', '.join(cell)} |\n"
+    )  # a last row with no line feed is ended first
     if model:
         _signed(folder, key, text, model)
     _known(folder, [f"{key}@{digest(text)}"])  # marked through the door: no build takes it for one that arrived
@@ -3030,8 +3011,7 @@ def reached(folder: Path, verb: str, ids: list[str]) -> None:
     what was said is in it. It is what cooling will need: what keeps being pulled stays near."""
     folder.mkdir(parents=True, exist_ok=True)
     now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
-    with open(within(folder, "reached.jsonl"), "a", encoding="utf-8") as handle:
-        handle.write(json.dumps({"at": now, "verb": verb, "ids": ids}) + "\n")
+    record.add(within(folder, "reached.jsonl"), json.dumps({"at": now, "verb": verb, "ids": ids}) + "\n")
 
 
 def strike(folder: Path, token: str, why: str = "") -> dict:
@@ -3258,8 +3238,7 @@ def _struck_out(folder: Path, token: str, why: str = "") -> dict:
     where it is struck; one that is kept is written back as it was. Every file this rewrites is
     written whole beside itself and then put in its place (see `_replaced`): the caller holds the
     home's lock."""
-    with open(within(folder, "struck.txt"), "a", encoding="utf-8") as handle:
-        handle.write(token + (f"  # {why}" if why else "") + "\n")
+    record.add(within(folder, "struck.txt"), token + (f"  # {why}" if why else "") + "\n")
     gone, removed, ids, wholes = struck(folder), 0, {token}, []
 
     def out(line: str) -> dict | None:
@@ -3279,8 +3258,10 @@ def _struck_out(folder: Path, token: str, why: str = "") -> dict:
             wholes += [was["uuid"] for was in taken if was]
             _replaced(folder, page, "".join(line + "\n" for line, was in zip(lines, taken) if not was))
     if token.startswith("session:") and wholes:  # by each whole id: a transcript of another name brings none back
-        with open(within(folder, "struck.txt"), "a", encoding="utf-8") as handle:
-            handle.write("".join(f"{uuid}  # of {token}\n" for uuid in dict.fromkeys(wholes) if record.nameable(uuid)))
+        record.add(
+            within(folder, "struck.txt"),
+            "".join(f"{uuid}  # of {token}\n" for uuid in dict.fromkeys(wholes) if record.nameable(uuid)),
+        )
     for page in pages(folder):
         lines = record.ended(_text(page))
         kept = [line for line in lines if not ((m := ROW.match(line.rstrip("\n"))) and m.group(1) in gone)]

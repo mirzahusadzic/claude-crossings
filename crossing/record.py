@@ -99,6 +99,23 @@ def lines_in(path: Path) -> list[str]:
     return decoded(path.read_bytes(), path)
 
 
+def add(path: Path, text: str, head: str = "") -> None:
+    """Append whole lines (`text`, each ending in a line feed) to a plain file: the one way the
+    plugin adds a line to a file of a home, a log or the person's record. Where the file's last line
+    has no line feed (an editor, a checkout or a sync left it so), the line feed comes first, so that
+    the last line and the first new one stay two lines; where the file is new or empty, `head` comes
+    first. A file that cannot be opened raises OSError as before."""
+    with open(path, "a", encoding="utf-8") as handle:
+        if handle.tell():
+            with open(path, "rb") as seen:
+                seen.seek(-1, os.SEEK_END)
+                if seen.read(1) != b"\n":
+                    handle.write("\n")
+        elif head:
+            handle.write(head)
+        handle.write(text)
+
+
 def undecodable(path: Path) -> int:
     """How many lines of a file cannot be read as text; nought for a file that cannot be opened."""
     try:
@@ -288,8 +305,7 @@ def data() -> Path:
 def log(line: str) -> None:
     """One line in the plugin's error log. A log that cannot be written is no reason to stop."""
     try:
-        with open(data() / "errors.log", "a", encoding="utf-8") as handle:
-            handle.write(line + "\n")
+        add(data() / "errors.log", line + "\n")
     except OSError:
         pass
 

@@ -11,6 +11,7 @@ Run with pytest, or without it:  python3 tests/test_seams.py
 from __future__ import annotations
 
 import contextlib
+import datetime
 import io
 import json
 import os
@@ -1581,6 +1582,54 @@ def test_a_record_with_nothing_in_unsaid_or_places_and_one_an_earlier_make_wrote
     assert not store.lost(home_)  # an earlier make's count of lines cannot miss it: the next switch keeps more
     (home_ / off.FILE).write_text("".join(line + "\n" for line in (home_ / off.FILE).read_text().splitlines()[1:]))
     assert store.lost(home_)
+
+
+# --- a file whose last line has no line feed ------------------------------------------------------------
+
+
+def test_a_line_is_added_to_a_file_whose_last_line_has_no_line_feed_as_a_line_of_its_own(tmp_path):
+    """A label page, struck.txt, models.txt, the log of what was pulled, the person's record and the
+    error log, each left by an editor or a sync with no line feed after its last line: what is added
+    next is a line of its own, and the line that was there reads back whole."""
+    project = tmp_path / "project"
+    crossings = project / "crossings"
+    (crossings / "said").mkdir(parents=True)
+    (crossings / "labels").mkdir()
+    (project / ".git").mkdir()
+    (crossings / "said" / "deadbeef.jsonl").write_text(
+        json.dumps({"uuid": f"aaaaaaaa{WHOLE}", "id": "aaaaaaaa", "session": "deadbeef", "voice": "his", "text": "A."})
+        + "\n",
+        encoding="utf-8",
+    )
+    page = crossings / "labels" / f"{datetime.date.today().isoformat()}.md"
+    page.write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n| W1 | The row that was here. | his | `aaaaaaaa` |"
+    )
+    assert through("switch", "adopt", "--cwd", str(project)) == (0, ON)
+    for name, text in (("struck.txt", "R9  # struck by hand"), ("models.txt", "W1@abcdef made-up-hand")):
+        (crossings / name).write_text(text, encoding="utf-8")
+    (crossings / "reached.jsonl").write_text(json.dumps({"at": "", "verb": "thread", "ids": ["aaaaaaaa"]}))
+    out = through("mark", "--model", "made-up-model", "--anchors", "aaaaaaaa", "--cwd", str(project), "The new row.")
+    assert out[0] == 0 and out[1].startswith("marked W2"), out
+    held = {label["id"]: (label["text"], label["whose"]) for label in store.labels(crossings)}
+    assert held == {"W1": ("The row that was here.", "his"), "W2": ("The new row.", "session")}, held
+    assert store.models(crossings)[("W1", "abcdef")] == "made-up-hand"
+    assert store.models(crossings)[("W2", store.digest("The new row."))] == "made-up-model"
+    assert through("strike", "W2", "--cwd", str(project))[0] == 0
+    assert {"R9", "W2"} <= store.struck(crossings)
+    assert through("thread", "aaaaaaaa", "--touch", "--cwd", str(project))[0] == 0
+    reached = [json.loads(line) for line in (crossings / "reached.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [each["verb"] for each in reached] == ["thread", "thread"], reached
+    switched = store.switched()
+    switched.write_text(switched.read_text(encoding="utf-8").rstrip("\n"), encoding="utf-8")
+    other = tmp_path / "other"
+    (other / "crossings").mkdir(parents=True)
+    assert through("switch", "on", "--cwd", str(other)) == (0, ON)
+    assert {Path(each).name for each, _ in store.consented()} >= {"project", "other"}
+    log = Path(os.environ["CLAUDE_PLUGIN_DATA"]) / "errors.log"
+    log.write_text("an earlier line with no line feed", encoding="utf-8")
+    record.log("a line of its own")
+    assert log.read_text(encoding="utf-8").splitlines() == ["an earlier line with no line feed", "a line of its own"]
 
 
 if __name__ == "__main__":
