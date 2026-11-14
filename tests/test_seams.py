@@ -2566,6 +2566,30 @@ def test_the_readme_and_settings_say_what_switch_on_does_with_a_crossings_folder
         assert "`/crossings on` names what it holds and leaves it, and `adopt` takes it" in text, page
 
 
+def test_a_read_whose_rebuild_cannot_have_the_home_makes_the_index_in_memory(tmp_path):
+    """A read finds the index's mark is not the one kept while another act holds the home all the
+    while: it makes the index in memory for itself and answers, and nothing is put in its place."""
+    project, home_, path = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    with contextlib.closing(sqlite3.connect(home_ / "store.db")) as db:
+        db.execute("update minted set mark = 'not-the-kept-mark'")
+        db.commit()
+    was, result = store.WAIT, {}
+    store.WAIT = 0.2
+    held = store._locked(home_)
+    try:
+        other = threading.Thread(target=lambda: result.update(status=store.status(home_)))
+        other.start()
+        other.join(timeout=10)
+    finally:
+        store._unlocked(home_, held)
+        store.WAIT = was
+    assert result["status"]["his"] > 0, result
+    with contextlib.closing(sqlite3.connect(home_ / "store.db")) as db:
+        assert db.execute("select mark from minted").fetchone() == ("not-the-kept-mark",)
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
