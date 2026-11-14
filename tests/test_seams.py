@@ -1332,6 +1332,54 @@ def test_one_message_is_one_message_wherever_a_count_of_them_is_said(tmp_path):
     assert record.many(0, "message") == "0 messages" and record.many(1000, "byte", grouped=True) == "1,000 bytes"
 
 
+# --- a cut's record of an odd shape ----------------------------------------------------------------------------
+
+
+def test_the_printout_of_the_cuts_passes_over_a_record_of_an_odd_shape_and_shows_the_others(tmp_path):
+    """Beside a cut's record as the count writes it lie one that is a list, one with a word where a
+    number belongs, one whose voice holds a word for its count, and one that is no JSON: the printout
+    names each of those in one line and shows the good one, from the command line too."""
+    from crossing import show
+
+    project, home_, _ = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    voice = {"pointers": [{"held": 0}, {"held": 5}], "covered": 5, "chars": 10, "messages": 2}
+    good = {"session_id": "abcdef01-1111", "counted_on": "2026-11-11", "cut": 1, "trigger": "auto"}
+    good.update(person=voice, session=voice, tokens_before=1000, tokens_after=100, cut_ms=2000)
+    odd = {
+        "abcdef01-cut-2.json": json.dumps([1, 2]),
+        "abcdef01-cut-3.json": json.dumps({**good, "cut": 3, "tokens_before": "many"}),
+        "abcdef01-cut-4.json": json.dumps({**good, "cut": 4, "person": {**voice, "messages": "some"}}),
+        "abcdef01-cut-5.json": "not json",
+    }
+    (home_ / "abcdef01-cut-1.json").write_text(json.dumps(good), encoding="utf-8")
+    for name, text in odd.items():
+        (home_ / name).write_text(text, encoding="utf-8")
+    shown = show.block(project)
+    assert shown.startswith("Crossings\n  1 cut on record in this project\n"), shown
+    for name in odd:
+        assert f"  A cut's record could not be read, so it was passed over: {name}\n" in shown, (name, shown)
+    assert "2026-11-11 · session abcdef01, cut 1 · auto\n    1,000 → 100 tokens · the cut took 2 s\n" in shown, shown
+    assert "    nothing held: 1 of 2 messages · 1 of 2 replies\n" in shown, shown
+    assert "many" not in shown and "some" not in shown, shown
+    printed = ran("show.py", str(project))
+    assert (printed.returncode, printed.stdout, printed.stderr) == (0, shown, ""), printed
+    # The record of another session is not named where one session is asked for; a size the harness
+    # gave without what was left after the cut is said as it was given.
+    assert show.block(project, session="ffff") == "Crossings\n  no cut on record in this project\n"
+    (home_ / "fedcba98-cut-1.json").write_text(json.dumps({**good, "session_id": "fedcba98", "tokens_after": None}))
+    alone = show.block(project, session="fedcba98")
+    assert "passed over" not in alone and "    1,000 tokens before · the cut took 2 s\n" in alone, alone
+    (home_ / "fedcba98-cut-2.json").write_text("[]")
+    assert show.block(project, session="fedcba98").startswith(
+        "Crossings\n  1 cut on record in this project\n"
+        "  A cut's record could not be read, so it was passed over: fedcba98-cut-2.json\n"
+    )
+    for name in [*odd, "abcdef01-cut-1.json", "fedcba98-cut-1.json"]:
+        (home_ / name).write_text("[]")
+    assert show.block(project).startswith("Crossings\n  no cut on record in this project\n  A cut's record could")
+
+
 # --- the small paths of the place and mark mends ---------------------------------------------------------------
 
 

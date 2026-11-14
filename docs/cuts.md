@@ -44,7 +44,7 @@ The sidecar holds every pointer, the session's id and the transcript's path, the
 
 The count is written for a cut in any session of a home that is on. The archive is brought up to date only for a session a person sits in.
 
-`python3 crossing/show.py [project] [--session ID]` prints the cuts on record in a few lines each, from the sidecars alone. `python3 crossing/read.py <transcript> <id or line>` reads a message back from a transcript, at most 20 a call, and shows only what was said: never a reasoning block, tool traffic or a harness note.
+`python3 crossing/show.py [project] [--session ID]` prints the cuts on record in a few lines each, from the sidecars alone. A sidecar that cannot be read, or is of another shape than the count writes (no object, a figure that is no number), is passed over in one line that names it, and the others are shown. `python3 crossing/read.py <transcript> <id or line>` reads a message back from a transcript, at most 20 a call, and shows only what was said: never a reasoning block, tool traffic or a harness note.
 
 ---
 
