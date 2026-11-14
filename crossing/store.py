@@ -2223,14 +2223,16 @@ DAMAGED_TOLD = "damaged-told.txt"  # the files the person's status said hold a l
 def damaged(folder: Path) -> list[str]:
     """The files of the home that hold a line that is no text, by their names from the home: the
     archive's pages, the label pages, and the small files read as lines (LINED). Each is said once,
-    for as many such lines as it holds, through `once`: the person's `status` asks this."""
+    for as many such lines as it holds, as `once` says a line, with DAMAGED_TOLD read once and
+    written once however many files are named: the person's `status` asks this."""
     found = []
     for path in said_pages(folder) + pages(folder) + [within(folder, name) for name in LINED]:
         bad = record.undecodable(path)
-        name = path.relative_to(folder).as_posix()
-        if bad and once(folder, DAMAGED_TOLD, f"{name} {bad}"):
-            found.append(name)
-    return found
+        if bad:
+            name = path.relative_to(folder).as_posix()
+            found.append((name, f"{name} {bad}"))
+    told = _once_all(folder, DAMAGED_TOLD, [line for _, line in found]) if found else set()
+    return [name for name, line in found if line in told]
 
 
 # A label marked from a shell, not through the door's server, that speaks for the person or about
@@ -2262,19 +2264,27 @@ def once(folder: Path, name: str, line: str) -> bool:
     """Whether this line is to be said now: it is not yet in the home's small file `name`, and is
     written there. Where that file cannot be written, nothing is said: said at every call, a
     sentence meant once would be worse than none."""
+    return line in _once_all(folder, name, [line])
+
+
+def _once_all(folder: Path, name: str, lines: list[str]) -> set[str]:
+    """Of these lines, those to be said now (see `once`): the file is read once for them all, and
+    those not yet in it are written there in one append. Where it cannot be read or written, none."""
     path = within(folder, name)
     try:
-        if line in record.lines_in(path):
-            return False
+        there = set(record.lines_in(path))
     except FileNotFoundError:
-        pass
+        there = set()
     except OSError:
-        return False
+        return set()
+    new = [line for line in dict.fromkeys(lines) if line not in there]
+    if not new:
+        return set()
     try:
-        record.add(path, line + "\n")
+        record.add(path, "".join(line + "\n" for line in new))
     except OSError:
-        return False
-    return True
+        return set()
+    return set(new)
 
 
 # Which labels came into the pages by the door's own mark is kept beside them: LABELLED holds every

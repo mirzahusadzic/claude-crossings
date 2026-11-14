@@ -1933,6 +1933,33 @@ def test_the_label_page_docs_say_what_a_mark_refuses_and_what_it_does_not(tmp_pa
     assert not store.mark(crossings, "work", "session", "x" * (store.LONGEST + 1), [A])["written"]
 
 
+# --- many damaged files -----------------------------------------------------------------------------------
+
+
+def test_status_reads_what_it_told_of_damaged_files_once_however_many_are_damaged(tmp_path):
+    """Forty pages of the archive each hold a line that is no text: the person's status names them all
+    once, and reads its record of what it told once, not once a page."""
+    project, home_, path = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    for n in range(40):
+        (home_ / "said" / f"bad{n:04d}.jsonl").write_bytes(b"\xff\n")
+    reads, real = [], record.lines_in
+
+    def counting(given: Path) -> list[str]:
+        reads.extend([given] if Path(given).name == store.DAMAGED_TOLD else [])
+        return real(given)
+
+    record.lines_in = counting
+    try:
+        told = through("status", "--cwd", str(project))[1]
+        assert len(reads) == 1, len(reads)
+        assert door.DAMAGED.format(", ".join(f"said/bad{n:04d}.jsonl" for n in range(40))) in told, told
+        assert "as text" not in through("status", "--cwd", str(project))[1] and len(reads) == 2  # once, and read once
+    finally:
+        record.lines_in = real
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
