@@ -16,6 +16,7 @@ import json
 import sys
 import tempfile
 import threading
+import types
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -30,7 +31,7 @@ from test_off import says  # noqa: E402
 from test_serve import said  # noqa: E402
 from test_store import DATA, at_terminal, home, row, started_by  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import door, handover, hook, off, store  # noqa: E402
+from crossing import count, door, handover, hook, off, store  # noqa: E402
 
 # No test here reaches a disk image either: a stand-in for macOS's hdiutil comes first on the path,
 # beside the one for the Keychain, and refuses. A test of a disk image's own use puts its own first.
@@ -406,6 +407,30 @@ def test_a_time_that_is_no_time_is_kept_as_none_and_shown_as_no_heading(tmp_path
         hook.run({**cut, "transcript_path": str(path), "session_id": path.stem})
     shown = (home_ / "abcdef01-cut-1.md").read_text(encoding="utf-8")
     assert "\n# Forged" not in shown and "auto# Forged" in shown, shown
+
+
+# --- a long count ---------------------------------------------------------------------------------------
+
+
+def test_a_count_whose_time_runs_out_inside_one_long_message_is_unfinished(tmp_path):
+    """A stand-in for the count's clock, a second further on at each look: the count has eight of
+    them, and one long message whose matching looks at the clock at each step uses them up."""
+    looked = {"n": 0}
+
+    def ticking() -> float:
+        looked["n"] += 1
+        return float(looked["n"])
+
+    long = "A long message the summary holds none of, " + "word " * 400
+    was = count.time
+    count.time = types.SimpleNamespace(monotonic=ticking)
+    try:
+        side, home_ = counted_cut(tmp_path, [row("user", "aaaaaaaa", 1, long)])
+    finally:
+        count.time = was
+    assert side["person"]["finished"] is False and side["person"]["pointers"] == [], side["person"]
+    assert side["person"]["messages"] == 1 and looked["n"] < 100  # what stood is still known, and the count stopped
+    assert "**Not all of it was counted:**" in (home_ / "abcdef01-cut-1.md").read_text(encoding="utf-8")
 
 
 if __name__ == "__main__":

@@ -21,10 +21,18 @@ SENTENCE = 40  # a sentence shorter than this is not counted as one
 DIGEST = 4  # bytes of a run's digest: enough that two runs are taken for one about once in four billion
 
 
-def covered(text: str, summary: str, run: int = RUN) -> int:
-    """Characters of text lying in some run of `run` or more that the summary holds."""
+class Late(Exception):
+    """The count's time ran out inside the matching of one message (see `covered`)."""
+
+
+def covered(text: str, summary: str, run: int = RUN, deadline: float | None = None) -> int:
+    """Characters of text lying in some run of `run` or more that the summary holds. Each step
+    searches the whole summary, so a long message against a long summary is slow: past `deadline`
+    (by time.monotonic) it stops, and says so (`Late`)."""
     total = at = 0
     while at + run <= len(text):
+        if deadline is not None and time.monotonic() > deadline:
+            raise Late
         if text[at : at + run] in summary:
             end = at + run
             while end < len(text) and text[at : end + 1] in summary:
@@ -80,7 +88,8 @@ def sentences(text: str) -> list[str]:
 
 def voice(messages: list[tuple[int, str, str]], summary: str, deadline: float) -> dict:
     """One voice's count. `messages` are (line, id, text). Past the deadline nothing is guessed:
-    the count is marked unfinished."""
+    the count is marked unfinished, whether the deadline passed between two messages or in the
+    matching of one."""
     out = {
         "messages": len(messages),
         "chars": sum(len(t) for _, _, t in messages),
@@ -101,7 +110,11 @@ def voice(messages: list[tuple[int, str, str]], summary: str, deadline: float) -
             out["pointers"].append({"line": line, "id": ident, "chars": len(text), "held": 0})
             continue
         whole = text in summary
-        held = len(text) if whole else covered(text, summary)
+        try:
+            held = len(text) if whole else covered(text, summary, deadline=deadline)
+        except Late:  # out of time inside this message: unfinished, as between two of them
+            out["finished"] = False
+            break
         out["whole"] += whole
         out["covered"] += held
         parts = sentences(text)
