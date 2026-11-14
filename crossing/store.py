@@ -245,11 +245,14 @@ def _recording():
 
 # The person's record also keeps, for a home that has a record of when Crossing was off, how many
 # lines that record had when the switch last wrote it: a line {"home": ..., "spans": N} beside the
-# project's own, which names no project and so switches nothing on. A spans file that is then
-# missing or shorter was taken away or cut by something other than the switch (a session, a
-# checkout or a clean of a home inside a repository), and what it said can no longer be told:
-# nothing is archived for that home until the person switches it on. So too where a line of it
-# is damaged, so that it is no span: what that line held can no longer be told either.
+# project's own, which names no project and so switches nothing on. Beside it, as an optional field
+# (`held`), it keeps what the three files of that record held then: how many spans `off.txt` held,
+# how many ids `unsaid.txt` held, and how many places `off-places.jsonl` held. A file that then holds
+# fewer, or is missing where it held any, or cannot be read, was taken away, cut or damaged by
+# something other than the switch (a session, a checkout or a clean of a home inside a repository),
+# and what it said can no longer be told: nothing is archived for that home until the person
+# switches it on. So too where a line of `off.txt` is damaged, so that it is no span. A line written
+# by an earlier make has no `held`, and its count of lines is read as it always was.
 
 
 def spanned(folder: Path) -> int:
@@ -279,14 +282,36 @@ def steadied(folder: Path) -> float | None:
     return float(found) if type(found) in (int, float) else None
 
 
+def _held(folder: Path) -> dict | None:
+    """What the three files of the home's record of when Crossing was off held as the switch last
+    wrote it (see `_spans_kept`): spans, ids and places, each a count; nothing where the person's
+    record keeps none, as a line an earlier make wrote keeps none."""
+    found = _spans_line(folder).get("held")
+    if not isinstance(found, dict):
+        return None
+    return {name: found[name] if type(found.get(name)) is int and found[name] >= 0 else 0 for name in HELD}
+
+
+HELD = ("spans", "unsaid", "places")
+
+
 def _spans_kept(folder: Path, steady: float | None = None) -> None:
     """Keep in the person's record how many lines the home's record of when Crossing was off has
-    now, and, as the switch turns it off, the steady clock's reading at that moment (`steady`, see
-    off.closed). The switch calls this once it has written that file, and once the project's own
-    line is in the record. The record is written whole beside itself and put in its place, under
-    its lock (see `_recording`); its other lines stay as they are."""
+    now, and what its three files hold now (`held`: the spans of `off.txt`, the ids of `unsaid.txt`
+    and the places of `off-places.jsonl`); and, as the switch turns it off, the steady clock's
+    reading at that moment (`steady`, see off.closed). The switch calls this once it has written
+    those files, and once the project's own line is in the record. The record is written whole
+    beside itself and put in its place, under its lock (see `_recording`); its other lines stay as
+    they are."""
     home = spelled(folder)
-    count = len(lines_of(within(folder, off.FILE).read_text(encoding="utf-8", errors="surrogateescape")))
+    lines = lines_of(within(folder, off.FILE).read_text(encoding="utf-8", errors="surrogateescape"))
+    count = len(lines)
+    held = {"spans": off.counted(lines)}
+    for name, holding in (("unsaid", off.unsaid_held), ("places", _places_held)):
+        try:
+            held[name] = holding(folder)
+        except OSError:  # a file that cannot be read now holds nothing that can be told: `lost` says so
+            held[name] = 0
     with _recording():
         kept = []
         for line in lines_of(switched().read_text(encoding="utf-8", errors="surrogateescape")):
@@ -304,7 +329,8 @@ def _spans_kept(folder: Path, steady: float | None = None) -> None:
                 kept.append(line)  # all but the count written before this one
         kept.append(
             json.dumps(
-                {"home": home, "spans": count, **({"steady": steady} if steady is not None else {})}, ensure_ascii=False
+                {"home": home, "spans": count, **({"steady": steady} if steady is not None else {}), "held": held},
+                ensure_ascii=False,
             )
         )
         fresh = switched().with_name(switched().name + ".new")
@@ -313,19 +339,33 @@ def _spans_kept(folder: Path, steady: float | None = None) -> None:
 
 
 def lost(folder: Path) -> bool:
-    """Whether what the home's record of when Crossing was off held can no longer be told: it is
-    missing, or shorter than it was when the switch last wrote it (see `spanned`), or it holds a
-    line that is no span since the switch last kept everything before that moment off (see
-    off.untold). Nothing is then archived for it, until the person switches Crossing on again. A
-    record that is there and cannot be read is said by its own rule (see `archive`)."""
-    was = spanned(folder)
+    """Whether what the home's record of when Crossing was off held can no longer be told: any of
+    its three files holds fewer than the person's record keeps it held when the switch last wrote it
+    (see `_held`): fewer spans in `off.txt`, fewer ids in `unsaid.txt`, fewer places in
+    `off-places.jsonl`, one of them missing where it held any; or one of them is there and cannot be
+    read; or `off.txt` holds a line that is no span since the switch last kept everything before
+    that moment off (see off.untold). Where the record keeps only how many lines `off.txt` had (a
+    line an earlier make wrote, see `spanned`), fewer lines are what is missed. Nothing is then
+    archived for it, nor counted, nor given on a words page, until the person switches Crossing on
+    again. A file that is not there because nothing was ever kept in it is no loss."""
+    was, held = spanned(folder), _held(folder)
     try:
         lines = lines_of(within(folder, off.FILE).read_text(encoding="utf-8", errors="surrogateescape"))
     except FileNotFoundError:
-        return bool(was)
+        if was or (held and held["spans"]):
+            return True
+        lines = []
     except OSError:
-        return False
-    return len(lines) < was or off.untold(lines)
+        return True
+    if off.untold(lines):
+        return True
+    if held is None and len(lines) < was:
+        return True
+    try:
+        now = {"spans": off.counted(lines), "unsaid": off.unsaid_held(folder), "places": _places_held(folder)}
+    except OSError:  # one of them is there and cannot be read
+        return True
+    return held is not None and any(now[name] < held[name] for name in HELD)
 
 
 def kept(cwd: Path) -> Path | None:
@@ -445,10 +485,11 @@ def switch(cwd: Path, to: str) -> str:
     off also keeps the steady clock's reading in the person's record, so that what was said while
     it was off is kept off where the clock was set back meanwhile (see off.closed).
 
-    The person's record keeps how many lines `off.txt` has each time the switch writes it (see
-    `lost`). Where that file is since missing or shorter, or holds a line that is no span (see
-    off.untold), switching on keeps everything before this moment as off the record, by a span
-    from the first moment there is to now, and archiving goes on from here; it gives `restored`.
+    The person's record keeps what `off.txt`, `unsaid.txt` and `off-places.jsonl` hold each time the
+    switch writes them (see `lost`). Where one of them since holds fewer, is missing where it held
+    any, or cannot be read, or `off.txt` holds a line that is no span (see off.untold), switching on
+    keeps everything before this moment as off the record, by a span from the first moment there is
+    to now, and archiving goes on from here; it gives `restored`.
 
     Where the home lies inside a repository and holds no ignore file, switching on writes one
     (see `ignored`)."""
@@ -545,7 +586,7 @@ def _reached_now(folder: Path) -> dict[str, dict]:
             with open(name, "rb") as handle:
                 at = _reached(handle)
                 found[name] = {"offset": at, "check": _check(handle, at)}
-        except OSError:  # a transcript that is gone: nothing more is said in it
+        except (OSError, ValueError):  # a transcript that is gone, or a path that names none: nothing is said in it
             continue
     return found
 
@@ -564,11 +605,26 @@ def _places_kept(folder: Path, reached: dict[str, dict]) -> None:
 
 
 def _places(folder: Path) -> dict[str, dict]:
-    """The places PLACES keeps, by path. A line that is not one is passed over."""
+    """The places PLACES keeps, by path. A line that is not one is passed over, and so is one whose
+    path holds a NUL, which names no file."""
     try:
-        lines = record.lines_in(within(folder, PLACES))
+        return _places_in(folder)
     except OSError:
         return {}
+
+
+def _places_held(folder: Path) -> int:
+    """How many places PLACES holds (see `_places`): nought where there is no file; a file that is
+    there and cannot be read is said so (OSError). The person's record keeps this count each time
+    the switch writes the record of the spans (see `lost`)."""
+    try:
+        return len(_places_in(folder))
+    except FileNotFoundError:
+        return 0
+
+
+def _places_in(folder: Path) -> dict[str, dict]:
+    lines = record.lines_in(within(folder, PLACES))
     found = {}
     for line in lines:
         try:
@@ -578,6 +634,7 @@ def _places(folder: Path) -> dict[str, dict]:
         if (
             isinstance(at, dict)
             and isinstance(at.get("path"), str)
+            and "\0" not in at["path"]
             and type(at.get("offset")) is int
             and at["offset"] >= 0
             and isinstance(at.get("check"), str)
@@ -607,7 +664,7 @@ def _unsaid_by_place(folder: Path) -> None:
                 for uuid in [str(row.get("uuid") or "") if row is not None else ""]
                 if record.nameable(uuid) and (transcript.person(row, whole=True) or transcript.session(row, whole=True))
             ]
-        except OSError:  # gone since: nothing more is said in it
+        except (OSError, ValueError):  # gone since, or a path that names none: nothing more is said in it
             continue
     off.keep_unsaid(folder, ids)
     try:
@@ -1061,8 +1118,8 @@ def archive(path: Path, folder: Path, whole: bool = False, taken: bool = False) 
     and cannot be read, nothing is archived and no marker moves. The ids of the rows a reading
     finds inside a span are kept in the home's `unsaid.txt` (see off.UNSAID), and no row whose id
     is there is ever archived, whether `off.txt` is there or not. Where the person's record says
-    `off.txt` had more lines than it has now, or that it was there and it is gone (see `lost`),
-    nothing is archived at all, until the person switches Crossing on again.
+    `off.txt`, `unsaid.txt` or `off-places.jsonl` held more than it holds now, or one of them cannot
+    be read (see `lost`), nothing is archived at all, until the person switches Crossing on again.
 
     The archive's page is named by the transcript's, as a session is: a name that cannot name a
     file is refused (record.ident). One archive at a time is made in a home (see `_locked`): one

@@ -1446,6 +1446,143 @@ def test_the_places_of_transcripts_gone_cut_short_replaced_or_odd_and_a_mark_kep
     assert added.count("the mark of a home's index could not be kept") == 1, added
 
 
+# --- what the three files of the record of when Crossing was off held ----------------------------------------
+
+UID = "-0000-4000-8000-000000000000"  # the rest of a made-up message's whole id, after its eight characters
+
+
+def lines_of_file(path: Path, change) -> None:
+    """A plain file with each of its lines put through `change`, as a sync or an editor would leave it."""
+    path.write_text("".join(change(line) + "\n" for line in path.read_text(encoding="utf-8").splitlines()))
+
+
+def off_and_on_by_place(folder: Path, clock: dict) -> tuple[Path, Path, Path]:
+    """A project switched on, a message archived, switched off at ten, and on again at half past. In
+    the transcript the archive knew, a message was said meanwhile under a time the clock was set
+    forward to, kept off by its place in unsaid.txt; and one is said on the record after. `clock` is
+    the made-up clock the caller has put in off.now's place."""
+    project, home_, path = public(folder)
+    path.write_text("", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    says(path, "10000001", "Said on the record before switching off.", at="2026-11-11T09:58:00.000Z")
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0  # the archive knows it
+    clock["now"] = "2026-11-11T10:00:00.000000+00:00"
+    assert through("switch", "off", "--cwd", str(project))[0] == 0
+    says(path, "10000002", "Said while off, after the clock went forward.", at="2026-11-11T12:00:00.000Z")
+    clock["now"] = "2026-11-11T10:30:00.000000+00:00"
+    assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["again"] + "\n")
+    says(path, "10000003", "Said on the record after switching on.", at="2026-11-11T10:31:00.000Z")
+    assert off.unsaid(home_) == {"10000002" + UID}
+    return project, home_, path
+
+
+def test_a_record_of_spans_ids_or_places_that_holds_fewer_than_it_did_keeps_everything_off(tmp_path):
+    """A span's line blanked or turned into a comment keeps the file's length, and unsaid.txt gone,
+    blanked or damaged loses what was said while off by its place: either is missed by what the
+    person's record keeps the three files held. Nothing is archived, counted or given on a words page,
+    and status says so, until the person switches on again and everything before that moment is off."""
+    damage = {
+        "a span blanked": (off.FILE, lambda line: "" if line.startswith("2026") else line),
+        "a span made a comment": (off.FILE, lambda line: "# moved" if line.startswith("2026") else line),
+        "unsaid.txt gone": (off.UNSAID, None),
+        "an id of unsaid.txt blanked": (off.UNSAID, lambda line: "" if line.startswith("1") else line),
+        "an id of unsaid.txt damaged": (off.UNSAID, lambda line: "not an id!" if line.startswith("1") else line),
+    }
+    clock, was = {}, off.now
+    off.now = lambda: clock["now"]
+    try:
+        for n, (kind, (name, change)) in enumerate(damage.items()):
+            project, home_, path = off_and_on_by_place(tmp_path / str(n), clock)
+            if change is None:
+                (home_ / name).unlink()
+            else:
+                lines_of_file(home_ / name, change)
+            assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+            assert kept_texts(home_) == ["Said on the record before switching off."], (kind, kept_texts(home_))
+            assert door.LOST in through("status", "--cwd", str(project))[1], kind
+            event = {"hook_event_name": "PostCompact", "transcript_path": str(path), "cwd": str(project)}
+            with started_by("cli"):
+                assert hook.run({**event, "trigger": "auto", "session_id": path.stem, "compact_summary": "A."}) is None
+            cut = json.loads((home_ / "abcdef01-cut-1.json").read_text(encoding="utf-8"))
+            assert cut.get("untold") is True and cut["person"]["pointers"] == [], (kind, cut)
+            (home_ / "hand-over.md").write_text(
+                "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n| R1 | A line. | his | `10000003` |\n"
+            )
+            assert words_script(str(path), str(home_ / "hand-over.md")).returncode == 0
+            assert "Said on the record after" not in (home_ / "hand-over.words.md").read_text(encoding="utf-8"), kind
+            clock["now"] = "2026-11-11T10:40:00.000000+00:00"
+            assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["restored"] + "\n"), kind
+            says(path, "10000004", "Said after it was switched on again.", at="2026-11-11T10:41:00.000Z")
+            assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+            kept = kept_texts(home_)
+            assert (
+                "Said after it was switched on again." in kept and "Said on the record after switching on." not in kept
+            )
+            assert door.LOST not in through("status", "--cwd", str(project))[1], kind
+    finally:
+        off.now = was
+
+
+def test_a_record_of_places_gone_or_damaged_while_off_is_told_and_restored_and_a_nul_path_is_passed_over(tmp_path):
+    """The places of the transcripts the archive knew, kept as the switch was turned off, gone or
+    damaged before it is turned on: status says the record cannot be told, and switching on keeps
+    everything before that moment off. A place whose path holds a NUL is passed over, and the
+    switch answers in its sentence."""
+    clock, was = {}, off.now
+    off.now = lambda: clock["now"]
+    try:
+        for n, damage in enumerate(("gone", "no place", "a place blanked", "a NUL path beside it", None)):
+            project, home_, path = public(tmp_path / str(n))
+            path.write_text("", encoding="utf-8")
+            assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+            says(path, "10000001", "Said on the record before switching off.", at="2026-11-11T09:58:00.000Z")
+            assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+            clock["now"] = "2026-11-11T10:00:00.000000+00:00"
+            assert through("switch", "off", "--cwd", str(project))[0] == 0
+            says(path, "10000002", "Said while off, after the clock went forward.", at="2026-11-11T12:00:00.000Z")
+            places = home_ / "off-places.jsonl"
+            if damage == "gone":
+                places.unlink()
+            elif damage == "no place":
+                places.write_text("this is not a place\n", encoding="utf-8")
+            elif damage == "a place blanked":
+                lines_of_file(places, lambda line: "")
+            elif damage == "a NUL path beside it":
+                with open(places, "a", encoding="utf-8") as handle:
+                    handle.write(json.dumps({"path": "\0", "offset": 0, "check": ""}) + "\n")
+            told = through("status", "--cwd", str(project))[1]
+            assert (door.LOST in told) is (damage not in (None, "a NUL path beside it")), (damage, told)
+            clock["now"] = "2026-11-11T10:30:00.000000+00:00"
+            state = "again" if damage in (None, "a NUL path beside it") else "restored"
+            assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED[state] + "\n"), damage
+            assert door.LOST not in through("status", "--cwd", str(project))[1], damage
+            if state == "again":  # an intact record keeps it off by its place
+                assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+                assert "Said while off, after the clock went forward." not in kept_texts(home_), damage
+    finally:
+        off.now = was
+
+
+def test_a_record_with_nothing_in_unsaid_or_places_and_one_an_earlier_make_wrote_keep_reading(tmp_path):
+    """A home switched off and on with no transcript known holds no unsaid.txt and no off-places.jsonl,
+    and nothing is lost. A line of the person's record an earlier make wrote, with the count of the
+    lines of off.txt alone, is read as it was: fewer lines are a loss, and nothing else is."""
+    project, home_, _ = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert through("switch", "off", "--cwd", str(project))[0] == 0
+    assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["again"] + "\n")
+    assert not (home_ / off.UNSAID).exists() and not (home_ / "off-places.jsonl").exists()
+    assert not store.lost(home_) and door.LOST not in through("status", "--cwd", str(project))[1]
+    switched = store.switched()
+    older = [json.loads(line) for line in switched.read_text(encoding="utf-8").splitlines()]
+    switched.write_text("".join(json.dumps({k: v for k, v in each.items() if k != "held"}) + "\n" for each in older))
+    assert not store.lost(home_)
+    lines_of_file(home_ / off.FILE, lambda line: "" if line.startswith("2026") else line)  # as many lines
+    assert not store.lost(home_)  # an earlier make's count of lines cannot miss it: the next switch keeps more
+    (home_ / off.FILE).write_text("".join(line + "\n" for line in (home_ / off.FILE).read_text().splitlines()[1:]))
+    assert store.lost(home_)
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

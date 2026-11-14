@@ -127,6 +127,13 @@ def untold(lines: list[str]) -> bool:
     return any(n > covered for n in passed)
 
 
+def counted(lines: list[str]) -> int:
+    """How many spans the lines hold: a line that is no span, a blank one or a comment is none of
+    them (see `_sorted`). The person's record keeps this count each time the switch writes the file
+    (see store.lost), so that a span's line blanked or turned into a comment is missed by it."""
+    return len(_sorted(lines)[0])
+
+
 def spans(folder: Path) -> tuple[list[Span], int]:
     """The spans of the home, in the file's order; and how many of its lines could not be read.
     A file that is not there holds none."""
@@ -202,8 +209,8 @@ FIRST = "1970-01-01T00:00:00.000000+00:00"  # earlier than any transcript's time
 
 def everything_before(folder: Path) -> None:
     """Keep that everything said before this moment is off the record: a span from FIRST to now.
-    The switch writes it where the record of the spans was found missing or shorter than it was
-    (see store.lost), since what it held can no longer be told."""
+    The switch writes it where the record of the spans was found missing, holding fewer than it did
+    or damaged (see store.lost), since what it held can no longer be told."""
     lines = _lines(folder)
     _write(folder, (lines or HEAD.splitlines()) + [f"{FIRST} {now()}"])
 
@@ -220,6 +227,18 @@ def unsaid(folder: Path) -> set[str]:
     except OSError:
         return set()
     return {line.strip() for line in lines if line.strip() and not line.startswith("#")}
+
+
+def unsaid_held(folder: Path) -> int:
+    """How many ids UNSAID holds, each once, of the form `keep_unsaid` writes: a line blanked or
+    damaged is none of them. Nought where there is no file; a file that is there and cannot be read
+    is said so (OSError). The person's record keeps this count each time the switch writes the
+    record of the spans (see store.lost)."""
+    try:
+        lines = lines_in(within(folder, UNSAID))
+    except FileNotFoundError:
+        return 0
+    return len({line.strip() for line in lines if not line.startswith("#") and nameable(line.strip())})
 
 
 def keep_unsaid(folder: Path, ids: list[str]) -> None:
