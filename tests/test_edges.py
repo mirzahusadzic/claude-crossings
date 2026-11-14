@@ -10,6 +10,7 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -220,6 +221,8 @@ def test_the_frame_still_crosses_where_its_small_conveniences_fail(tmp_path):
 
 
 def test_a_cut_renews_the_second_copy_where_the_home_names_a_folder(tmp_path):
+    if shutil.which("hdiutil") is None:  # the image is macOS's own: elsewhere there is no copy to renew
+        return
     crossings, path = home(tmp_path)
     (crossings / "copy").write_text(str(tmp_path / "cloud") + "\n", encoding="utf-8")
     event = {"transcript_path": str(path), "cwd": str(crossings.parent), "session_id": "session-0001"}
@@ -352,6 +355,8 @@ def test_striking_and_copying_through_the_door(tmp_path):
     assert store.status(crossings)["his"] == 1
     code, said = through("copy", "--cwd", project)
     assert code == 1 and "No second copy is set for this home" in said
+    if shutil.which("hdiutil") is None:  # the image is macOS's own: elsewhere no copy is made
+        return
     (crossings / "copy").write_text(str(tmp_path / "cloud") + "\n", encoding="utf-8")
     ours = tmp_path / "ours"
     ours.mkdir()
@@ -466,6 +471,8 @@ def test_the_passphrase_is_made_once_and_kept_in_the_keychain(tmp_path):
 
 
 def test_an_image_that_does_not_read_back_the_same_replaces_nothing(tmp_path):
+    if shutil.which("hdiutil") is None:  # the image is macOS's own
+        return
     crossings, _ = home(tmp_path)
     cloud = tmp_path / "cloud"
     stray = crossings / ".copy-stage" / "not-this-copy" / "kept.txt"

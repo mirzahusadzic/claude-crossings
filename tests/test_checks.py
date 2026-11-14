@@ -124,14 +124,22 @@ def test_a_setting_inside_the_project_is_found_by_the_files_whatever_its_letters
     )
     other = tmp_path / "other"
     other.mkdir()
-    spellings = ["/System/Volumes/Data" + str(shipped.resolve())]  # the same folder through the disk's own other path
-    folded = Path(str(tmp_path) + "/tool/data")
-    if folded.exists():  # a disk that does not tell letters apart, as a Mac's is by default
-        spellings.append(str(folded))
-    spellings = [each for each in spellings if os.path.isdir(each)]
-    assert spellings, "no other spelling of the folder could be made on this disk"
+    # The same folder by another spelling, whose text still differs once it is resolved: through the
+    # disk's own other path to it (/System/Volumes/Data on a Mac), or in letters of another case on a
+    # disk that does not tell them apart. A link is no such spelling: resolving it gives the folder's
+    # own text, which the text alone would catch, where the mend is that the files decide.
+    candidates = ["/System/Volumes/Data" + str(shipped.resolve()), str(tmp_path) + "/tool/data"]
+    spellings = [
+        each
+        for each in candidates
+        if os.path.isdir(each)
+        and os.path.samefile(each, shipped)
+        and str(Path(each).resolve()) != str(shipped.resolve())  # the text differs, the folder does not
+    ]
+    # Where the system offers neither, as Linux on a disk that tells letters apart offers none, no
+    # other spelling of the folder can be made without a mount: the loop has nothing to try there,
+    # and what follows it is tested all the same.
     for spelled in spellings:
-        assert str(Path(spelled).resolve()) != str(shipped.resolve())  # the text differs, the folder does not
         with set_to(CROSSING_HOME=spelled):
             assert record.astray(project) == "CROSSING_HOME" and store.kept(project) is None, spelled
             assert through("labels", "R1", "--cwd", str(project)) == (1, door.ASTRAY.format("CROSSING_HOME") + "\n")
