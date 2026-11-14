@@ -2233,6 +2233,25 @@ def test_the_receipts_pass_over_odd_lines_and_a_file_that_cannot_be_read_or_writ
     assert store._receipts(crossings) is not None
 
 
+# --- layer in a home switched off -------------------------------------------------------------------------
+
+
+def test_layer_refuses_in_a_home_switched_off_and_writes_nothing(tmp_path):
+    """`layer` is the person's verb and signs old lines: while the home is off nothing is added to it,
+    so it answers one sentence that says the home is off and nothing was signed, and writes nothing.
+    Switched on again, it signs as before."""
+    crossings, _ = home(tmp_path)  # labels and messages of the session's with no model
+    project = str(crossings.parent)
+    assert through("switch", "off", "--cwd", project)[0] == 0
+    before, receipts = files_of(crossings), store._receipts_path().read_bytes()
+    off_ = "Crossings is switched off for this project, so nothing was signed.\n"
+    assert through("layer", "made-up-model", "--cwd", project) == (1, off_)
+    assert files_of(crossings) == before and store._receipts_path().read_bytes() == receipts
+    assert through("switch", "on", "--cwd", project)[0] == 0
+    code, out = through("layer", "made-up-model", "--cwd", project)
+    assert code == 0 and out.startswith("Signed 2 labels and 2 messages"), out
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

@@ -60,7 +60,7 @@ The person's switch is kept where no repository can hold it: `~/.claude/crossing
 | a line of `off.txt` is no span (a sync, an editor or a hand damaged it) | passes over it, and `status` says how many; what it held can no longer be told, so the home archives nothing, as where the file is missing, until the next `/crossings on` keeps everything before that moment off the record. A line that is no span before that moment is kept off by it, and is still counted |
 | a cut comes while it is off | is not counted, noted or answered |
 | a cut comes while the record of when it was off cannot be told (above) | is counted with nothing said listed: its page says the record cannot be told |
-| `mark` or `leave` while it is off | refuse |
+| `mark`, `leave` or `layer` while it is off | refuse: nothing is marked or signed, and nothing is written |
 
 The store shows that something may have been said, and nothing of what: `status` says how many times Crossings was off (how many spans `off.txt` holds), `look` puts a line with the two moments among its days, `thread` puts one in the place of what was said, and `find` finds nothing of it. `unsaid.txt` keeps one id for each message a reading met inside a span, so how many they were can be counted from it; the person's record keeps how many ids it held as the switch last wrote the record of the spans, so that a file cut short is told, and no other count of them or of their characters is kept, a cut's count included, and the frame does not mention it.
 

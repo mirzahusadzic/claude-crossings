@@ -67,7 +67,7 @@ A label or a message with no model named is read as of no known layer until the 
 python3 crossing/door.py layer <model-key>
 ```
 
-It runs from the person's own terminal; the door's server does not offer it. It signs, as made with that model, every label whose sentence has no line in `models.txt` and every message of the session's voice that has no model, says how many of each it signed, and, where it signed any, makes the index whole. A line that has a model is never changed. A key with a space or a `#` in it, one that begins with `<`, or none, is refused.
+It runs from the person's own terminal; the door's server does not offer it. While the project is switched off it signs nothing and writes nothing: it says in one sentence that Crossings is switched off and nothing was signed, with exit status 1. Switched on, it signs, as made with that model, every label whose sentence has no line in `models.txt` and every message of the session's voice that has no model, says how many of each it signed, and, where it signed any, makes the index whole. A line that has a model is never changed. A key with a space or a `#` in it, one that begins with `<`, or none, is refused.
 
 ---
 

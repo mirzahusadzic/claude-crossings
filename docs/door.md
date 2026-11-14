@@ -30,6 +30,7 @@ Every answer is given as the door gives it with `--bare`: no answer names a file
 | a setting names a place inside the project, or no absolute path | that the setting was not followed |
 | a file of the home is a link | "A file of this project's home is a link, so nothing was written." |
 | `mark` or `leave` while the project is switched off | "not marked: Crossings is switched off for this project" |
+| `layer` while the project is switched off | "Crossings is switched off for this project, so nothing was signed." |
 | `mark` with an anchor the archive does not hold, a sentence longer than 4,000 characters, a stack that breaks a rule, or a home another act holds for five seconds | "not marked:" and the reason |
 | this computer's `python3` has no FTS5 in its `sqlite3` | "This computer's python3 has no full-text search (FTS5) in its sqlite3, so the store cannot be searched; what is said is still kept in plain files." |
 | a fault inside the door | "The door could not answer:" and the kind of fault; the server goes on |

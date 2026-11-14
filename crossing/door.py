@@ -59,8 +59,9 @@ in a sentence, with exit status 1. `switch on` and `status` narrow a home that i
 other accounts to its owner alone. `switch` is the person's, from their terminal or through their command, and
 `strike`, `layer` and `copy` from their terminal; `home` prints the folder of a home that is believed, and
 nothing otherwise; the door's server offers none of these. Switched off, a home is
-still read, and nothing is added to it; and nothing said until it is switched on again is ever
-kept, by any verb, from any transcript (see crossing/off.py). No file of a home is read or written through a link:
+still read, and nothing is added to it (`layer` signs nothing, and says so); and nothing said
+until it is switched on again is ever kept, by any verb, from any transcript (see crossing/off.py).
+No file of a home is read or written through a link:
 where one is, the door says so in a sentence, with exit status 1, and writes nothing; and so for an id that
 cannot name a file (record.ident). `status` and `look` from the person's terminal or for the plugin's own
 hooks and module, not --bare, also say which kept messages look like they hold a key (store.flagged), and
@@ -575,6 +576,9 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         if not key or key != said:
             print("layer takes one model's key, with no space in it: the model the lines with none were made with.")
             return 2
+        if not on:  # switched off, nothing is added to a home: no line is signed, and nothing is written
+            print("Crossings is switched off for this project, so nothing was signed.")
+            return 1
         signed = store.layered(folder, key)
         if signed is None:
             print("Another act was writing this home, so nothing was signed: try again in a moment.")
