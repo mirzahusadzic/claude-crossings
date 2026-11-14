@@ -48,13 +48,15 @@ Each is a plain file of the home with one line. A word is read without case or t
 | File | Sets | Default | Refused or passed over |
 | --- | --- | --- | --- |
 | `switch` | `on` or `off`, as `/crossings` writes it | on, where there is no file | any word but `off` reads as on; a switch written by hand keeps no span in `off.txt` |
-| `mode` | how a cut is answered: `native`, `beside` or `own` ([Cuts](cuts.md)) | `native`; a home `/crossings on` makes outside the project starts with `beside` | a word not known reads as `native` |
-| `carry` | how the frame is carried: `message` or `note` | `message`; a home made outside starts with `note` | a word not known reads as `message` |
+| `mode` | how a cut is answered: `native`, `beside` or `own` ([Cuts](cuts.md)) | `native`; a home `/crossings on` makes, or finds empty, starts with `beside` | a word not known reads as `native` |
+| `carry` | how the frame is carried: `message` or `note` | `message`; a home made or found empty starts with `note` | a word not known reads as `message` |
 | `copy` | the folder for the second copy; a leading `~`, alone or before a `/`, is the person's own folder, never `HOME`, and what follows it stays below that folder (`~//tmp` is `~/tmp`, and a `..` climbs no higher than it) | no copy | a place inside the project makes no copy |
 | `frame-size` | the frame's size in characters | 9,000 | held between 2,000 and 9,500; a file that holds no whole number leaves 9,000 |
 | `retelling-length` | how long a summary must be, in characters, for the retelling line | 20,000 | a file that holds no whole number leaves the default |
 | `retelling-share` | how much of it, in percent, must repeat the summary before; `%` may follow | 60 | the same |
 | `project` | the path of the project a home outside it belongs to, written by `/crossings on` | | a home named by the slug alone, without a digest, is used only where this names exactly the project's path |
+
+A home is found empty where it holds no folder and no file but those whose names begin with a dot (`.DS_Store`, `.gitkeep`, `.gitignore`). A home that holds anything else, a project's own `crossings/` folder among them, is switched on as it is: what a folder already holds is its person's, so switching writes no `mode` and no `carry` into it. A person who wants the frame there writes `mode` as `beside` and `carry` as `note`. Once switched on, a home holds its switch, so switching it off and on again never writes either anew.
 
 A home inside a repository is also given a `.gitignore` by `/crossings on` where it has none ([Privacy](privacy.md)).
 

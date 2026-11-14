@@ -182,9 +182,108 @@ def test_a_project_with_a_folder_of_its_own_keeps_it_and_is_switched_there(tmp_p
     assert not store.active(store.kept(empty)) and inside(empty) == [
         "crossings",
         "crossings/archive.lock",
+        "crossings/carry",  # set as a home made outside is, and with no project file: it lies in the project
+        "crossings/mode",
         "crossings/off.txt",
         "crossings/switch",
     ]
+
+
+def cut_in(project: Path, path: Path) -> dict:
+    """A cut the harness made in a session of the project, as its SessionStart hook is told it."""
+    return {
+        "transcript_path": str(path),
+        "cwd": str(project),
+        "session_id": "abcdef01-4444",
+        "hook_event_name": "SessionStart",
+        "source": "compact",
+    }
+
+
+@in_person
+def test_an_empty_folder_of_the_projects_own_is_set_as_a_home_made_outside_and_brings_the_frame(tmp_path):
+    project, _, path = public(tmp_path / "own")
+    crossings = project / "crossings"
+    crossings.mkdir()
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert (crossings / "mode").read_text(encoding="utf-8") == "beside\n"
+    assert (crossings / "carry").read_text(encoding="utf-8") == "note\n"
+    assert not (crossings / "project").exists() and not record.outside(project.resolve()).exists()
+    away, outside, other = public(tmp_path / "away")  # a project whose home is made outside it
+    assert through("switch", "on", "--cwd", str(away)) == (0, ON)
+    with set_to(CROSSING_WAIT="1"):
+        for where, transcript_path in ((project, path), (away, other)):
+            with set_to(CLAUDE_PROJECT_DIR=str(where)):
+                framed = json.loads(hook.carried(cut_in(where, transcript_path)))
+            assert framed["hookSpecificOutput"]["additionalContext"].startswith(transcript.CARRIED), where
+            assert framed["systemMessage"].startswith("crossing · a frame crossed with this cut: "), where
+    assert (outside / "mode").read_text(encoding="utf-8") == "beside\n"  # as the home made outside is set
+
+
+def test_switching_off_and_on_again_never_writes_mode_or_carry_anew(tmp_path):
+    project = tmp_path / "kept"
+    (project / "crossings").mkdir(parents=True)
+    crossings = project / "crossings"
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    (crossings / "mode").write_text("native\n", encoding="utf-8")  # as the person set it since
+    (crossings / "carry").unlink()  # and took this one away
+    assert through("switch", "off", "--cwd", str(project)) == (0, OFF)
+    assert through("switch", "on", "--cwd", str(project)) == (0, AGAIN)
+    assert through("switch", "toggle", "--cwd", str(project)) == (0, OFF)
+    assert through("switch", "toggle", "--cwd", str(project)) == (0, AGAIN)
+    assert (crossings / "mode").read_text(encoding="utf-8") == "native\n" and not (crossings / "carry").exists()
+
+
+def test_a_folder_of_the_projects_own_that_holds_anything_is_switched_as_it_is(tmp_path):
+    """What a folder already holds is its person's: switching it on writes no `mode` and no `carry`
+    into it, whatever it holds. One that holds a file is taken by the word adopt (see store.unclaimed)."""
+    crossings, _ = home(tmp_path / "made")  # a real archive, to be brought into a folder that holds only it
+    archive = {p.relative_to(crossings): p.read_bytes() for p in (crossings / "said").iterdir()}
+    for name, held in (
+        ("unrelated", {Path("notes.txt"): b"Kept by hand.\n"}),
+        ("mode-only", {Path("mode"): b"own\n"}),
+        ("archive-only", archive),
+    ):
+        project = tmp_path / name
+        for relative, data in held.items():
+            (project / "crossings" / relative).parent.mkdir(parents=True, exist_ok=True)
+            (project / "crossings" / relative).write_bytes(data)
+        assert through("switch", "on", "--cwd", str(project))[0] == 1  # held by no record here: not taken unasked
+        assert through("switch", "adopt", "--cwd", str(project)) == (0, ON), name
+        folder = project / "crossings"
+        assert {r: (folder / r).read_bytes() for r in held} == held, name  # what it held is as it was
+        assert not (folder / "carry").exists(), name
+        assert (folder / "mode").exists() == (name == "mode-only"), name
+    bare = tmp_path / "subfolder-only"  # a folder in it counts, though it holds no file
+    (bare / "crossings" / "labels").mkdir(parents=True)
+    assert through("switch", "on", "--cwd", str(bare)) == (0, ON)
+    assert not (bare / "crossings" / "mode").exists() and not (bare / "crossings" / "carry").exists()
+
+
+def test_files_whose_names_begin_with_a_dot_do_not_count_as_what_a_folder_holds(tmp_path):
+    """A `.DS_Store`, a `.gitkeep` or a `.gitignore` is left by a system, a repository or a tool, and
+    says nothing of how the home is to be set. The plugin writes no file of a home whose name begins
+    with a dot but its `.gitignore` (see store.ignored)."""
+    ignored = tmp_path / "ignored"
+    (ignored / ".git").mkdir(parents=True)
+    (ignored / "crossings").mkdir()
+    (ignored / "crossings" / ".gitignore").write_text("*\n", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(ignored)) == (0, ON)
+    assert (ignored / "crossings" / "mode").read_text(encoding="utf-8") == "beside\n"
+    assert (ignored / "crossings" / "carry").read_text(encoding="utf-8") == "note\n"
+    assert (ignored / "crossings" / ".gitignore").read_text(encoding="utf-8") == "*\n"  # left as it was
+    kept = tmp_path / "kept"  # any other such file is a file all the same to `unclaimed`: the word adopt takes it
+    (kept / "crossings").mkdir(parents=True)
+    (kept / "crossings" / ".DS_Store").write_bytes(b"\0\0\0\1Bud1")
+    (kept / "crossings" / ".gitkeep").write_text("", encoding="utf-8")
+    assert through("switch", "adopt", "--cwd", str(kept)) == (0, ON)
+    assert (kept / "crossings" / "mode").read_text(encoding="utf-8") == "beside\n"
+    assert (kept / "crossings" / "carry").read_text(encoding="utf-8") == "note\n"
+    assert (kept / "crossings" / ".DS_Store").read_bytes() == b"\0\0\0\1Bud1"
+    named = tmp_path / "named"  # a folder whose name begins with a dot is held all the same
+    (named / "crossings" / ".obsidian").mkdir(parents=True)
+    assert through("switch", "on", "--cwd", str(named)) == (0, ON)
+    assert not (named / "crossings" / "mode").exists() and not (named / "crossings" / "carry").exists()
 
 
 def test_a_home_named_outright_is_switched_like_any_other_and_names_no_project(tmp_path):

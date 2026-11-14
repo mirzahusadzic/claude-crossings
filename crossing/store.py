@@ -459,6 +459,14 @@ def unclaimed(cwd: Path) -> dict | None:
     return held
 
 
+def empty(folder: Path) -> bool:
+    """Whether a home's folder holds nothing yet: no folder, and no file but those whose names
+    begin with a dot (`.DS_Store`, `.gitkeep`, `.gitignore`), which a system, a repository or the
+    person's tools leave and which say nothing of how the home is to be set. The one such file
+    the plugin writes is `.gitignore` (see `ignored`), and only once a home is switched on."""
+    return all(entry.is_file() and entry.name.startswith(".") for entry in folder.iterdir())
+
+
 def switch(cwd: Path, to: str) -> str:
     """Turn the person's switch for the project `cwd` stands in: `on`, `off`, or `toggle` to
     turn it over; or `adopt`, which switches on a home that holds what this computer has no
@@ -471,11 +479,14 @@ def switch(cwd: Path, to: str) -> str:
     in it, where it leads, or outside the project.
 
     Switching on is the one act that makes a home, and the one that keeps in the person's
-    record (see `switched`) that this project's home is believed. A project with a `crossings/`
-    folder has one already, and a home made earlier is there: either is only switched, and
-    nothing else in it is changed. Any other project gets one outside it, set to cut beside the
-    harness's summary and to carry the frame as a note, with a plain file `project` that holds
-    the path of the project it belongs to, so that a person can tell the homes apart.
+    record (see `switched`) that this project's home is believed. A project with no `crossings/`
+    folder gets one outside it, set to cut beside the harness's summary and to carry the frame as
+    a note, with a plain file `project` that holds the path of the project it belongs to, so that
+    a person can tell the homes apart. A home that is there and holds nothing yet (see `empty`),
+    a project's own `crossings/` folder among them, is set the same way as it is switched on; one
+    inside the project is given no `project` file. A home that holds anything is only switched,
+    and nothing else in it is changed: what it holds is its person's. Once switched on it holds
+    its switch, so switching it off and on again never writes `mode` or `carry` anew.
 
     Switching off keeps the line in the record and turns the home's own switch, and keeps the
     moment in the home's `off.txt`: a span opens, which switching on again closes (see
@@ -507,7 +518,7 @@ def switch(cwd: Path, to: str) -> str:
     adopted = on and unclaimed(cwd) is not None
     if adopted and to != "adopt":
         return "unclaimed"  # content someone else made is not trusted with no word said
-    if not folder.is_dir():
+    if not folder.is_dir() or (on and empty(folder)):  # judged before the switch writes a file of its own
         folder.mkdir(parents=True, exist_ok=True)  # two sessions may switch one project on at the same moment
         within(folder, "mode").write_text("beside\n", encoding="utf-8")
         within(folder, "carry").write_text("note\n", encoding="utf-8")

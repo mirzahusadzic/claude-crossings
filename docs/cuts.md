@@ -59,7 +59,7 @@ Two plain files of the home decide how a cut is answered: `mode` and `carry`, on
 | `beside` | `message`, or missing | the frame goes into the cut's answer as a message, after the harness's summary |
 | `own` | either | at a cut the harness did not start by itself, the frame takes the summary's place; an earlier cut's summary at the head of the conversation is carried on before it. At an automatic cut, as `beside` with `message` |
 
-A home that `/crossings on` makes outside the project starts with `mode` set to `beside` and `carry` to `note`. A project's own `crossings/` folder is switched on as it is: with no `mode` file, its cuts are `native`.
+A home that `/crossings on` makes outside the project starts with `mode` set to `beside` and `carry` to `note`. So does a project's own `crossings/` folder that is empty as it is first switched on; files whose names begin with a dot, such as `.DS_Store`, `.gitkeep` or `.gitignore`, do not count. A `crossings/` folder that holds anything else is switched on as it is, and nothing else in it is written: what a folder already holds is its person's. With no `mode` file, its cuts are `native`; a person who wants the frame there writes `mode` and `carry` ([Settings](settings.md)). Switching off and on again never writes either file anew.
 
 A frame carried as a message is handed to the harness as a user message in the cut's answer. It opens "A note from the Crossings plugin", and the plugin's reader never takes such a row for the person's words, nor one that opens with the older "A note from the Crossing plugin". Carried as a note, nothing is filed as a message.
 
