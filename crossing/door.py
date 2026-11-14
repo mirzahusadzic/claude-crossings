@@ -62,9 +62,10 @@ nothing otherwise; the door's server offers none of these. Switched off, a home 
 still read, and nothing is added to it; and nothing said until it is switched on again is ever
 kept, by any verb, from any transcript (see crossing/off.py). No file of a home is read or written through a link:
 where one is, the door says so in a sentence, with exit status 1, and writes nothing; and so for an id that
-cannot name a file (record.ident). `status` and `look` from a shell, not --bare, also say which kept
-messages look like they hold a key (store.flagged), and `status` that the second copy's passphrase is taken
-from the environment where it is, and once that an older second copy is no longer renewed. A
+cannot name a file (record.ident). `status` and `look` from the person's terminal or for the plugin's own
+hooks and module, not --bare, also say which kept messages look like they hold a key (store.flagged), and
+`status` that the second copy's passphrase is taken from the environment where it is, and once that an older
+second copy is no longer renewed; from anywhere else they answer as the door's server does, as --bare. A
 strike's answer names the labels that rest on what it struck, and ends with what no strike can
 reach; a strike that struck nothing says why in one sentence, with exit status 1.
 """
@@ -491,6 +492,11 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         return 1
     if args.session:
         record.ident(args.session)  # an id, looked for as it is: never a pattern
+    narrowing = args.verb == "status" and not args.bare  # a status asked from any shell narrows a home left wide
+    if args.verb in ("status", "look") and not personal(args):
+        # A session's shell is answered as the door's server is: no folder of the home, no id that looks like a
+        # key, no key the person alone is shown, and nothing said once is taken from the person's own status.
+        args.bare = True
     if args.verb == "switch":
         if said.lower() not in ("on", "off", "toggle", "adopt"):
             print("switch takes one word: on, off, toggle or adopt.")
@@ -539,7 +545,7 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         print(NOT_ON)
         return 1
     record.sound(folder)  # a link anywhere in the home, and nothing is read or written
-    if args.verb == "status" and not args.bare:
+    if narrowing:
         record.narrow(folder)  # what an older make left readable by other accounts
     on = ours or store.active(folder)  # switched off, a home is read and nothing is added to it
     if args.verb in ("frame", "page") and not (record.attended() or record.terminal()):

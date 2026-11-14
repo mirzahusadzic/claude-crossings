@@ -335,10 +335,10 @@ def test_a_label_marked_from_a_shell_for_the_person_is_said_by_the_persons_next_
         assert "marked from a shell" not in said("status")[0]  # the session's own status is not the person's
     assert store.shelled(crossings) == ["W2", "R2"]
     sentence = "2 labels were marked from a shell, not through the door, and shown to no one as marked: W2, R2."
-    assert sentence in shell("status", "--cwd", project)[1] and store.shelled(crossings) == [
+    assert "marked from a shell" not in shell("status", "--cwd", project)[1] and store.shelled(crossings) == [
         "W2",
         "R2",
-    ]  # a shell clears nothing
+    ]  # a session's shell is not told the person's keys, and clears nothing
     assert sentence in through("status", "--cwd", project)[1]  # the person's own status says it, once
     assert "marked from a shell" not in through("status", "--cwd", project)[1]
     assert not (crossings / store.SHELLED).exists()

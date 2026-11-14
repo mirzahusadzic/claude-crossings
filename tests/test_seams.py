@@ -1803,6 +1803,43 @@ def test_the_harness_blocks_in_the_persons_turn_are_told_by_their_shape_and_the_
     assert kept_texts(home_) == [*kept, "And then the person's own sentence."], kept_texts(home_)
 
 
+# --- status and look from a session's shell --------------------------------------------------------------
+
+
+def test_status_and_look_from_a_sessions_shell_answer_as_the_server_does_and_take_nothing_said_once(tmp_path):
+    """door.py status and look, run by a session's shell (no terminal, no flag of the plugin's), name
+    no folder of the home, no id that looks like a key and no key the person alone is shown, and the
+    person's own status still says once what is said once."""
+    project, home_, path = public(tmp_path)
+    path.write_text(json.dumps(row("user", "aaaaaaaa", 1, 'api_key = "made0000up"')) + "\n", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    (home_ / "labels").mkdir()
+    (home_ / "labels" / "2026-11-11.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n| R1 | A standing line. | his | `aaaaaaaa` |\n",
+        encoding="utf-8",
+    )
+    assert through("build", "--cwd", str(project))[0] == 0
+    (home_ / "shelled.txt").write_text("R1\n", encoding="utf-8")  # as a mark from a shell leaves it
+    page = next((home_ / "said").glob("*.jsonl"))
+    page.write_bytes(page.read_bytes() + b"\xff\n")
+    for verb in ("status", "look"):
+        shell = ran("door.py", verb, "--cwd", str(project))  # a session's shell: no terminal, no flag
+        assert shell.returncode == 0, shell
+        for held in (
+            str(home_),
+            str(home_.resolve()),
+            "(aaaaaaaa)",
+            "marked from a shell",
+            "as text",
+            "door.py strike",
+        ):
+            assert held not in shell.stdout, (verb, held, shell.stdout)  # look names R1 as the server's look does
+    told = through("status", "--cwd", str(project))[1]  # the person's own, after the session's
+    assert "(aaaaaaaa)" in told and door.DAMAGED.format(f"said/{page.name}") in told, told
+    assert "marked from a shell" in told and ": R1." in told, told
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

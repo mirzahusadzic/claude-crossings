@@ -112,7 +112,7 @@ If the home's `copy` file names a folder, the plain files go there as one encryp
 | the image does not read back the same | it replaces nothing |
 | the Keychain will not keep the passphrase, or `hdiutil` cannot make the image | no copy is made: the door says so in one sentence, with exit status 1, and a cut's hook in a line of the error log; neither names the command it ran, whose Keychain call holds the passphrase |
 | the passphrase | a random one, made the first time and kept in the Keychain under `crossing-archive` |
-| `CROSSING_COPY_KEY` is set and the door stands at a real terminal | it is the passphrase instead, and `status` from a shell says that every program the session starts can read it |
+| `CROSSING_COPY_KEY` is set and the door stands at a real terminal | it is the passphrase instead, and `status` from the person's terminal says that every program the session starts can read it |
 | `CROSSING_COPY_KEY` is set anywhere else | it is passed over, with one line in the error log |
 
 An earlier image, or a backup of the folder, keeps what was struck since.
@@ -130,7 +130,7 @@ A message of the person's that looks like it holds a key or a password is kept: 
 - a token after `Authorization: Bearer`
 - an assignment such as `password=`, `passwd:` or `api_key=` with a value of eight characters or more
 
-Until the message is struck, `status` and `look` from a shell or the person's command say, a sentence a message, that a kept message looks like it holds a key or a password, its id, and that `door.py strike <id>` removes it. The door's server and the frame never say it, and the frame never quotes such a message among the person's own words. `find` and `thread` still give it: the session heard it when it was said.
+Until the message is struck, `status` and `look` from the person's own terminal or command say, a sentence a message, that a kept message looks like it holds a key or a password, its id, and that `door.py strike <id>` removes it. The door's server and the frame never say it, nor do `status` and `look` run by a session's shell (no terminal, and no flag of the plugin's), which answer as the server does: no folder of the home, no such id, no key the person alone is shown, and nothing said once is taken from the person's next `status`; and the frame never quotes such a message among the person's own words. `find` and `thread` still give it: the session heard it when it was said.
 
 ---
 
