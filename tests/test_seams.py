@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+import functools
+import inspect
 import io
 import json
 import os
@@ -38,10 +40,14 @@ from test_store import DATA, ROWS, A, B, D, E, at_terminal, home, own_folder, ro
 
 from crossing import count, door, frame, handover, hook, layer, off, record, second, store, transcript  # noqa: E402
 
-# No test here reaches a disk image either: a stand-in for macOS's hdiutil comes first on the path,
-# beside the one for the Keychain, and refuses. A test of a disk image's own use puts its own first.
-(DATA / "bin" / "hdiutil").write_text("#!/bin/sh\necho 'no test makes a disk image' >&2\nexit 52\n", encoding="utf-8")
-(DATA / "bin" / "hdiutil").chmod(0o755)
+# No test here reaches a disk image either: a stand-in for macOS's hdiutil comes first on the path for
+# the length of each test of this file (see the end of it), beside the one for the Keychain, and
+# refuses. Only here: in one pytest process the other files' tests of a real image run after these.
+# A test of a disk image's own use puts its own first.
+NO_IMAGE = DATA / "no-image"
+NO_IMAGE.mkdir()
+(NO_IMAGE / "hdiutil").write_text("#!/bin/sh\necho 'no test makes a disk image' >&2\nexit 52\n", encoding="utf-8")
+(NO_IMAGE / "hdiutil").chmod(0o755)
 
 
 def kept_texts(folder: Path) -> list[str]:
@@ -2590,9 +2596,25 @@ def test_a_read_whose_rebuild_cannot_have_the_home_makes_the_index_in_memory(tmp
         assert db.execute("select mark from minted").fetchone() == ("not-the-kept-mark",)
 
 
+def making_no_image(test):
+    """A test of this file, run with the stand-in that refuses to make a disk image first on the path."""
+
+    @functools.wraps(test)
+    def run(*args, **kwargs):
+        with set_to(PATH=f"{NO_IMAGE}{os.pathsep}{os.environ.get('PATH', '')}"):
+            return test(*args, **kwargs)
+
+    return run
+
+
+for _name, _test in list(globals().items()):
+    if _name.startswith("test_") and callable(_test):
+        globals()[_name] = making_no_image(_test)
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
             with tempfile.TemporaryDirectory(prefix="crossing-test-") as folder:
-                test(Path(folder)) if test.__code__.co_argcount else test()
+                test(Path(folder)) if inspect.signature(test).parameters else test()
             print("ok", name)
