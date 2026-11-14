@@ -263,13 +263,13 @@ const registerCommand = (on: Parameters<Register>[0]) => {
 // hooks module (trace, welcome), or with an option that hands it a transcript, names a model or
 // speaks for the plugin (--transcript, --session, --model, --by-hook, --by-module) is refused; so
 // is a shell command, or a call of a tool that writes a file, that names the person's record of
-// switches, a home's record of when Crossing was off or of what was said then, its models file,
-// or its files of session ids. The files of a home that the door alone writes (the label pages,
-// the hand-over and its words page, what was struck, the model behind a call, the ids noted as
-// looking like a key, the one-word settings) are refused to a tool that writes a file, and to a
+// switches, or a small file of a home a hook or the door alone writes (KEPT). The files of a home
+// that the door alone writes and the person reads (WRITTEN_BY_DOOR: the label pages, the hand-over
+// and every words page, what was struck, the model behind a call, the ids noted as looking like a
+// key, the pages of the cuts, the one-line settings) are refused to a tool that writes a file, and to a
 // shell command that names one in any part of it that is not a plain read (a command of READS
 // with no `>` in it); reading them stays open. A shell command that runs the hand-over's words
-// script is the person's too. These too are string checks: against a session with a shell, the
+// script is the person's too. A command's quotes and backslashes are taken out before any of this. These too are string checks: against a session with a shell, the
 // wall is the person's own approval of the commands it runs.
 
 const REFUSED =
@@ -292,7 +292,10 @@ const trimmed = (folder: string) => folder.replace(/\\/g, '/').replace(/\/+$/, '
 // The paths and commands a call names, as one text, with a separator of one kind and the
 // person's own folder spelled out where the shell would spell it.
 const named = (e: Record<string, unknown>, home: string): string => {
-  const said = NAMING.map(key => e[key]).filter((v): v is string => typeof v === 'string')
+  // A shell's quotes and backslashes are taken out of a command first, as the shell takes them out:
+  // `crossings/'said'` and `crossings/sa\id` name `crossings/said`. A file tool's path keeps its own.
+  const said = NAMING.map(key => (key === 'command' && typeof e[key] === 'string' ? (e[key] as string).replace(/['"\\]/g, '') : e[key]))
+    .filter((v): v is string => typeof v === 'string')
   for (const key of ['file_paths', 'paths']) {
     const many = e[key]
     if (Array.isArray(many)) said.push(...many.filter((v): v is string => typeof v === 'string'))
@@ -316,13 +319,15 @@ const named = (e: Record<string, unknown>, home: string): string => {
 }
 
 // The small files of a home a session is not to write or take away: the record of when Crossing
-// was off and of what was said then, which model wrote each label, and the files of session ids.
-const KEPT = String.raw`(?:off|unsaid|models|welcomed|told|there|unattended|shelled|labelled|arrived|collided)\.txt\b`
+// was off and of what was said then, which model wrote each label, the files of session ids, how far
+// each transcript was read, the sentences said once, what was pulled, the lock, a copy's stage, and
+// the traces of the last cut and the last frame.
+const KEPT = String.raw`(?:(?:off|unsaid|models|welcomed|told|there|unattended|shelled|labelled|arrived|collided|passed-over|ignore-told|copy-told|damaged-told|copy-stage)\.txt\b|(?:markers|reached)\.jsonl\b|archive\.lock\b|last-(?:carry|cut)\.json\b)`
 // The files of a home the door alone writes, which a session may read: the label pages, the hand-over
-// and its words page, what was struck, the model behind a call, the ids noted as looking like a key,
-// and the one-word settings.
+// and every words page, what was struck, the model behind a call, the ids noted as looking like a key,
+// the pages of the cuts and their sidecars, the one-line settings, the project's name and the ignore file.
 const WRITTEN_BY_DOOR =
-  String.raw`(?:labels${END}|hand-over(?:\.words)?\.md\b|(?:struck|calling|flagged)\.txt\b|(?:copy|switch|mode|carry|frame-size)${END})`
+  String.raw`(?:labels${END}|hand-over\.md\b|[^/\s'"\x60]+\.words\.md\b|(?:struck|calling|flagged)\.txt\b|[^/\s'"\x60]+-cut-\d+\.(?:md|json)\b|(?:copy|switch|mode|carry|frame-size|retelling-length|retelling-share|project|\.gitignore)${END})`
 
 // The places of the archive's files, or of the home's kept files, as patterns over that text.
 const places = (homes: string, ours: string, outright: string, files = ARCHIVE): RegExp[] => {
@@ -366,7 +371,7 @@ const runsHelper = (command: string): boolean =>
     if (first === 'handover.py') return true // the script itself, by its own first line
     if (!PYTHON.test(first)) return false
     const at = words.findIndex((word, n) => n > 0 && !word.startsWith('-'))
-    return (at > 0 && /(?:^|\/)handover\.py$/.test(words[at])) || words.some((word, n) => word === '-m' && words[n + 1] === 'crossing.handover')
+    return (at > 0 && /(?:^|\/)handover\.py$/.test(words[at] ?? '')) || words.some((word, n) => word === '-m' && words[n + 1] === 'crossing.handover')
   })
 // A shell command that names a file of `places` in any part of it that is not a plain read.
 const writesTo = (command: string, home: string, found: RegExp[]): boolean =>

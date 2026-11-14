@@ -652,3 +652,60 @@ test("a shell command that runs the hand-over's words script is the person's, an
   }
   expect(reached.length).toBe(3)
 })
+
+test('every small file a hook or the door alone writes is kept from a session that would write it, wherever a home stands', async ($, on) => {
+  const reached = tools(on)
+  // Neither written nor named in a shell: how far each transcript was read (a marker set by hand would hide what
+  // came before it), the sentences said once, what was pulled, the lock, a copy's stage and the traces.
+  const kept = ['markers.jsonl', 'passed-over.txt', 'ignore-told.txt', 'copy-told.txt', 'damaged-told.txt', 'reached.jsonl',
+    'archive.lock', 'copy-stage.txt', 'last-carry.json', 'last-cut.json']
+  for (const home of HOMES) {
+    for (const file of kept) {
+      const file_path = `${home}/${file}`
+      for (const call of [{ tool: 'Write', file_path, content: '' }, { tool: 'Edit', file_path, old_string: 'a', new_string: 'b' }]) {
+        expect(refused(await $.tool.call(call as any))).toBe(PERSONS)
+      }
+      expect(refused(await $.tool.call({ tool: 'Bash', command: `echo x > ${file_path}` }))).toBe(PERSONS)
+    }
+  }
+  // Read, and not written: every words page, the pages of the cuts and their sidecars, and the one-line settings.
+  const written = ['notes.words.md', 'abcdef01-cut-2.md', 'abcdef01-cut-2.json', 'retelling-length', 'retelling-share',
+    'project', '.gitignore']
+  for (const home of HOMES) {
+    for (const file of written) {
+      const file_path = `${home}/${file}`
+      for (const call of [{ tool: 'Write', file_path, content: '' }, { tool: 'Edit', file_path, old_string: 'a', new_string: 'b' }]) {
+        expect(refused(await $.tool.call(call as any))).toBe(WRITTEN)
+      }
+      expect(refused(await $.tool.call({ tool: 'Bash', command: `echo x > ${file_path}` }))).toBe(WRITTEN)
+    }
+  }
+  expect(reached).toEqual([])
+  for (const file of written) expect(refused(await $.tool.call({ tool: 'Read', file_path: `/project/crossings/${file}` }))).toBe(undefined)
+  for (const file of written) expect(refused(await $.tool.call({ tool: 'Bash', command: `cat crossings/${file}` }))).toBe(undefined)
+  for (const file of kept) expect(refused(await $.tool.call({ tool: 'Read', file_path: `/project/crossings/${file}` }))).toBe(undefined)
+  // A word of the same name that is no file of a home is left alone.
+  for (const file_path of ['/project/crossings/projects/x.md', '/project/notes/markers.jsonl', '/project/.gitignore', '/project/crossings/copy-stage']) {
+    expect(refused(await $.tool.call({ tool: 'Write', file_path, content: '' }))).toBe(undefined)
+  }
+  expect(reached.length).toBe(written.length * 2 + kept.length + 4)
+})
+
+test("a command's quotes and backslashes are taken out before its paths are looked at, as the shell takes them out", async ($, on) => {
+  const reached = tools(on)
+  for (const command of ["cat crossings/'said'/x.jsonl", 'cat crossings/sa\\id/x.jsonl', 'cat "crossings/s"aid/x.jsonl',
+    "sqlite3 crossings/'store'.db .dump", 'head ~/.claude/crossing/ours/"said"/x.jsonl']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toContain("through the door's tools")
+  }
+  for (const command of ["rm crossings/'off'.txt", 'echo > crossings/mark\\ers.jsonl']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(PERSONS)
+  }
+  for (const command of ["echo x > crossings/la''bels/2026-11-12.md", 'sed -i "" s/a/b/ "crossings/hand-over.md"']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(WRITTEN)
+  }
+  expect(reached).toEqual([])
+  for (const command of ["grep -n 'said' notes.md", 'echo "the store" > notes/store.md']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(undefined)
+  }
+  expect(reached.length).toBe(2)
+})
