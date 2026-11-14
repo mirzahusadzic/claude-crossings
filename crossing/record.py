@@ -463,9 +463,11 @@ def spelled(path: Path) -> Path:
 
 
 def _same(one: Path, other: Path) -> bool:
+    """Whether two paths name one folder or file, by the files. A path that names none (gone, or
+    holding a NUL, as a damaged line of the person's record may) is the same as nothing."""
     try:
         return os.path.samefile(one, other)
-    except OSError:
+    except (OSError, ValueError):
         return False
 
 

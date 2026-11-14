@@ -188,7 +188,7 @@ def switched() -> Path:
 
 def _record_objects() -> list[dict]:
     """The lines of the person's record that are objects, in its order. A line that is not one
-    is passed over."""
+    is passed over, and so is one whose home or project holds a NUL, which names no folder."""
     try:
         lines = record.lines_in(switched())
     except OSError:
@@ -199,7 +199,11 @@ def _record_objects() -> list[dict]:
             given = json.loads(line)
         except ValueError:
             continue
-        if isinstance(given, dict) and isinstance(given.get("home"), str):
+        if (
+            isinstance(given, dict)
+            and isinstance(given.get("home"), str)
+            and not any(isinstance(given.get(name), str) and "\0" in given[name] for name in ("home", "project"))
+        ):
             found.append(given)
     return found
 

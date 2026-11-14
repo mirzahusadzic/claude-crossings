@@ -2278,6 +2278,37 @@ def test_a_restore_passes_over_a_transcript_gone_and_a_receipt_with_nothing_to_a
     assert store._receipts_path().read_bytes() == receipts
 
 
+# --- the fourth pass ------------------------------------------------------------------------------------------
+
+
+def test_a_nul_in_a_path_of_the_persons_record_or_beside_it_is_passed_over(tmp_path):
+    """A line of the person's record, of switched.indexes or of switched.receipts whose home holds a
+    NUL names no folder: it is passed over as any line that is not one, and status, the switch and an
+    archive go on for every project."""
+    project, home_, path = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    assert through("mark", "--kind", "work", "--anchors", A, "--cwd", str(project), "--", "A line on the boat.")[0] == 0
+    sides = {
+        store.switched(): {"home": "\0", "project": "\0", "spans": 1, "held": {"spans": 0, "unsaid": 0, "places": 0}},
+        store._minted_path(): {"home": "\0", "index": "0" * 32},
+        store._receipts_path(): {"home": "\0", "labels": [], "signs": []},
+    }
+    for side, line in sides.items():
+        was = side.read_bytes()
+        try:
+            with open(side, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps(line) + "\n")
+            assert through("status", "--cwd", str(project))[0] == 0, side.name
+            assert through("switch", "on", "--cwd", str(project))[0] == 0, side.name
+            other, _, _ = public(tmp_path / side.name)
+            assert through("switch", "on", "--cwd", str(other)) == (0, ON), side.name
+            assert not store.lost(home_), side.name
+            assert handover.believed(home_) is not None, side.name
+        finally:
+            side.write_bytes(was)
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
