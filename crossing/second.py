@@ -15,6 +15,7 @@ from __future__ import annotations
 import getpass
 import hashlib
 import os
+import posixpath
 import secrets
 import shutil
 import subprocess
@@ -37,13 +38,16 @@ class Failed(Exception):
 def destination(folder: Path) -> Path | None:
     """Where this home's second copy goes: the folder named in its plain `copy` file, if any. A
     leading `~`, alone or before a `/`, is the person's own folder as the system's record of their
-    account gives it (record.own), never the HOME variable, which a project's settings can set."""
+    account gives it (record.own), never the HOME variable, which a project's settings can set; and
+    what follows it stays under that folder, read with it as its root: `~//tmp` is `~/tmp`, and a
+    `..` climbs no higher than it."""
     try:
         given = "\n".join(record.lines_in(store.within(folder, "copy"))).strip()
     except OSError:
         return None
     if given == "~" or given.startswith("~/"):
-        return record.own().joinpath(given[2:]) if given != "~" else record.own()
+        below = posixpath.normpath("/" + given[2:]).lstrip("/")  # as from the root: no slash or .. leads out
+        return record.own().joinpath(below) if below else record.own()
     return Path(given) if given else None
 
 

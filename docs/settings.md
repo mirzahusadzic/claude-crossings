@@ -50,7 +50,7 @@ Each is a plain file of the home with one line. A word is read without case or t
 | `switch` | `on` or `off`, as `/crossings` writes it | on, where there is no file | any word but `off` reads as on; a switch written by hand keeps no span in `off.txt` |
 | `mode` | how a cut is answered: `native`, `beside` or `own` ([Cuts](cuts.md)) | `native`; a home `/crossings on` makes outside the project starts with `beside` | a word not known reads as `native` |
 | `carry` | how the frame is carried: `message` or `note` | `message`; a home made outside starts with `note` | a word not known reads as `message` |
-| `copy` | the folder for the second copy; a leading `~`, alone or before a `/`, is the person's own folder, never `HOME` | no copy | a place inside the project makes no copy |
+| `copy` | the folder for the second copy; a leading `~`, alone or before a `/`, is the person's own folder, never `HOME`, and what follows it stays below that folder (`~//tmp` is `~/tmp`, and a `..` climbs no higher than it) | no copy | a place inside the project makes no copy |
 | `frame-size` | the frame's size in characters | 9,000 | held between 2,000 and 9,500; a file that holds no whole number leaves 9,000 |
 | `retelling-length` | how long a summary must be, in characters, for the retelling line | 20,000 | a file that holds no whole number leaves the default |
 | `retelling-share` | how much of it, in percent, must repeat the summary before; `%` may follow | 60 | the same |

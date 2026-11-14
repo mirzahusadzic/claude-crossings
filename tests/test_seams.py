@@ -32,7 +32,7 @@ from test_edges import as_the_module, ran, reader, through, words_script  # noqa
 from test_homes import public  # noqa: E402
 from test_off import says  # noqa: E402
 from test_serve import said  # noqa: E402
-from test_store import DATA, ROWS, A, B, D, E, at_terminal, home, row, started_by  # noqa: E402  (and its data folder: no test reaches the real home)
+from test_store import DATA, ROWS, A, B, D, E, at_terminal, home, own_folder, row, started_by  # noqa: E402  (and its data folder: no test reaches the real home)
 
 from crossing import count, door, frame, handover, hook, layer, off, record, second, store  # noqa: E402
 
@@ -1878,6 +1878,30 @@ def test_a_read_of_a_home_switched_off_writes_nothing_and_what_is_said_once_wait
     told = through("status", "--cwd", str(project))[1]
     assert door.DAMAGED.format(f"said/{page.name}") in told, told
     assert "A file of this home holds a line" not in through("status", "--cwd", str(project))[1]  # once
+
+
+# --- a copy file's ~ ---------------------------------------------------------------------------------------
+
+
+def test_a_copy_files_tilde_stays_under_the_persons_own_folder_whatever_follows_it(tmp_path):
+    """`~//` and `~/..` in a home's copy file name a folder below the person's own folder, never one
+    outside it: `~//<the project>` is a folder of that name below it, not the project, so the door
+    goes on to the copy (here, with nothing to copy yet) rather than refusing a place in the project."""
+    own = tmp_path / "own"
+    project = own / "work" / "tern"
+    (project / "crossings").mkdir(parents=True)
+    home_ = project / "crossings"
+    with own_folder(own):
+        assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+        (home_ / "copy").write_text(f"~/{project.resolve()}\n", encoding="utf-8")  # ~//var/..., by a slash too many
+        assert through("copy", "--cwd", str(project)) == (1, "not copied: nothing to copy yet\n")
+        assert second.destination(home_) == own / str(project.resolve()).lstrip("/")
+        for given, below in (("~//tmp", own / "tmp"), ("~///tmp/x", own / "tmp" / "x"), ("~/../../tmp", own / "tmp")):
+            (home_ / "copy").write_text(given + "\n", encoding="utf-8")
+            assert second.destination(home_) == below, given
+        for given in ("~", "~/", "~//", "~/.."):
+            (home_ / "copy").write_text(given + "\n", encoding="utf-8")
+            assert second.destination(home_) == own, given
 
 
 if __name__ == "__main__":
