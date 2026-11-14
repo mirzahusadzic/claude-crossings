@@ -126,7 +126,10 @@ TOOLS = [
         "A message in its place, by its id: what stood before and after it, and the labels resting there.",
         ("id",),
         id={"type": "string", "description": "The id of a message, as find gives it."},
-        around={"type": "integer", "description": "How many messages before and after to show (default 2)."},
+        around={
+            "type": "integer",
+            "description": "How many messages before and after to show (default 2, at most 50).",
+        },
     ),
     tool(
         "mark",
@@ -192,7 +195,7 @@ def asked(name: str, given: dict) -> list[str] | str:
             if isinstance(given.get("around"), int) and not isinstance(given.get("around"), bool)
             else 2
         )
-        return ["thread", "--around", str(max(0, around)), "--touch", "--", given["id"].strip()]
+        return ["thread", "--around", str(max(0, min(around, store.AROUND))), "--touch", "--", given["id"].strip()]
     if name in ("mark", "leave"):
         if not said.strip() or not strings(given.get("anchors")):
             return f"{name} needs a sentence and at least one anchor."

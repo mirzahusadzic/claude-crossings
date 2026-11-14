@@ -433,6 +433,44 @@ def test_a_count_whose_time_runs_out_inside_one_long_message_is_unfinished(tmp_p
     assert "**Not all of it was counted:**" in (home_ / "abcdef01-cut-1.md").read_text(encoding="utf-8")
 
 
+# --- a long miss, and a long thread ---------------------------------------------------------------------
+
+
+def test_a_long_miss_lists_the_words_once_and_tries_a_few_and_a_thread_reaches_fifty_each_way(tmp_path):
+    project, home_, path = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    path.write_text(
+        "".join(
+            json.dumps({**row("user", f"{n:08x}", 0, f"Message {n} holds the word harbour{n:03d}x."), "timestamp": at})
+            + "\n"
+            for n in range(1, 121)
+            for at in [f"2026-11-11T{9 + n // 60:02d}:{n % 60:02d}:00.000Z"]
+        ),
+        encoding="utf-8",
+    )
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    asked, real = [], store.difflib.get_close_matches
+
+    def counted(word, possibilities, *args, **kwargs):
+        asked.append((word, possibilities))
+        return real(word, possibilities, *args, **kwargs)
+
+    store.difflib.get_close_matches = counted
+    try:
+        with set_to(CLAUDE_PROJECT_DIR=str(project)):
+            text, failed = said("find", words=" ".join(f"zzmissing{n:02d}" for n in range(20)))
+    finally:
+        store.difflib.get_close_matches = real
+    assert not failed and "That is a miss, not a no" in text, text
+    assert 0 < len(asked) <= 5 and len({id(listed) for _, listed in asked}) == 1, len(asked)  # one list, a few words
+    with set_to(CLAUDE_PROJECT_DIR=str(project)):
+        text, failed = said("thread", id=f"{60:08x}", around=1000)
+    assert not failed and text.startswith(f"thread of `{60:08x}`: 101 messages"), text[:80]
+    assert through("thread", f"{60:08x}", "--around", "1000", "--cwd", str(project))[1].startswith(
+        f"thread of `{60:08x}`: 101 messages"
+    )
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

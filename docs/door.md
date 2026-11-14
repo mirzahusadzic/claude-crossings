@@ -13,7 +13,7 @@ The server is started by the plugin's `.mcp.json` as `python3 -I crossing/serve.
 | `look` | the room, with no word needed: the days and how many messages each voice has on each, the labels by kind, the labels that are misaligned or unresolved, the newest line left at the door, and the eight newest labels about the work that are not cooled |
 | `labels` | the labels themselves, newest first: with nothing named, those about the work and the lines at the door; or those of one kind (`relation`, `work`, `next`), of one day (a label's day is that of the newest message it rests on, and a stack's is also that of its own page), or named by key, a stack with every line beneath it |
 | `find` | the messages and labels that hold the words, all of them or, failing that, any; `voice` narrows it to the person's messages or the session's |
-| `thread` | a message by its id in its place: what stood before and after it (`around`, two by default), numbered in the order said, with the labels resting there |
+| `thread` | a message by its id in its place: what stood before and after it (`around`, two by default and fifty at most), numbered in the order said, with the labels resting there |
 | `mark` | writes a label: one sentence, the ids it rests on, its kind (`relation` or `work`, the default) and whose it is (`his`, `session`, the default, or `both`) |
 | `leave` | writes a line for the session that wakes after the next cut: the session's own, resting on messages |
 | `status` | what the store holds, in one line |
@@ -42,7 +42,7 @@ A session is a person's where the harness names it `cli` in `CLAUDE_CODE_ENTRYPO
 
 | Tool | Shows |
 | --- | --- |
-| `find` | each word by its stem, and also as a plain run of letters wherever it stands, so the door never finds less than a search of the files would; `word*` takes every word that begins so, and `"a phrase"` the phrase; up to eight messages and eight labels; a miss names up to five of the nearest words that are there |
+| `find` | each word by its stem, and also as a plain run of letters wherever it stands, so the door never finds less than a search of the files would; `word*` takes every word that begins so, and `"a phrase"` the phrase; up to eight messages and eight labels; a miss names up to five of the nearest words that are there, to the first five words asked |
 | `find`, where labels hold only some of the words | three of them, each sentence cut at 240 characters, and a standing line among them named by key and not recited |
 | `thread` | the message named up to 6,000 characters, each neighbour up to 500; a span when Crossings was off stands in its place as its two moments, and nothing of what was said then; an id of eight characters that two messages share is answered with both whole ids, and either is threaded by its own |
 | `labels` | the forty newest, and how many older ones there are; a sentence cut at 240 characters in a list, and given whole by its key; its state where it is not carried, and the stack it stands beneath |

@@ -93,6 +93,8 @@ LINE_TO_ID = re.compile(r"^\|\s*(\d{3,})\s*\|\s*`([0-9a-f]{8})`\s*\|")
 TOKENS = "porter unicode61 remove_diacritics 2"
 TERM = re.compile(r'"([^"]*)"|(\w+\*?)')  # a phrase in quotes, or a word, which a * may end
 NEAR = 500  # characters of a neighbour shown in a thread
+AROUND = 50  # messages before and after the one a thread is about, at most
+TRIED = 5  # words of a miss whose nearest words are looked for: the answer names five at most
 WHOLE = 6000  # characters of the message a thread is about
 
 
@@ -2166,8 +2168,12 @@ def find(folder: Path, words: str, voice: str | None = None, limit: int = 8) -> 
         out["all_words"] = not out["said"] and bool(out["labels"]) and out["labels_all"]
     if not (out["labels"] or out["said"]):
         # A miss names the nearest words that are there, so the next reach is not a guess.
+        # The words that are there, listed once; and the nearest to a few of the words asked alone, so
+        # that a long miss costs no more than a short one.
         known = dict(db.execute("select term, n from word").fetchall())
-        near = [w for run in runs for w in difflib.get_close_matches(run, list(known), n=3, cutoff=0.7)]
+        listed = list(known)
+        tried = list(dict.fromkeys(runs))[:TRIED]
+        near = [w for run in tried for w in difflib.get_close_matches(run, listed, n=3, cutoff=0.7)]
         out["nearest"] = [(w, known[w]) for w in dict.fromkeys(near)][:5]
     for label in out["labels"]:
         label["anchors"], label["beneath"] = _anchors(db, label["id"]), _beneath(db, label["id"])
@@ -2181,7 +2187,9 @@ def find(folder: Path, words: str, voice: str | None = None, limit: int = 8) -> 
 def thread(folder: Path, said_id: str, around: int = 2) -> dict:
     """A message in its place: what stood before and after it, and the labels that rest on any of them.
     An id of eight characters that two messages share is no one place: the whole ids of both are
-    given (`twins`), and either is threaded by its own."""
+    given (`twins`), and either is threaded by its own. It reaches AROUND messages to either side
+    at most, however many are asked for."""
+    around = max(0, min(around, AROUND))
     db = _open(folder)
     twins = (
         [
