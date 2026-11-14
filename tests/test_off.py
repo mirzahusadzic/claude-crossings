@@ -267,7 +267,10 @@ def test_several_spans_each_keep_out_what_was_said_inside_them(tmp_path):
 
 
 @in_person
-def test_a_torn_or_nonsensical_spans_file_loses_nothing_on_the_record_and_keeps_nothing_it_covers(tmp_path):
+def test_a_torn_or_nonsensical_spans_file_keeps_nothing_until_switched_on_again_and_nothing_it_covers(tmp_path):
+    """A line of the record that is no span may have been a span, and what it held can no longer be
+    told: nothing more is archived until the person switches on again, which keeps everything
+    before that moment off. The lines stay as they were."""
     project, folder, path = on_with_a_transcript(tmp_path)
     switch(project, "off")
     says(path, "20000002", "Inside the span that can be read.")
@@ -282,23 +285,28 @@ def test_a_torn_or_nonsensical_spans_file_loses_nothing_on_the_record_and_keeps_
             "2026-11-12T08:00:0"
         )  # the last of them torn mid-line
     asked(project, path)
-    assert kept_ids(folder) == ["10000001", "30000003"]
+    assert kept_ids(folder) == ["10000001"] and store.lost(folder)
     status = through("status", "--cwd", str(project))[1]
     assert "Crossings was off here 2 times: nothing said while it was off is kept." in status
     assert (
         f"8 lines of the record of when Crossings was off ({folder / 'off.txt'}) could not be read and were passed over."
         in status
     )
+    assert door.LOST in status
     with set_to(CLAUDE_PROJECT_DIR=str(project)):
         bare = said("status")[0]
     assert "8 lines of the record of when Crossings was off could not be read" in bare and "off.txt" not in bare
-    # Switched off and on again, the lines that could not be read stay as they were, and the new span is read.
+    # Switched off and on again, the lines that could not be read stay as they were, everything said
+    # before that moment stays off, and what is said after it is kept.
     before = (folder / "off.txt").read_bytes()
     switch(project, "off")
     says(path, "20000004", "Inside a new span.")
-    switch(project, "on")
+    assert switch(project, "on") == door.SWITCHED["restored"] + "\n"
     asked(project, path, "SessionEnd")
-    assert kept_ids(folder) == ["10000001", "30000003"]
+    assert kept_ids(folder) == ["10000001"] and not store.lost(folder)
+    says(path, "40000005", "On the record, after it was switched on again.")
+    asked(project, path)
+    assert kept_ids(folder) == ["10000001", "40000005"]
     after = (folder / "off.txt").read_bytes()
     assert after.startswith(before.rstrip(b"\n")) and good.encode() in after and b"\xff\xfe" in after
 

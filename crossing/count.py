@@ -142,9 +142,9 @@ def count(
 
     A row said while the person's switch was off, inside one of `spans` (see crossing/off.py),
     is not counted at all: no message, no character and no pointer of it is kept. With `untold`,
-    the home's record of those spans is missing or shorter than it was (see store.lost), so what
-    was said off the record cannot be told from the rest: nothing said is counted or listed, and
-    the count says so (`untold`), for the page to say it.
+    what the home's record of those spans held cannot be told (see store.lost), so what was said
+    off the record cannot be told from the rest: nothing said is counted or listed, and the count
+    says so (`untold`), for the page to say it.
 
     With the home's `key`, the summary's runs are kept as digests (`summary_runs`), for the next
     cut to compare with; and where `earlier`, asked with this cut's ordinal, gives the digests of

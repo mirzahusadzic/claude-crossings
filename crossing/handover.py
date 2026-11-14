@@ -12,7 +12,8 @@ Only what the person wrote and what the session answered is copied, through the 
 reader as everywhere else in this plugin, and only what the home beside the page still
 keeps: no message struck, nothing said while Crossing was off (by its spans and by the ids
 noted then), and nothing a session no person sat in held. Where the home's record of when it
-was off cannot be read, or is missing or shorter than it was, no message is given. The page
+was off cannot be read, or what it held cannot be told (missing, shorter than it was, or with a
+line that is no span: see store.lost), no message is given. The page
 is written through `within`, for its owner alone, as every file of a home is; where a file of
 it is a link, nothing is written. It is the person's to run, as the door's own verbs are, and
 writes only into a home the door believes for its project: anywhere else it says so in one
@@ -77,8 +78,8 @@ def kept_out(folder: Path, path: Path, rows: list) -> set[str]:
     `folder` keeps out of everything it gives: struck (by the message's id, its whole id or its
     session), said inside a span when Crossing was off (by the spans of `off.txt` and the ids
     in `unsaid.txt`), held by a session no person sat in (`unattended.txt`), or whose id is no
-    name. Where the record of the spans cannot be read, or is missing or shorter than it was,
-    every row is kept out."""
+    name. Where the record of the spans cannot be read, or what it held cannot be told (see
+    store.lost), every row is kept out."""
     from crossing import off, record, store  # here alone: the store reads this file's `named`
 
     every = {transcript.ident(row) for _, row in rows}

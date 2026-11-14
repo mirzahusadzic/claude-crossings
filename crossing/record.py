@@ -620,9 +620,9 @@ def honest(text: str, counted: dict) -> str:
     person, own = counted["person"], counted["session"]
     if counted.get("untold"):
         said = (
-            "### Not counted\n\nThe record of when Crossings was off in this project is missing or shorter "
-            "than it was, so what was said off the record cannot be told from the rest, and nothing said is "
-            "listed here.\n\n"
+            "### Not counted\n\nThe record of when Crossings was off in this project is missing, shorter "
+            "than it was, or holds a line that cannot be read as a span, so what was said off the record "
+            "cannot be told from the rest, and nothing said is listed here.\n\n"
         )
         return text[: text.index(HELD)] + said + text[text.index("Every message's pointer") :]
     if not person["messages"] and not own["messages"]:

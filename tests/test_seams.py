@@ -804,6 +804,54 @@ def test_the_marks_of_the_indexes_stand_odd_lines_a_mark_that_cannot_be_kept_and
         marks.rmdir()
 
 
+# --- a damaged line of the record of when Crossing was off --------------------------------------------------
+
+
+def test_a_damaged_line_of_the_record_of_spans_keeps_everything_off_until_switched_on_again(tmp_path):
+    """A line of off.txt that a sync or a hand damaged is no span, and what it held can no longer be
+    told: nothing is archived, counted or given on a words page until the person switches on again,
+    and then everything before that moment stays off."""
+    project, home_, path = public(tmp_path)
+    path.write_text("", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    clock, was = {"now": "2026-11-11T10:00:00.000000+00:00"}, off.now
+    off.now = lambda: clock["now"]
+    try:
+        assert through("switch", "off", "--cwd", str(project))[0] == 0
+        says(path, "10000002", "Said while off, inside the span.", at="2026-11-11T10:00:05.000Z")
+        clock["now"] = "2026-11-11T10:00:10.000000+00:00"
+        assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["again"] + "\n")
+        says(path, "10000003", "Said on the record, before the line was damaged.", at="2026-11-11T10:00:20.000Z")
+        page = home_ / off.FILE
+        lines = page.read_text(encoding="utf-8").splitlines()
+        lines[-1] = "not a moment"  # the span's own line, so that the file is no shorter than the switch left it
+        page.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+        assert kept_texts(home_) == [], kept_texts(home_)
+        told = through("status", "--cwd", str(project))[1]
+        assert door.LOST in told and "1 line of the record of when Crossings was off" in told, told
+        # A cut counted meanwhile lists nothing said, and a words page gives no message.
+        event = {"hook_event_name": "PostCompact", "transcript_path": str(path), "cwd": str(project), "trigger": "auto"}
+        with started_by("cli"):
+            assert hook.run({**event, "session_id": path.stem, "compact_summary": "A summary."}) is None
+        cut = json.loads((home_ / "abcdef01-cut-1.json").read_text(encoding="utf-8"))
+        assert cut.get("untold") is True and cut["person"]["pointers"] == [], cut
+        (home_ / "hand-over.md").write_text(
+            "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n| R1 | A line. | his | `10000003` |\n"
+        )
+        assert words_script(str(path), str(home_ / "hand-over.md")).returncode == 0
+        assert "Said on the record" not in (home_ / "hand-over.words.md").read_text(encoding="utf-8")
+        # Switched on again, everything before that moment is off, and what is said after it is kept.
+        clock["now"] = "2026-11-11T10:01:00.000000+00:00"
+        assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["restored"] + "\n")
+        says(path, "10000004", "Said after it was switched on again.", at="2026-11-11T10:01:30.000Z")
+        assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    finally:
+        off.now = was
+    assert kept_texts(home_) == ["Said after it was switched on again."], kept_texts(home_)
+    assert door.LOST not in through("status", "--cwd", str(project))[1]
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

@@ -47,8 +47,9 @@ DAMAGED = "A file of this home holds a line that cannot be read as text, and it 
 ARRIVED = "A label came into this home's pages without a mark through the door, and crosses every cut as any other: {}."
 COLLIDED = "Two messages of this home share the id {0}: thread {0} names both, and a strike takes one by its whole id."
 UNTOLD = (
-    "The record of when Crossings was off in this project is missing or shorter than it was, so what was said off "
-    "the record cannot be told from the rest, and nothing said is listed here."
+    "The record of when Crossings was off in this project is missing, shorter than it was, or holds a line that "
+    "cannot be read as a span, so what was said off the record cannot be told from the rest, and nothing said is "
+    "listed here."
 )
 
 

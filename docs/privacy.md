@@ -55,9 +55,9 @@ The person's switch is kept where no repository can hold it: `~/.claude/crossing
 | a message has no time, or one that cannot be read | keeps it only where the rows on either side of it in that file are outside every span and no span begins or ends between them; at the first or last row of a file it is not kept, and a session's end decides the last again once a row has come after it |
 | `off.txt` is there and cannot be read | archives nothing, and moves no marker, until it can be |
 | `off.txt` is missing, or shorter than the record says (a session, a checkout or a clean took it) | archives nothing for that home, and `status` and `look` say why; the next `/crossings on` keeps everything before that moment off the record, by a span from 1970 to now, and archives again from there |
-| a line of `off.txt` is no span | passes over it, and `status` says how many; what it might have held is not guessed at |
+| a line of `off.txt` is no span (a sync, an editor or a hand damaged it) | passes over it, and `status` says how many; what it held can no longer be told, so the home archives nothing, as where the file is missing, until the next `/crossings on` keeps everything before that moment off the record. A line that is no span before that moment is kept off by it, and is still counted |
 | a cut comes while it is off | is not counted, noted or answered |
-| a cut comes while `off.txt` is missing or shorter than the record says | is counted with nothing said listed: its page says the record cannot be told |
+| a cut comes while `off.txt` is missing, shorter than the record says, or holds a line that is no span since the last `/crossings on` that kept everything before off | is counted with nothing said listed: its page says the record cannot be told |
 | `mark` or `leave` while it is off | refuse |
 
 The store shows that something may have been said, and nothing of what: `status` says how many times Crossings was off (how many spans `off.txt` holds), `look` puts a line with the two moments among its days, `thread` puts one in the place of what was said, and `find` finds nothing of it. `unsaid.txt` keeps one id for each message a reading met inside a span, so how many they were can be counted from it; no count of them or of their characters is kept, a cut's count included, and the frame does not mention it.

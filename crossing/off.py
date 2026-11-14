@@ -92,20 +92,39 @@ def _lines(folder: Path) -> list[str]:
 
 def _parsed(lines: list[str]) -> tuple[list[tuple[int, datetime.datetime, datetime.datetime | None]], int]:
     """Each span the lines hold, with the number of its line; and how many lines are no span and
-    were passed over. A span is one moment and, unless it is still open, a second as late or
-    later. Only the last span can be open: an open one with another after it is no span."""
-    found, unread = [], 0
+    were passed over (see `_sorted`)."""
+    found, passed = _sorted(lines)
+    return found, len(passed)
+
+
+def _sorted(lines: list[str]) -> tuple[list[tuple[int, datetime.datetime, datetime.datetime | None]], list[int]]:
+    """Each span the lines hold, with the number of its line; and the numbers of the lines that are
+    no span. A span is one moment and, unless it is still open, a second as late or later. Only the
+    last span can be open: an open one with another after it is no span."""
+    found, passed = [], []
     for n, line in enumerate(lines):
         if not line.strip() or line.lstrip().startswith("#"):
             continue
         parts = line.split()
         times = [moment(part) for part in parts]
         if len(parts) not in (1, 2) or None in times or (len(times) == 2 and times[1] < times[0]):
-            unread += 1
+            passed.append(n)
             continue
         found.append((n, times[0], times[1] if len(times) == 2 else None))
     shut = [each for each in found[:-1] if each[2] is not None] + found[-1:]
-    return shut, unread + len(found) - len(shut)
+    kept = {each[0] for each in shut}
+    return shut, sorted(passed + [each[0] for each in found if each[0] not in kept])
+
+
+def untold(lines: list[str]) -> bool:
+    """Whether the lines hold one that is no span after the last span from FIRST, which keeps
+    everything said before its end off the record (see `everything_before`): what such a line
+    held can no longer be told, and nothing is archived until the person switches on again (see
+    store.lost). A line that is no span before such a span is kept off by it, whatever it held."""
+    found, passed = _sorted(lines)
+    first = moment(FIRST)
+    covered = max((n for n, start, end in found if start == first and end is not None), default=-1)
+    return any(n > covered for n in passed)
 
 
 def spans(folder: Path) -> tuple[list[Span], int]:

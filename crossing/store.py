@@ -246,7 +246,8 @@ def _recording():
 # project's own, which names no project and so switches nothing on. A spans file that is then
 # missing or shorter was taken away or cut by something other than the switch (a session, a
 # checkout or a clean of a home inside a repository), and what it said can no longer be told:
-# nothing is archived for that home until the person switches it on.
+# nothing is archived for that home until the person switches it on. So too where a line of it
+# is damaged, so that it is no span: what that line held can no longer be told either.
 
 
 def spanned(folder: Path) -> int:
@@ -310,15 +311,19 @@ def _spans_kept(folder: Path, steady: float | None = None) -> None:
 
 
 def lost(folder: Path) -> bool:
-    """Whether the home's record of when Crossing was off is missing, or shorter than it was when
-    the switch last wrote it (see `spanned`): nothing is then archived for it."""
+    """Whether what the home's record of when Crossing was off held can no longer be told: it is
+    missing, or shorter than it was when the switch last wrote it (see `spanned`), or it holds a
+    line that is no span since the switch last kept everything before that moment off (see
+    off.untold). Nothing is then archived for it, until the person switches Crossing on again. A
+    record that is there and cannot be read is said by its own rule (see `archive`)."""
     was = spanned(folder)
-    if not was:
-        return False
     try:
-        return len(lines_of(within(folder, off.FILE).read_text(encoding="utf-8", errors="surrogateescape"))) < was
+        lines = lines_of(within(folder, off.FILE).read_text(encoding="utf-8", errors="surrogateescape"))
     except FileNotFoundError:
-        return True
+        return bool(was)
+    except OSError:
+        return False
+    return len(lines) < was or off.untold(lines)
 
 
 def kept(cwd: Path) -> Path | None:
@@ -439,9 +444,9 @@ def switch(cwd: Path, to: str) -> str:
     it was off is kept off where the clock was set back meanwhile (see off.closed).
 
     The person's record keeps how many lines `off.txt` has each time the switch writes it (see
-    `lost`). Where that file is since missing or shorter, switching on keeps everything before
-    this moment as off the record, by a span from the first moment there is to now, and archiving
-    goes on from here; it gives `restored`.
+    `lost`). Where that file is since missing or shorter, or holds a line that is no span (see
+    off.untold), switching on keeps everything before this moment as off the record, by a span
+    from the first moment there is to now, and archiving goes on from here; it gives `restored`.
 
     Where the home lies inside a repository and holds no ignore file, switching on writes one
     (see `ignored`)."""
@@ -471,12 +476,12 @@ def switch(cwd: Path, to: str) -> str:
     if held is None:
         raise OSError(f"the home was held by another act for {WAIT:.0f} seconds")
     try:
-        return _switched(cwd, folder, on, believed)
+        return _switched(cwd, folder, on)
     finally:
         _unlocked(folder, held)
 
 
-def _switched(cwd: Path, folder: Path, on: bool, believed: bool) -> str:
+def _switched(cwd: Path, folder: Path, on: bool) -> str:
     """`switch`, from its span on, with the home's lock held."""
     if not on:
         off.opened(folder)  # from this moment nothing said is kept
@@ -486,7 +491,7 @@ def _switched(cwd: Path, folder: Path, on: bool, believed: bool) -> str:
         return "off"
     consent(cwd)
     ignored(folder)
-    was_lost = believed and lost(folder)
+    was_lost = lost(folder)  # a home adopted with a damaged record is restored as it is switched on, too
     closed = off.closed(folder, since=steadied(folder))
     if was_lost:
         off.everything_before(folder)  # what the missing record may have held is kept off, all of it
@@ -2502,7 +2507,7 @@ def look(folder: Path, newest: int = 8) -> dict:
             for shown in [off.shown(span)]
         ],
         "flagged": _flagged(folder, db),  # for the person's own look alone: the door's server is not told it
-        "lost": lost(folder),  # the record of when Crossing was off is missing or shorter: nothing is archived
+        "lost": lost(folder),  # the record of when Crossing was off cannot be told: nothing is archived
     }
     left = db.execute("select id, text from label where kind = 'next' order by n desc limit 1").fetchone()
     if left is not None:

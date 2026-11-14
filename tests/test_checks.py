@@ -49,13 +49,13 @@ PERSONS = (
     "was done.\n"
 )
 LOST = (
-    "The record of when Crossings was off in this project is missing or shorter than it was, so nothing more is "
-    "archived here until the person switches Crossings on again."
+    "The record of when Crossings was off in this project is missing, shorter than it was, or holds a line that "
+    "cannot be read as a span, so nothing more is archived here until the person switches Crossings on again."
 )
 RESTORED = (
-    "Crossings is on again for this project. Its record of when Crossings was off had been taken away or cut short, "
-    "so everything said before this moment that was not kept already is kept off the record; what is said from "
-    "now on is kept.\n"
+    "Crossings is on again for this project. Its record of when Crossings was off had been taken away, cut short or "
+    "damaged, so everything said before this moment that was not kept already is kept off the record; what is said "
+    "from now on is kept.\n"
 )
 UNATTENDED = "The door is for sessions a person sits in, and this one is not, so nothing was read."
 PASSING = (
