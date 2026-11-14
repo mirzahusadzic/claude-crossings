@@ -8,7 +8,7 @@ What Crossings does when the harness compacts a session: the count and its page,
 
 | Event | Crossings |
 | --- | --- |
-| the harness is about to cut (`session.compact`, in the hooks module) | reads the home's `mode` and `carry` through the door, and answers the cut as they ask (below). A subagent's own cut, and one the harness computes ahead of time, are never touched |
+| the harness is about to cut (`session.compact`, in the hooks module) | asks the door where the home is, for the guard on the archive's files ([Privacy](privacy.md)), reads the home's `mode` and `carry` through the door, and answers the cut as they ask (below). A subagent's own cut, and one the harness computes ahead of time, are never touched |
 | the session starts again (`SessionStart`, source `compact`) | where the hook's input names no subagent, gives a session a person sits in the waking note, about this cut by its number, and, where the home carries the frame as context, the frame |
 | the harness hands over its summary (`PostCompact`) | counts the cut and writes its page; for a session a person sits in, brings the archive and the index up to date and renews the second copy where one is set; and shows the person one line where the summary mostly retells the one before; nothing at all where the hook's input names a subagent |
 

@@ -894,7 +894,11 @@ def test_the_hooks_module_asks_for_the_project_root_and_not_the_shells_directory
     """The module's own half of the same fault: $.session.cwd() moves with a shell `cd`, $.session.root() does not."""
     source = (ROOT / "hooks" / "crossings.ts").read_text(encoding="utf-8")
     assert "$.session.root()" in source
-    assert source.count("$.session.cwd()") == 1, "only as the fallback, where a build has no root()"
+    # Once as the fallback, where a build has no root(); and once in the guard on the archive's files,
+    # which reads a relative name of the project's home from where the shell stands, and starts no door.
+    guard = source[source.index("const registerGuard") :]
+    assert source.count("$.session.cwd()") == 2 and guard.count("$.session.cwd()") == 1
+    assert "started(" not in guard and "door(" not in guard
 
 
 def test_the_hooks_module_puts_no_home_together_itself():

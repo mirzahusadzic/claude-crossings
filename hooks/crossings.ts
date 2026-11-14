@@ -70,13 +70,17 @@ const entrypoint = async ($: any): Promise<Record<string, string>> => {
     return {}
   }
 }
+// The door's process, as the module starts it, and what it gave back; a throw where it could not be started.
+const started = async ($: any, argv: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> => {
+  const cwd = await root($)
+  return await $.process.run(
+    ['python3', '-I', `${$.plugin.root}/crossing/door.py`, ...argv, '--by-module', '--cwd', cwd],
+    { timeoutMs: 60000, env: { ...(await entrypoint($)), CLAUDE_PLUGIN_ROOT: $.plugin.root } },
+  )
+}
 const door = async ($: any, argv: string[]): Promise<{ ok: boolean; text: string }> => {
   try {
-    const cwd = await root($)
-    const ran = await $.process.run(
-      ['python3', '-I', `${$.plugin.root}/crossing/door.py`, ...argv, '--by-module', '--cwd', cwd],
-      { timeoutMs: 60000, env: { ...(await entrypoint($)), CLAUDE_PLUGIN_ROOT: $.plugin.root } },
-    )
+    const ran = await started($, argv)
     return { ok: ran.exitCode === 0, text: (ran.exitCode === 0 ? ran.stdout : ran.stdout || ran.stderr).trim() }
   } catch (err) {
     return { ok: false, text: String(err) }
@@ -119,6 +123,7 @@ const registerCut = (on: Parameters<Register>[0]) => {
   on('session.compact', async ($, e, next) => {
     // A subagent's own cut, and one the harness computes ahead of time, are never touched.
     if (e.agentId !== undefined || e.trigger === 'precompute') return next(e)
+    await askHome($) // where the home is, for the guard below: a cut is one of the moments it is asked
     const { mode, carry } = await asked($)
     if (mode === 'native') return next(e)
 
@@ -187,6 +192,7 @@ const registerCommand = (on: Parameters<Register>[0]) => {
         'with the project), or see what its store holds: ' +
         '/crossings status, look, find <words>, labels [relation|work|door|a day|ids], frame',
     })
+    await askHome($) // where this project's home is, for the guard on the archive's files, before any tool call
     return next(e)
   })
 
@@ -235,6 +241,7 @@ const registerCommand = (on: Parameters<Register>[0]) => {
     // The door turns the switch and says how it now stands: on, off, or never switched on. Given
     // the session, it notes by id what that session said while it was off, as the span closes.
     const text = (await door($, ['switch', said || 'toggle', ...(session ? ['--session', session] : [])])).text || 'Nothing came back.'
+    await askHome($) // the switch may have made a home, or believed one: the guard below knows it from now on
     if (!session) return { text }
     const told = await door($, ['welcome', session])
     return told.ok && told.text ? { text, context: [told.text] } : { text }
@@ -250,16 +257,28 @@ const registerCommand = (on: Parameters<Register>[0]) => {
 // that is none of the files a session may read there (READABLE), whatever its folder is named, so
 // that a link made inside a home is no way round. The homes are those outside a project (the
 // folder CROSSING_HOMES names, else ~/.claude/crossing/homes), the home on this computer
-// (CROSSING_OURS, else ~/.claude/crossing/ours), a home named outright (CROSSING_HOME), and a
-// project's own crossings/ folder, wherever it stands. The label pages, the pages of the cuts and
-// the other plain files a session may read stay readable: the person reads those beside the work,
-// and so may the session.
+// (CROSSING_OURS, else ~/.claude/crossing/ours), a home named outright (CROSSING_HOME), and this
+// project's home as the door last named it (`known`, below), by its whole path and, where it lies
+// below the folder the session stands in, by the path from there. The label pages, the pages of
+// the cuts and the other plain files a session may read stay readable: the person reads those
+// beside the work, and so may the session.
+//
+// Any other folder named crossings/ is nobody's home as far as the guard knows: a program's own
+// package of that name, or a project's own folder where Crossings was never switched on. There a
+// path is refused only by the names that are the archive's own, wherever that folder stands: said/
+// one step below it, store.db in it (ARCHIVE), or a words page in it (WORDS). Every other path there
+// is read and written freely.
 //
 // It is decided at every tool call, so it is decided by string checks on the call's input alone:
-// no process is started and no file is opened. A cheap check is no wall: a path it cannot see in
-// the call's text (a `cd` into a home and a relative name after it, a search of a whole home)
-// is not caught. The door's own tools are not looked at, nor the plugin's own reads, which are
-// no tool calls of the session's; a shell call of door.py names no such path and runs.
+// no process is started and no file is opened. Where this project's home lies is asked of the
+// door (`door.py home`) at three moments alone: as the session starts, after the person's command
+// has turned the switch, and at a cut. A home switched on from the person's own terminal meanwhile
+// is guarded by the archive's names alone until the next of them, and so is this project's home
+// where the door could not be asked, with one line in the harness's debug log. A cheap check is no
+// wall: a path it cannot see in the call's text (a `cd` into a home and a relative name after it, a
+// search of a whole home, this project's home by another spelling than the door's) is not caught.
+// The door's own tools are not looked at, nor the plugin's own reads, which are no tool calls of
+// the session's; a shell call of door.py names no such path and runs.
 //
 // What is the person's alone is guarded the same way. A shell command that runs door.py with one
 // of the person's verbs (switch, strike, layer, copy), with a verb that writes a kept file for the
@@ -326,11 +345,13 @@ const named = (e: Record<string, unknown>, home: string): string => {
 // each transcript was read, the sentences said once, what was pulled, the lock, a copy's stage, and
 // the traces of the last cut and the last frame.
 const KEPT = String.raw`(?:(?:off|unsaid|models|welcomed|told|there|unattended|shelled|labelled|arrived|collided|passed-over|ignore-told|copy-told|damaged-told|copy-stage|models-met|models-arrived)\.txt\b|(?:markers|reached|off-places)\.jsonl\b|archive\.lock\b|last-(?:carry|cut)\.json\b)`
+// A words page, by its name: what was said, word for word.
+const WORDS = String.raw`[^/\s'"\x60]+\.words\.md\b`
 // The files of a home the door alone writes, which a session may read: the label pages, the hand-over
 // and every words page, what was struck, the model behind a call, the ids noted as looking like a key,
 // the pages of the cuts and their sidecars, the one-line settings, the project's name and the ignore file.
 const WRITTEN_BY_DOOR =
-  String.raw`(?:labels${END}|hand-over\.md\b|[^/\s'"\x60]+\.words\.md\b|(?:struck|calling|flagged)\.txt\b|[^/\s'"\x60]+-cut-\d+\.(?:md|json)\b|(?:copy|switch|mode|carry|frame-size|retelling-length|retelling-share|project|\.gitignore)${END})`
+  String.raw`(?:labels${END}|hand-over\.md\b|${WORDS}|(?:struck|calling|flagged)\.txt\b|[^/\s'"\x60]+-cut-\d+\.(?:md|json)\b|(?:copy|switch|mode|carry|frame-size|retelling-length|retelling-share|project|\.gitignore)${END})`
 
 // Where a path below a home ends, for the files a session may read there: a mark of the shell's, a
 // quote, a space or the end, and never a separator, so that nothing reached through one of them is
@@ -344,15 +365,62 @@ const READABLE = String.raw`(?:${KEPT}|labels/?|labels/[^/\s'"\x60]+\.md|hand-ov
 // alias of said/, or of the home itself) is no way round the check on the archive's files.
 const BELOW = String.raw`(?!${READABLE})(?=[^\s'"\x60;|&()<>{}\[\],])`
 
-// The places of the archive's files, or of the home's kept files, as patterns over that text.
-const places = (homes: string, ours: string, outright: string, files = ARCHIVE): RegExp[] => {
+// Where this project's home lies, as the door last named it (`door.py home`): its folder, or '' where
+// the door names none (a project where Crossings was never switched on) or could not be asked. It is
+// asked as the session starts, after the person's command has turned the switch, and at a cut, and
+// never at a tool call, which uses what is kept here.
+let known = ''
+const UNASKED =
+  "Crossings: the door could not be asked where this project's home is, so its guard knows no home of this project's " +
+  'until the session starts again, the switch is turned through /crossings, or a cut comes.'
+const askHome = async ($: any): Promise<void> => {
+  let ran: { exitCode: number; stdout: string; stderr: string } | null = null
+  try {
+    ran = await started($, ['home'])
+  } catch {
+    ran = null
+  }
+  const said = ran !== null && typeof ran.stdout === 'string' ? ran.stdout.trim() : ''
+  if (ran !== null && ran.exitCode === 0 && !/[\r\n]/.test(said) && /^(?:\/|[A-Za-z]:[\\/])/.test(said)) {
+    known = trimmed(said)
+    return
+  }
+  known = ''
+  // No home believed: the door says nothing, or one sentence for a setting it did not follow.
+  if (ran !== null && ran.exitCode === 1 && !(ran.stderr ?? '').trim()) return
+  try {
+    $.ui.log(UNASKED, { to: 'debug' })
+  } catch {
+    // a log that cannot be written is nothing to stop for
+  }
+}
+
+// The places a home's rules hold over: the homes the settings name or the plugin keeps by default,
+// and this project's home as the door named it, by its whole path and, where it lies below the
+// folder the session stands in (`cwd`), by the path from there.
+type Where = { homes: string; ours: string; outright: string; known: string; cwd: string }
+const below = (folder: string, cwd: string): string => {
+  if (!folder || !cwd) return ''
+  const from = trimmed(cwd)
+  return folder.toLowerCase().startsWith(`${from.toLowerCase()}/`) ? folder.slice(from.length + 1) : ''
+}
+
+// The places of the archive's files, or of the home's kept files, as patterns over that text: `files`
+// below every home, and `byName` below any other folder named crossings/, where only the names that
+// are the archive's own are looked for ('' for none).
+const places = (at: Where, files: string, byName: string): RegExp[] => {
   const found = [
-    String.raw`(?:^|[^\w.-])crossings/${files}`, // a project's own home, wherever the project stands
     String.raw`\.claude/crossing/homes/[^/\s'"\x60]+/${files}`, // the default homes, however the path begins
     String.raw`\.claude/crossing/ours/${files}`,
   ]
-  if (homes) found.push(`${escaped(trimmed(homes))}/[^/\\s'"\\x60]+/${files}`)
-  for (const one of [ours, outright]) if (one) found.push(`${escaped(trimmed(one))}/${files}`)
+  if (at.homes) found.push(`${escaped(trimmed(at.homes))}/[^/\\s'"\\x60]+/${files}`)
+  for (const one of [at.ours, at.outright]) if (one) found.push(`${escaped(trimmed(one))}/${files}`)
+  if (at.known) {
+    found.push(String.raw`(?:^|[^\w.-])${escaped(at.known)}/${files}`)
+    const from = below(at.known, at.cwd)
+    if (from) found.push(String.raw`(?:^|[^\w./-])(?:\./)*${escaped(from)}/${files}`) // a relative name, from the shell's folder
+  }
+  if (byName) found.push(String.raw`(?:^|[^\w.-])crossings/${byName}`) // a folder that only bears the name
   return found.map(pattern => new RegExp(pattern, 'i')) // a Mac's folders are not told apart by case
 }
 
@@ -406,21 +474,32 @@ const registerGuard = (on: Parameters<Register>[0]) => {
     const home = trimmed((await $.env.get('HOME')) ?? '')
     const text = named(given, home)
     if (!text) return next(e)
-    const homes = (await $.env.get('CROSSING_HOMES')) ?? ''
-    const ours = (await $.env.get('CROSSING_OURS')) ?? ''
-    const outright = (await $.env.get('CROSSING_HOME')) ?? ''
-    if (places(homes, ours, outright).some(place => place.test(text))) return { deny: REFUSED }
+    let cwd = ''
+    try {
+      cwd = await $.session.cwd() // where the shell stands, for a relative name of this project's home
+    } catch {
+      cwd = ''
+    }
+    const at: Where = {
+      homes: (await $.env.get('CROSSING_HOMES')) ?? '',
+      ours: (await $.env.get('CROSSING_OURS')) ?? '',
+      outright: (await $.env.get('CROSSING_HOME')) ?? '',
+      known,
+      cwd: typeof cwd === 'string' ? cwd : '',
+    }
+    if (places(at, ARCHIVE, ARCHIVE).some(place => place.test(text))) return { deny: REFUSED }
     const command = typeof given.command === 'string' ? given.command : ''
     if (command && (runsTheirs(command) || runsHelper(command))) return { deny: PERSONS }
     if (command || WRITES.includes(e.tool)) {
       const switched = (await $.env.get('CROSSING_SWITCHED')) ?? ''
-      const kept = [...places(homes, ours, outright, KEPT), ...recordOf(switched)]
+      const kept = [...places(at, KEPT, ''), ...recordOf(switched)]
       if (kept.some(place => place.test(text))) return { deny: PERSONS }
-      const byDoor = places(homes, ours, outright, WRITTEN_BY_DOOR)
+      const byDoor = places(at, WRITTEN_BY_DOOR, WORDS)
       if (command ? writesTo(command, home, byDoor) : byDoor.some(place => place.test(text))) return { deny: WRITTEN }
     }
-    // Read or written, a path below a home that is none of the files a session may read there.
-    if (places(homes, ours, outright, BELOW).some(place => place.test(text))) return { deny: REFUSED }
+    // Read or written, a path below a home that is none of the files a session may read there, or a words
+    // page below a folder that only bears the name.
+    if (places(at, BELOW, WORDS).some(place => place.test(text))) return { deny: REFUSED }
     return next(e)
   }).catch(($, e, next) => next(e)) // a fault here never stops the session's work
 }

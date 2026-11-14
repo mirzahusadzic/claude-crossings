@@ -37,16 +37,22 @@ type World = {
   id?: () => string
   readOnly?: boolean // no file can be written
   words?: () => string // what the door answers for the home's words, where a test wants another answer
+  believed?: () => string // where the door says the home is, where a test changes it as it goes; '' for none
 }
 
 const verb = (argv: string[]) => argv[3] // after python3 -I <door.py>
 
-// The door's three verbs for the module, as the door answers them from the home's files.
+// The door's verbs for the module, as the door answers them from the home's files: where the home is, its
+// words, its page and the trace.
 const NOT_ON = 'Crossings is not switched on for this project.'
 const forModule = (argv: string[], home: string, files: Files, given: World): Ran | null => {
   const read = (name: string) => (files[`${home}/${name}`] ?? '').trim()
   const answer = (stdout: string, exitCode = 0): Ran => ({ exitCode, stdout, stderr: '' })
   const v = verb(argv)
+  if (v === 'home') {
+    const where = given.believed ? given.believed() : home
+    return where ? answer(`${where}\n`) : answer('', 1) // where there is none, the door says nothing
+  }
   if (v !== 'words' && v !== 'page' && v !== 'trace') return null
   if (!home) return answer(`${NOT_ON}\n`, 1)
   if (v === 'words') {
@@ -68,6 +74,7 @@ const forModule = (argv: string[], home: string, files: Files, given: World): Ra
 const world = (on: any, given: World = {}) => {
   const seen = {
     ran: [] as string[][], inits: [] as any[], files: { ...(given.files ?? {}) } as Files, registered: [] as string[], opened: [] as string[],
+    logged: [] as string[],
   }
   const home = given.home ?? HOME
   on('session.root', () => ({ value: (given.root ?? (() => '/project'))() }))
@@ -89,6 +96,10 @@ const world = (on: any, given: World = {}) => {
     return { value: (given.script ?? (() => ({ exitCode: 0, stdout: FRAME, stderr: '' })))([...e.argv]) }
   })
   on('session.compact', () => (given.made ?? (() => ({ messages: [SUMMARY, KEPT] })))())
+  on('ui.log', (_: unknown, e: { text: string }) => {
+    seen.logged.push(e.text)
+    return { value: undefined }
+  })
   on('session.start', (_: unknown, e: { cwd: string }) => ({ cwd: e.cwd }))
   on('command.register', (_: unknown, e: { name: string }) => {
     seen.registered.push(`command ${e.name}`)
@@ -120,7 +131,7 @@ for (const [trigger, kind] of [['auto', 'a cut that came by itself'], ['manual',
     const seen = world(on, { files: asks('beside', 'note') })
     const made = await $.session.compact({ trigger, messages: BEFORE })
     expect(made.messages).toEqual([SUMMARY, KEPT])
-    expect(verbs(seen)).toEqual(['words', 'trace']) // no frame is made here: the hook makes the one that is carried
+    expect(verbs(seen)).toEqual(['home', 'words', 'trace']) // no frame is made here: the hook makes the one that is carried
     expect(trace(seen).carried).toBe('context, by the hook')
     expect(trace(seen).trigger).toBe(trigger)
   })
@@ -130,7 +141,7 @@ test('with the word message, the frame goes into the answer after the summary', 
   const seen = world(on, { files: asks('beside', 'message') })
   const made = await $.session.compact({ trigger: 'auto', messages: BEFORE })
   expect(texts(made)).toEqual([SUMMARY.text, FRAME, KEPT.text])
-  expect(verbs(seen)).toEqual(['words', 'frame', 'trace'])
+  expect(verbs(seen)).toEqual(['home', 'words', 'frame', 'trace']) // where the home is, for the guard, then the cut's own
   expect(seen.opened).toEqual([]) // every file of the home was the door's to read and write
   for (const [n, argv] of seen.ran.entries()) {
     expect(argv.slice(-3)).toEqual(['--by-module', '--cwd', '/project']) // the door is given the project's root, not the shell's directory
@@ -156,7 +167,7 @@ test('where Crossing was never switched on, the cut is left to the harness and n
   const files = { '/project/crossings/mode': 'beside\n', '/project/crossings/carry': 'message\n' }
   const seen = world(on, { home: '', files })
   expect((await $.session.compact({ trigger: 'manual', messages: BEFORE })).messages).toEqual([SUMMARY, KEPT])
-  expect(verbs(seen)).toEqual(['words']) // the door was asked for the home's words, and for nothing else
+  expect(verbs(seen)).toEqual(['home', 'words']) // the door was asked where the home is and for its words, and for nothing else
   expect(seen.files).toEqual(files)
 })
 
@@ -168,14 +179,14 @@ test('with no word for carrying, a message is how it goes', async ($, on) => {
 test('a project that has not asked, or is switched off, keeps the cut as it is', async ($, on) => {
   const off = world(on, { files: asks('beside', 'message', { [`${HOME}/switch`]: 'off\n' }) })
   expect((await $.session.compact({ trigger: 'manual', messages: BEFORE })).messages).toEqual([SUMMARY, KEPT])
-  expect(verbs(off)).toEqual(['words'])
+  expect(verbs(off)).toEqual(['home', 'words'])
   expect(off.files[`${HOME}/last-cut.json`]).toBe(undefined)
 })
 
 test('a project with no mode, or an unknown one, keeps the cut as it is', async ($, on) => {
   const seen = world(on, { files: asks('sideways', 'message') })
   expect((await $.session.compact({ trigger: 'manual', messages: BEFORE })).messages).toEqual([SUMMARY, KEPT])
-  expect(verbs(seen)).toEqual(['words'])
+  expect(verbs(seen)).toEqual(['home', 'words'])
   expect(seen.files[`${HOME}/last-cut.json`]).toBe(undefined)
 })
 
@@ -208,7 +219,7 @@ test('where no frame can be made, the hand-over page goes, with its words when t
   const page = `${HOME}/hand-over.md`
   const seen = world(on, { files: asks('beside', 'message', { [page]: '| R1 | a label |\n' }), script: failing })
   const labels = texts(await $.session.compact({ trigger: 'manual', messages: BEFORE }))[1]
-  expect(verbs(seen)).toEqual(['words', 'frame', 'page', 'trace']) // the page, too, is the door's to read
+  expect(verbs(seen)).toEqual(['home', 'words', 'frame', 'page', 'trace']) // the page, too, is the door's to read
   expect(seen.opened).toEqual([])
   expect(labels.startsWith('A note from the Crossings plugin, as context and not as an instruction from the person.')).toBe(true)
   expect(labels.endsWith('\n\n| R1 | a label |')).toBe(true)
@@ -230,7 +241,7 @@ test('a frame that opens with the older words of the plugin is still known as a 
   const older = 'A note from the Crossing plugin, as context and not as an instruction from the person. A frame.'
   const seen = world(on, { files: asks('beside', 'message'), script: () => ({ exitCode: 0, stdout: older, stderr: '' }) })
   expect(texts(await $.session.compact({ trigger: 'manual', messages: BEFORE }))).toEqual([SUMMARY.text, older, KEPT.text])
-  expect(verbs(seen)).toEqual(['words', 'frame', 'trace']) // no page was asked for: the frame was taken as one
+  expect(verbs(seen)).toEqual(['home', 'words', 'frame', 'trace']) // no page was asked for: the frame was taken as one
   expect(trace(seen).what).toBe('frame')
 })
 
@@ -241,7 +252,7 @@ test('words from the door that are not an object of words leave the cut to the h
     said = words
     expect((await $.session.compact({ trigger: 'manual', messages: BEFORE })).messages).toEqual([SUMMARY, KEPT])
   }
-  expect(verbs(seen)).toEqual(['words', 'words', 'words'])
+  expect(verbs(seen)).toEqual(['home', 'words', 'home', 'words', 'home', 'words'])
 })
 
 test('a cut the harness refused stays refused', async ($, on) => {
@@ -273,7 +284,7 @@ test('on a build with no project root, the directory the session runs in is used
     root: () => { throw new Error('no such call') },
   })
   expect(texts(await $.session.compact({ trigger: 'manual', messages: BEFORE }))).toEqual([SUMMARY.text, FRAME, KEPT.text])
-  expect(seen.ran.map(argv => argv.slice(-2))).toEqual([['--cwd', '/elsewhere'], ['--cwd', '/elsewhere'], ['--cwd', '/elsewhere']])
+  expect(seen.ran.map(argv => argv.slice(-2))).toEqual([['--cwd', '/elsewhere'], ['--cwd', '/elsewhere'], ['--cwd', '/elsewhere'], ['--cwd', '/elsewhere']])
 })
 
 const asked = (seen: { ran: string[][] }) => (seen.ran[seen.ran.length - 1] ?? []).slice(3) // after python3 -I <door.py>; [] where nothing ran
@@ -283,13 +294,17 @@ const asked = (seen: { ran: string[][] }) => (seen.ran[seen.ran.length - 1] ?? [
 const start = ($: any) => $.session.start({ cwd: '/elsewhere', surface: 'terminal', isInteractive: true })
 const say = async ($: any, args: string) => (await $.command.run({ command: 'crossings', args })).text
 // The door's own switch, as far as the module can tell: it says what it was told to do.
+// What the door was last asked by a verb, after python3 -I <door.py>.
+const lastOf = (seen: { ran: string[][] }, name: string) => ([...seen.ran].reverse().find(argv => verb(argv) === name) ?? []).slice(3)
 const switching = (argv: string[]): Ran => ({ exitCode: 0, stdout: `the door said: ${argv.slice(3, 5).join(' ')}\n`, stderr: '' })
 
 test('a session that starts is given the command, and no tool: the door is a server now', async ($, on) => {
   const seen = world(on)
   expect(await start($)).toEqual({ cwd: '/elsewhere' })
   expect(seen.registered).toEqual(['command crossings'])
-  expect(seen.ran).toEqual([]) // and nothing is looked for or made by a session's starting
+  // The door is asked where the home is, for the guard on the archive's files, and nothing is made.
+  expect(seen.ran.map(argv => argv.slice(3))).toEqual([['home', '--by-module', '--cwd', '/project']])
+  expect(seen.files).toEqual({})
 })
 
 test("the switch is turned by the door, and the door's sentence is the answer", async ($, on) => {
@@ -299,18 +314,20 @@ test("the switch is turned by the door, and the door's sentence is the answer", 
   // the project's root, not where the shell stands.
   const tail = ['--session', 'abcdef01-0000', '--by-module', '--cwd', '/project']
   expect(await say($, 'off')).toBe('the door said: switch off')
-  expect((seen.ran[seen.ran.length - 2] ?? []).slice(3)).toEqual(['switch', 'off', ...tail]) // then what the session is told
+  expect(lastOf(seen, 'switch')).toEqual(['switch', 'off', ...tail]) // then where the home is, then what the session is told
   expect(await say($, '  ON ')).toBe('the door said: switch on')
-  expect((seen.ran[seen.ran.length - 2] ?? []).slice(3)).toEqual(['switch', 'on', ...tail]) // then the welcome is asked for
+  expect(lastOf(seen, 'switch')).toEqual(['switch', 'on', ...tail]) // then the welcome is asked for
   expect(await say($, '')).toBe('the door said: switch toggle') // a bare command turns it over
-  expect((seen.ran[seen.ran.length - 2] ?? []).slice(3)).toEqual(['switch', 'toggle', ...tail])
+  expect(lastOf(seen, 'switch')).toEqual(['switch', 'toggle', ...tail])
   // A slip of the hand changes nothing: only a bare command turns the switch over.
   expect(await say($, 'lok')).toBe('/crossings takes: on, off, adopt, status, look, find <words>, labels, frame. "lok" is none of these; nothing was changed.')
   // A home that came with the project is taken by the word adopt, which the door is given as it is.
   expect(await say($, 'Adopt')).toBe('the door said: switch adopt')
-  expect((seen.ran[seen.ran.length - 2] ?? []).slice(3)).toEqual(['switch', 'adopt', ...tail])
-  // Switched off, on, adopted, or turned over, the door is asked what the session is to be told.
-  expect(verbs(seen)).toEqual(['switch', 'welcome', 'switch', 'welcome', 'switch', 'welcome', 'switch', 'welcome'])
+  expect(lastOf(seen, 'switch')).toEqual(['switch', 'adopt', ...tail])
+  // Switched off, on, adopted, or turned over, the door is asked where the home now is, and what the session is
+  // to be told; the slip of the hand asked nothing.
+  const turned = ['switch', 'home', 'welcome']
+  expect(verbs(seen)).toEqual(['home', ...turned, ...turned, ...turned, ...turned])
   expect(seen.files).toEqual({}) // the module writes no switch of its own, in the project or anywhere
 })
 
@@ -356,7 +373,7 @@ test('switching off from inside a session tells it, as context, that nothing is 
   expect(asked(seen)).toEqual(['welcome', 'abcdef01-0000', '--by-module', '--cwd', '/project'])
   now = 'on again'
   expect((await run($, '')).context).toEqual([AGAIN]) // turned over and on again, the door says that too
-  expect(verbs(seen)).toEqual(['switch', 'welcome', 'switch', 'welcome'])
+  expect(verbs(seen)).toEqual(['home', 'switch', 'home', 'welcome', 'switch', 'home', 'welcome'])
 })
 
 test('a session whose id cannot be told is switched on and not welcomed', async ($, on) => {
@@ -365,8 +382,8 @@ test('a session whose id cannot be told is switched on and not welcomed', async 
   const made = await run($, 'on')
   expect(made.text).toBe('the door said: switch on')
   expect(made.context).toBe(undefined)
-  expect(verbs(seen)).toEqual(['switch'])
-  expect(asked(seen)).toEqual(['switch', 'on', '--by-module', '--cwd', '/project']) // and no session is named
+  expect(verbs(seen)).toEqual(['home', 'switch', 'home'])
+  expect(lastOf(seen, 'switch')).toEqual(['switch', 'on', '--by-module', '--cwd', '/project']) // and no session is named
 })
 
 test('a switch the door could not turn is said so, in what came back from it', async ($, on) => {
@@ -394,7 +411,7 @@ test('status of a project where Crossing was never switched on says so and looks
   const seen = world(on, { home: '' })
   await start($)
   expect(await say($, 'STATUS')).toBe('Crossings was never switched on for this project.')
-  expect(verbs(seen)).toEqual(['words'])
+  expect(verbs(seen)).toEqual(['home', 'words']) // where the home is, as the session started, and its words
   expect(seen.files).toEqual({})
 })
 
@@ -435,20 +452,42 @@ test('his own command shows the store through the same script', async ($, on) =>
 const PLACES = { HOME: '/Users/someone', CROSSING_HOMES: '/elsewhere/homes', CROSSING_OURS: '/elsewhere/ours' }
 const SAID = '/elsewhere/homes/made-up-tern-1a2b3c4d/said/abcdef01.jsonl'
 
-// The engine beneath the module: every call that reaches it runs, and is counted.
-const tools = (on: any, places: Record<string, string> = PLACES) => {
+// The project's own crossings/, believed by the door as this project's home: the home most tests here guard.
+const OWN = '/project/crossings'
+
+// The engine beneath the module: every call that reaches it runs, and is counted. The session starts in the
+// project's folder, where the shell stands too, and the door names `believed` as this project's home ('' for
+// none, null where the door cannot be started at all); every process the module starts is kept in `ran`.
+const tools = async ($: any, on: any, places: Record<string, string> = PLACES, believed: string | null = OWN) => {
   mock.env(on, places)
   const reached: string[] = []
+  const ran: string[][] = []
+  const logged: string[] = []
+  on('session.root', () => ({ value: '/project' }))
+  on('session.cwd', () => ({ value: '/project' }))
+  on('session.id', () => ({ value: 'abcdef01-0000' }))
+  on('session.start', (_: unknown, e: { cwd: string }) => ({ cwd: e.cwd }))
+  on('command.register', (_: unknown, e: { name: string }) => ({ value: { command: e.name } }))
+  on('ui.log', (_: unknown, e: { text: string }) => {
+    logged.push(e.text)
+    return { value: undefined }
+  })
+  on('process.run', (_: unknown, e: { argv: readonly string[] }) => {
+    ran.push([...e.argv])
+    if (believed === null) throw new Error('no python3 here')
+    return { value: verb([...e.argv]) === 'home' && believed ? { exitCode: 0, stdout: `${believed}\n`, stderr: '' } : { exitCode: 1, stdout: '', stderr: '' } }
+  })
   on('tool.call', (_: unknown, e: { tool: string }) => {
     reached.push(e.tool)
     return { result: 'ran' }
   })
-  return reached
+  await $.session.start({ cwd: '/project', surface: 'terminal', isInteractive: true })
+  return Object.assign(reached, { ran, logged })
 }
 const refused = (made: any) => made.deny ?? (made.isError ? made.text : undefined)
 
 test("a Read of a file of the archive is refused, in one sentence that names the door's tools", async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   const made = await $.tool.call({ tool: 'Read', file_path: SAID })
   expect(refused(made)).toBe(
     "What was said is reached through the door's tools (look, labels, find and thread), not by opening the archive's own files, so this call was not run.")
@@ -466,7 +505,7 @@ test("a Read of a file of the archive is refused, in one sentence that names the
 })
 
 test('a shell command that names a file of the archive is refused, however it spells the place', async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   for (const command of [`cat ${SAID}`, 'cat ~/.claude/crossing/homes/made-up-tern-1a2b3c4d/said/abcdef01.jsonl',
     'grep -r Tern "$HOME/.claude/crossing/homes/made-up-tern-1a2b3c4d/said"', 'sqlite3 crossings/store.db .dump',
     'head -n 3 ./crossings/said/*.jsonl', 'ls /elsewhere/homes/*/said', 'cat /project//crossings/./said/abcdef01.jsonl']) {
@@ -476,7 +515,7 @@ test('a shell command that names a file of the archive is refused, however it sp
 })
 
 test("the label pages, the cut pages, the door's own script and a word said elsewhere are left alone", async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   const reads = ['/project/crossings/labels/2026-11-12.md', '/project/crossings/hand-over.md', '/project/crossings/abcdef01-cut-2.md',
     '/elsewhere/homes/made-up-tern-1a2b3c4d/labels/2026-11-12.md', '/project/notes/said/what-was-said.md',
     '/project/my-crossings/said/x.md', '/project/said/store.db']
@@ -493,7 +532,7 @@ const REFUSED =
   "What was said is reached through the door's tools (look, labels, find and thread), not by opening the archive's own files, so this call was not run."
 
 test("a shell command that runs the door with what is the person's alone is refused", async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   for (const command of ['python3 crossing/door.py switch off --cwd /project', 'python3 -I door.py strike aaaaaaaa',
     'cd /x && python3 /plugins/crossing/crossing/door.py layer some-model', 'python3 door.py copy',
     'python3 door.py SWITCH on', 'python3 door.py look --transcript /tmp/x.jsonl', 'python3 door.py status --session "*"',
@@ -511,7 +550,7 @@ test("a shell command that runs the door with what is the person's alone is refu
 })
 
 test("a shell command or a write that names the person's record or a home's kept small files is refused", async ($, on) => {
-  const reached = tools(on, { ...PLACES, CROSSING_SWITCHED: '/elsewhere/record/switched' })
+  const reached = await tools($, on, { ...PLACES, CROSSING_SWITCHED: '/elsewhere/record/switched' })
   for (const command of ['rm crossings/off.txt', ': > /elsewhere/homes/made-up-tern-1a2b3c4d/off.txt',
     'cat /dev/null > ~/.claude/crossing/switched', 'truncate -s 0 /elsewhere/record/switched', 'rm /elsewhere/ours/unsaid.txt',
     'sed -i "" d crossings/models.txt', 'rm crossings/welcomed.txt crossings/told.txt', 'echo > crossings/there.txt',
@@ -532,14 +571,15 @@ test("a shell command or a write that names the person's record or a home's kept
 const WRITTEN =
   "This file of the home is written through the door (a label by mark or leave) or by the person's own hand, not by a " +
   "session's call, so this call was not run."
-// Every place a home can stand, as the guard knows them, and the files there that the door alone writes.
-const HOMES = ['/project/crossings', '/project/sub/Crossings', '/elsewhere/homes/made-up-tern-1a2b3c4d', '/elsewhere/ours',
+// Every place a home can stand, as the guard knows them (this project's home, by its own spelling and by
+// another case of its letters, among them), and the files there that the door alone writes.
+const HOMES = [OWN, '/PROJECT/Crossings', '/elsewhere/homes/made-up-tern-1a2b3c4d', '/elsewhere/ours',
   '/Users/someone/.claude/crossing/homes/other-0a0a0a0a', '/Users/someone/.claude/crossing/ours']
 const WRITTEN_FILES = ['labels/2026-11-12.md', 'labels', 'hand-over.md', 'hand-over.words.md', 'struck.txt', 'calling.txt',
   'flagged.txt', 'copy', 'switch', 'mode', 'carry', 'frame-size']
 
 test('a writing tool is refused on the label pages, what was struck, and the one-word settings, wherever a home stands', async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   for (const home of HOMES) {
     for (const file of WRITTEN_FILES) {
       const file_path = `${home}/${file}`
@@ -561,7 +601,7 @@ test('a writing tool is refused on the label pages, what was struck, and the one
 })
 
 test('a shell command that writes those files is refused, and one that reads them runs', async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   for (const command of ['echo beside > crossings/mode', 'rm crossings/labels/2026-11-12.md', 'rm -r crossings/labels',
     'sed -i "" s/a/b/ crossings/hand-over.md', 'cat x | tee crossings/struck.txt', 'cp /x ~/.claude/crossing/homes/made-up-tern-1a2b3c4d/copy',
     'printf "%s" a >> /elsewhere/ours/calling.txt', 'mv a crossings/flagged.txt', `python3 -c "open('crossings/frame-size','w')"`,
@@ -578,7 +618,7 @@ test('a shell command that writes those files is refused, and one that reads the
 })
 
 test("a shell command that runs the module's own verbs, or names a model for the door, is refused", async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   for (const command of ['python3 crossing/door.py trace {} --cwd /project', 'python3 door.py welcome abcdef01-0000',
     'python3 door.py mark --anchors aaaaaaaa A label. --model made-up-model', 'python3 door.py frame --model=made-up-model']) {
     expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(PERSONS)
@@ -591,7 +631,7 @@ test("a shell command that runs the module's own verbs, or names a model for the
 })
 
 test('with no settings, the homes are looked for where the plugin keeps them by default', async ($, on) => {
-  const reached = tools(on, { HOME: '/Users/someone' })
+  const reached = await tools($, on, { HOME: '/Users/someone' })
   expect(refused(await $.tool.call({ tool: 'Read', file_path: '/Users/someone/.claude/crossing/ours/said/x.jsonl' }))).toContain('door')
   expect(refused(await $.tool.call({ tool: 'Read', file_path: '/elsewhere/homes/made-up-tern-1a2b3c4d/labels/x.md' }))).toBe(undefined)
   expect(reached).toEqual(['Read'])
@@ -600,7 +640,7 @@ test('with no settings, the homes are looked for where the plugin keeps them by 
 // --- what an independent review found ---------------------------------------------------------
 
 test('a path that steps back with .. is read where it leads, and the door run as a module is the door', async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   for (const file_path of ['/project/crossings/labels/../said/x.jsonl', '/project/crossings/a/b/../../store.db',
     '/elsewhere/ours/labels/./../said/x.jsonl']) {
     expect(refused(await $.tool.call({ tool: 'Read', file_path }))).toContain("through the door's tools")
@@ -622,7 +662,7 @@ test('a path that steps back with .. is read where it leads, and the door run as
 })
 
 test("the home's files of labels met, labels arrived and ids shared are kept from a session's hand", async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   for (const command of ['rm crossings/arrived.txt', 'echo W9@abcdef >> crossings/labelled.txt', ': > crossings/collided.txt']) {
     expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(PERSONS)
   }
@@ -634,7 +674,7 @@ test('the door is handed how the session was started, so that it carries nothing
   mock.env(on, { CLAUDE_CODE_ENTRYPOINT: 'sdk-cli' })
   const seen = world(on, { files: asks('beside', 'message') })
   await $.session.compact({ trigger: 'auto', messages: BEFORE })
-  expect(verbs(seen)).toEqual(['words', 'frame', 'trace'])
+  expect(verbs(seen)).toEqual(['home', 'words', 'frame', 'trace'])
   for (const init of seen.inits) {
     expect(init?.env?.CLAUDE_CODE_ENTRYPOINT).toBe('sdk-cli')
     expect(typeof init?.env?.CLAUDE_PLUGIN_ROOT).toBe('string')
@@ -642,7 +682,7 @@ test('the door is handed how the session was started, so that it carries nothing
 })
 
 test("a shell command that runs the hand-over's words script is the person's, and one that reads the script runs", async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   for (const command of ['python3 crossing/handover.py /x/abcdef01.jsonl crossings/hand-over.md',
     'python3 -I /plugins/crossing/crossing/handover.py /x/abcdef01.jsonl /elsewhere/notes.md', 'cd /p && python crossing/handover.py a b',
     'FOO=1 python3.9 "crossing/handover.py" a b', 'python3 -m crossing.handover a b', './crossing/handover.py a b',
@@ -657,7 +697,7 @@ test("a shell command that runs the hand-over's words script is the person's, an
 })
 
 test('every small file a hook or the door alone writes is kept from a session that would write it, wherever a home stands', async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   // Neither written nor named in a shell: how far each transcript was read (a marker set by hand would hide what
   // came before it), the sentences said once, what was pulled, the lock, a copy's stage and the traces.
   const kept = ['markers.jsonl', 'passed-over.txt', 'ignore-told.txt', 'copy-told.txt', 'damaged-told.txt', 'reached.jsonl',
@@ -697,7 +737,7 @@ test('every small file a hook or the door alone writes is kept from a session th
 })
 
 test("a command's quotes and backslashes are taken out before its paths are looked at, as the shell takes them out", async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   for (const command of ["cat crossings/'said'/x.jsonl", 'cat crossings/sa\\id/x.jsonl', 'cat "crossings/s"aid/x.jsonl',
     "sqlite3 crossings/'store'.db .dump", 'head ~/.claude/crossing/ours/"said"/x.jsonl']) {
     expect(refused(await $.tool.call({ tool: 'Bash', command }))).toContain("through the door's tools")
@@ -716,7 +756,7 @@ test("a command's quotes and backslashes are taken out before its paths are look
 })
 
 test("the marks of the homes' indexes, beside the person's record, are kept from a session's hand", async ($, on) => {
-  const reached = tools(on, { ...PLACES, CROSSING_SWITCHED: '/elsewhere/record/switched' })
+  const reached = await tools($, on, { ...PLACES, CROSSING_SWITCHED: '/elsewhere/record/switched' })
   for (const command of ['rm ~/.claude/crossing/switched.indexes', 'echo x >> /elsewhere/record/switched.indexes']) {
     expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(PERSONS)
   }
@@ -727,7 +767,7 @@ test("the marks of the homes' indexes, beside the person's record, are kept from
 })
 
 test("a words page is read through the door alone, as the archive's own files are, by any tool and any shell read", async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   for (const home of HOMES) {
     for (const file_path of [`${home}/hand-over.words.md`, `${home}/notes.words.md`]) {
       expect(refused(await $.tool.call({ tool: 'Read', file_path }))).toBe(REFUSED)
@@ -743,7 +783,7 @@ test("a words page is read through the door alone, as the archive's own files ar
 })
 
 test('a path below a home is refused by whatever name its folder bears, but for the files a session may read there', async ($, on) => {
-  const reached = tools(on)
+  const reached = await tools($, on)
   // A link a session made inside a home leads to said/ or to the home itself by another name.
   for (const home of HOMES) {
     for (const file of ['alias/x.jsonl', 'alias/said/x.jsonl', 'alias/store.db', 'labels/alias/x.jsonl', 'labels/said/x.md',
@@ -765,4 +805,110 @@ test('a path below a home is refused by whatever name its folder bears, but for 
     expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(undefined)
   }
   expect(reached.length).toBe(6)
+})
+
+// --- a folder that only bears the name --------------------------------------------------------
+
+// This project's home where it lies outside the project, under the folder the homes outside a project lie in.
+const OUTSIDE = '/elsewhere/homes/made-up-tern-1a2b3c4d'
+
+test("where this project's home lies outside it, a folder of its own named crossings/ is read and written freely", async ($, on) => {
+  const reached = await tools($, on, PLACES, OUTSIDE)
+  // A program's own package of that name, a page about crossings, and a top-level folder of the name.
+  for (const file_path of ['/project/src/crossings/models.py', '/project/docs/crossings/said.md', '/project/crossings/notes.md']) {
+    expect(refused(await $.tool.call({ tool: 'Read', file_path }))).toBe(undefined)
+  }
+  for (const file_path of ['/project/src/crossings/labels/x.md', '/project/src/crossings/mode']) {
+    expect(refused(await $.tool.call({ tool: 'Write', file_path, content: '' }))).toBe(undefined)
+  }
+  for (const command of ['cat src/crossings/models.py', 'echo x > src/crossings/mode', 'rm src/crossings/off.txt', 'ls crossings/alias']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(undefined)
+  }
+  expect(reached.length).toBe(9)
+})
+
+test("in a folder that only bears the name, the archive's own names are still refused", async ($, on) => {
+  // These hold on the code before the guard knew the home from the door as well: the names are the archive's own.
+  const reached = await tools($, on, PLACES, OUTSIDE)
+  for (const file_path of ['/project/src/crossings/said/x.jsonl', '/project/src/crossings/store.db', '/project/src/crossings/hand-over.words.md']) {
+    expect(refused(await $.tool.call({ tool: 'Read', file_path }))).toBe(REFUSED)
+  }
+  expect(refused(await $.tool.call({ tool: 'Bash', command: 'cat src/crossings/hand-over.words.md' }))).toBe(REFUSED)
+  expect(refused(await $.tool.call({ tool: 'Write', file_path: '/project/src/crossings/hand-over.words.md', content: '' }))).toBe(WRITTEN)
+  expect(reached).toEqual([])
+})
+
+test("where this project's home is its own crossings/, the full rules hold there and nowhere else in the project", async ($, on) => {
+  const reached = await tools($, on, PLACES, OWN)
+  for (const file_path of ['/project/crossings/alias/said/x.jsonl', '/project/crossings/hand-over.words.md', '/project/crossings/x.bak']) {
+    expect(refused(await $.tool.call({ tool: 'Read', file_path }))).toBe(REFUSED)
+  }
+  expect(refused(await $.tool.call({ tool: 'Write', file_path: '/project/crossings/labels/2026-11-12.md', content: '' }))).toBe(WRITTEN)
+  expect(refused(await $.tool.call({ tool: 'Bash', command: 'cat crossings/x.bak' }))).toBe(REFUSED)
+  expect(reached).toEqual([])
+  for (const file_path of ['/project/crossings/labels/2026-11-12.md', '/project/crossings/hand-over.md']) {
+    expect(refused(await $.tool.call({ tool: 'Read', file_path }))).toBe(undefined)
+  }
+  // Another folder of the name in the same project is not its home: only the archive's own names are refused there.
+  expect(refused(await $.tool.call({ tool: 'Read', file_path: '/project/src/crossings/models.py' }))).toBe(undefined)
+  expect(refused(await $.tool.call({ tool: 'Write', file_path: '/project/src/crossings/mode', content: '' }))).toBe(undefined)
+  expect(reached.length).toBe(4)
+})
+
+test("the module's own /crossings on makes the guard hold the full rules over the new home at once", async ($, on) => {
+  let believed = ''
+  const seen = world(on, { home: '', believed: () => believed, script: () => ({ exitCode: 0, stdout: 'Crossings is on for this project.\n', stderr: '' }) })
+  mock.env(on, PLACES)
+  on('tool.call', () => ({ result: 'ran' }))
+  await start($)
+  // Never switched on: the project's own crossings/ is a folder of that name and no more.
+  expect(refused(await $.tool.call({ tool: 'Read', file_path: '/project/crossings/x.bak' }))).toBe(undefined)
+  believed = OWN
+  await say($, 'on')
+  expect(refused(await $.tool.call({ tool: 'Read', file_path: '/project/crossings/x.bak' }))).toBe(REFUSED) // no new session needed
+  believed = ''
+  await say($, 'off') // whatever the door names after a switch is what the guard holds: here it names none
+  expect(refused(await $.tool.call({ tool: 'Read', file_path: '/project/crossings/x.bak' }))).toBe(undefined)
+  expect(seen.logged).toEqual([])
+})
+
+test('a home switched on from a terminal in the middle of a session is guarded by its names until the next cut', async ($, on) => {
+  let believed = ''
+  const seen = world(on, { home: '', believed: () => believed })
+  mock.env(on, PLACES)
+  on('tool.call', () => ({ result: 'ran' }))
+  await start($)
+  expect(refused(await $.tool.call({ tool: 'Read', file_path: '/project/crossings/x.bak' }))).toBe(undefined)
+  // The person switches on from their own terminal; the module is not told, and the archive's names alone are refused.
+  believed = OWN
+  expect(refused(await $.tool.call({ tool: 'Read', file_path: '/project/crossings/x.bak' }))).toBe(undefined)
+  expect(refused(await $.tool.call({ tool: 'Read', file_path: '/project/crossings/said/x.jsonl' }))).toBe(REFUSED)
+  // At the next cut the module asks the door, and the full rules hold from then on.
+  await $.session.compact({ trigger: 'auto', messages: BEFORE })
+  expect(verbs(seen)).toEqual(['home', 'home', 'words'])
+  expect(refused(await $.tool.call({ tool: 'Read', file_path: '/project/crossings/x.bak' }))).toBe(REFUSED)
+})
+
+test('where the door cannot be asked as the session starts, the guard knows no home, says so in one line, and goes on', async ($, on) => {
+  const reached = await tools($, on, PLACES, null) // the door cannot be started
+  expect(reached.ran.length).toBe(1)
+  expect(reached.logged.length).toBe(1)
+  expect(reached.logged[0]).toContain('the door could not be asked')
+  // The names of the archive alone are refused; every other path of the project's crossings/ runs.
+  expect(refused(await $.tool.call({ tool: 'Read', file_path: '/project/crossings/x.bak' }))).toBe(undefined)
+  expect(refused(await $.tool.call({ tool: 'Write', file_path: '/project/crossings/labels/2026-11-12.md', content: '' }))).toBe(undefined)
+  expect(refused(await $.tool.call({ tool: 'Read', file_path: '/project/crossings/said/x.jsonl' }))).toBe(REFUSED)
+  expect(reached).toEqual(['Read', 'Write'])
+})
+
+test('the door is asked where the home is once as the session starts, and never at a tool call', async ($, on) => {
+  const reached = await tools($, on, PLACES, OWN)
+  expect(reached.ran.map(argv => argv.slice(3))).toEqual([['home', '--by-module', '--cwd', '/project']])
+  for (const file_path of ['/project/crossings/said/x.jsonl', '/project/crossings/labels/2026-11-12.md', '/project/src/crossings/models.py']) {
+    await $.tool.call({ tool: 'Read', file_path })
+    await $.tool.call({ tool: 'Write', file_path, content: '' })
+  }
+  for (const command of ['cat crossings/x.bak', 'echo x > crossings/mode', 'python3 door.py look', 'ls']) await $.tool.call({ tool: 'Bash', command })
+  expect(reached.ran.length).toBe(1) // no tool call started a process
+  expect(reached.logged).toEqual([])
 })

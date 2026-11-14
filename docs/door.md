@@ -83,7 +83,7 @@ A word the command does not know changes nothing and says what it takes. The wor
 | `frame [--size N]` | prints the frame |
 | `status` | what the store holds, and from a shell more than the server says ([Privacy](privacy.md)): once each, the labels that came into the pages by no mark through the door, an id two messages share, and a file that holds a line that cannot be read as text |
 | `build` | makes the index whole from the plain files |
-| `home` | prints the folder of the project's home, or nothing |
+| `home` | prints the folder of the project's home, or nothing; the hooks module asks it as a session starts, after `/crossings` turns the switch, and at a cut, for its guard on the archive's files |
 | `switch on\|off\|toggle\|adopt` | the switch, as `/crossings` turns it |
 | `strike <id \| key \| session:id> [--why text]` | removes a message, a label or a whole session from the archive, the label pages and the home's small files, and names the labels left resting on what it took; an id two messages share strikes neither, and the answer names both (see Privacy) |
 | `layer <model-key>` | signs every label and message of the session's that has no model (see Layers); with the home held by another act for five seconds, it signs nothing and says so |
