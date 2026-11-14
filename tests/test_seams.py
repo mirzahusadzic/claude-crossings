@@ -1123,6 +1123,33 @@ def test_layering_reads_the_lines_met_once_for_a_whole_batch_of_labels(tmp_path)
     assert few == many <= 4, (few, many)
 
 
+# --- an index whose mark cannot be kept, read again and again -------------------------------------------------
+
+
+def test_an_index_whose_mark_cannot_be_kept_is_made_once_in_a_process_and_every_read_is_answered(tmp_path):
+    crossings, _ = home(tmp_path)  # switched on, archived, built and marked
+    project, marks = str(crossings.parent), store._minted_path()
+    log = Path(os.environ["CLAUDE_PLUGIN_DATA"]) / "errors.log"
+    before = log.read_text(encoding="utf-8") if log.exists() else ""
+    kept = marks.read_text(encoding="utf-8")
+    marks.unlink()
+    marks.mkdir()  # the mark of no index can be kept now
+    try:
+        seen = []
+        for _ in range(3):
+            code, out = through("status", "--cwd", project)
+            assert code == 0 and out.startswith("The store at "), out
+            seen.append((crossings / "store.db").stat().st_ino)
+        assert len(set(seen)) == 1, seen  # made once, at the first read, and not at each read after it
+        text = through("find", "Tern", "--cwd", project)[1]  # and the other reads are answered from it
+        assert "Said:" in text and (crossings / "store.db").stat().st_ino == seen[0], text
+    finally:
+        marks.rmdir()
+        marks.write_text(kept, encoding="utf-8")
+    added = (log.read_text(encoding="utf-8") if log.exists() else "")[len(before) :]
+    assert added.count("the mark of a home's index could not be kept") == 1, added
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

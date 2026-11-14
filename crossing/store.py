@@ -1666,10 +1666,17 @@ def _kept_mark(folder: Path) -> str:
     return marks[-1] if marks else ""
 
 
+# The homes whose index this process made and could not keep the mark of, with the mark the index
+# bears: this process believes that index, so that a read does not make it again at every call, and
+# the log says once that the mark could not be kept. Another process makes it again, once.
+_unkept_marks: dict[str, str] = {}
+
+
 def _mint(folder: Path, mark: str) -> None:
     """Keep the mark of the index just made for this home, under the record's lock (see
     `_recording`, taken after the home's); its other lines stay as they are. Where it cannot be
-    written, the log says so, and the index is made again at its next reading."""
+    written, the log says so, once a process, and the index is made again at its next reading in
+    another process (see `_unkept_marks`)."""
     home = spelled(folder)
     try:
         with _recording():
@@ -1682,18 +1689,24 @@ def _mint(folder: Path, mark: str) -> None:
             fresh = _minted_path().with_name(_minted_path().name + ".new")
             fresh.write_text("".join(line + "\n" for line in lines), encoding="utf-8")
             os.replace(fresh, _minted_path())
+        _unkept_marks.pop(home, None)
     except OSError as err:
-        record.log(f"the mark of a home's index could not be kept: {err}")
+        if home not in _unkept_marks:
+            record.log(f"the mark of a home's index could not be kept: {err}")
+        _unkept_marks[home] = mark
 
 
 def _believed_index(db: sqlite3.Connection, folder: Path) -> bool:
     """Whether an index is the one this computer's last build of the home made: its mark is the one
-    kept beside the person's record (see MINTED)."""
+    kept beside the person's record (see MINTED), or the one this process made where that could not
+    be kept (see `_unkept_marks`)."""
     try:
         found = db.execute("select mark from minted").fetchone()
     except sqlite3.Error:
         return False
-    return found is not None and bool(found[0]) and found[0] == _kept_mark(folder)
+    if found is None or not found[0]:
+        return False
+    return found[0] == _kept_mark(folder) or found[0] == _unkept_marks.get(spelled(folder))
 
 
 def _put(fresh: Path, made: Path) -> None:
