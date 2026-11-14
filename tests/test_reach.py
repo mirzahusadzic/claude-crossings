@@ -783,11 +783,57 @@ def test_an_image_made_while_a_strike_took_words_is_not_put_in_place_and_one_mad
         assert out == {"copied": False, "why": CHANGED}, out
         assert STRUCK in image.read_bytes()  # the earlier image stands, as a strike says of an earlier copy
         assert sorted(p.name for p in cloud.iterdir()) == ["project.dmg"]  # and the one made meanwhile went
+        DURING[0] = lambda: (crossings / "hand-over.md").unlink()  # a file it staged is gone by then
+        assert second.make(crossings, cloud, "project") == {"copied": False, "why": CHANGED}
         DURING[0] = lambda: None
         assert second.make(crossings, cloud, "project")["copied"]  # the next takes the home as it stands
         assert STRUCK not in image.read_bytes() and b"jib" in image.read_bytes()
     finally:
         DURING[0] = lambda: None
+
+
+@making(DURING)
+def test_a_copy_that_cannot_have_the_home_when_it_must_makes_or_puts_nothing(tmp_path):
+    crossings, _ = home(tmp_path)
+    cloud = tmp_path / "cloud"
+    empty = tmp_path / "empty" / "crossings"
+    empty.mkdir(parents=True)
+    switched_on(empty.parent)
+    wait, store.WAIT = store.WAIT, 0.2
+    held = []
+    try:
+        DURING[0] = lambda: held.append(store._locked(crossings))  # an act takes the home as the image is made
+        out = second.make(crossings, cloud, "project")
+        store._unlocked(crossings, held.pop())
+        assert out == {"copied": False, "why": HELD} and list(cloud.iterdir()) == []  # nothing put in place
+        DURING[0] = lambda: None
+        held.append(store._locked(empty))  # a home that holds nothing yet, held by its first archive
+        assert second.make(empty, cloud, "empty") == {"copied": False, "why": HELD}
+    finally:
+        DURING[0] = lambda: None
+        store.WAIT = wait
+        for each in held:
+            store._unlocked(empty, each)
+
+
+def test_the_doors_copy_a_hook_starts_keeps_what_it_did_not_make_in_the_log(tmp_path):
+    crossings, _ = home(tmp_path)
+    (crossings / "copy").write_text(str(tmp_path / "cloud") + "\n", encoding="utf-8")
+    log = Path(os.environ["CLAUDE_PLUGIN_DATA"]) / "errors.log"
+
+    def copied() -> tuple[subprocess.CompletedProcess, str]:
+        before = log.read_text(encoding="utf-8") if log.exists() else ""
+        done = ran("door.py", "copy", "--cwd", str(crossings.parent), "--by-hook", CLAUDE_PLUGIN_ROOT=str(ROOT))
+        return done, (log.read_text(encoding="utf-8") if log.exists() else "")[len(before) :]
+
+    done, added = copied()  # the Keychain refuses here: a failure, kept
+    assert done.returncode == 1 and "not copied: the Keychain" in added, (done, added)
+    other = store._held_at(crossings / COPYING)  # another copy is being made: given up on, kept
+    try:
+        done, added = copied()
+    finally:
+        store._let_go(crossings / COPYING, other)
+    assert done.returncode == 1 and f"not copied: {BUSY}" in added, (done, added)
 
 
 IMAGE_TOOL = r'''"""hdiutil as a stand-in, for the tests alone and on every system: `create` keeps a folder's files
