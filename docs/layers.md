@@ -1,6 +1,6 @@
 # Layers
 
-What changes when more than one model works in a home. A session can change its model, and a project can be worked by more than one; every line of the session's voice is kept as the line of the model that made it, and what a frame carries and what a stack may stand over then depend on which model is there now. Nothing is moved: the pages stay as they are, and a layer is only a way of reading them.
+What changes when more than one model works in a home. A session can change its model, and a project can be worked by more than one. Every line of the session's voice is kept as the line of the model that made it, and what a frame carries, and what a stack may stand over, then depend on which model is there now. Nothing is moved: the pages stay as they are, and a layer is only a way of reading them.
 
 ---
 
@@ -16,9 +16,9 @@ What changes when more than one model works in a home. A session can change its 
 
 `models.txt` is the one place the plugin keeps who wrote a label. The pages read as they always did, and the frame does not carry a model.
 
-Every line a signing through the door or `door.py layer` writes is met by the home, as the receipts kept beside the person's record outside every project know it (`switched.receipts`, see [The store](store.md)); `models-met.txt` inside the home is written too, and is no proof alone. A line a build finds that those receipts do not know (a pull, a checkout, a hand, also one that came with its line of `models-met.txt`) is followed all the same, and the person's next `status` names it once, by the label's key and the model it names, as it names a label that came by no mark. A home that is adopted (`/crossings adopt`) has met none of the lines its `models.txt` holds then, whatever a `models-met.txt` that came with it says, so its first build notes every one.
+A label marked through the door is signed with the model of the session that marks it. The server is not told which session calls it, so the hook before a call of `mark` hands over the model, and the hook after `mark` or `leave` signs the label where it was not signed as it was written: only the label of that key and that sentence, and only once. A label a subagent marks is left unsigned, since the hook is told the subagent and not its model.
 
-A label marked through the door is signed with the model of the session that marks it. The server is not told which session calls it, so the hook before a call of `mark` hands over the model, and the hook after `mark` or `leave` signs the label where it was not signed as it was written. Only the label of that key and that sentence is signed, and only once. A label a subagent marks is left unsigned: the hook is told the subagent and not its model.
+Every line a signing through the door or `layer` writes is kept in the receipts beside the person's record ([The store](store.md)). A line a build finds that those receipts do not know (a pull, a checkout, a hand) is followed all the same, and the person's next `status` names it once, by the label's key and the model it names. An adopted home has met none of the lines its `models.txt` holds, so its first build notes every one.
 
 ---
 
@@ -26,9 +26,9 @@ A label marked through the door is signed with the model of the session that mar
 
 | Event | Crossings |
 | --- | --- |
-| a session a person sits in starts | keeps the model the harness names in `there.txt`, by the session as the archive names it, with the moment, where it is not the one kept already |
+| a session a person sits in starts | keeps the model the harness names in `there.txt`, by the session, with the moment, where it is not the one kept already |
 | the harness reports a model switch (`PostModelSwitch`) | brings the archive up to the moment, and keeps the new model the same way |
-| a call of `mark` through the door | the hook before it writes the call's digest and the model into `calling.txt`; the server takes the line of the same digest and takes it out |
+| a call of `mark` through the door | the hook before it writes the call's digest and the model into `calling.txt`; the server takes the line of the same digest out |
 | the hooks were never told, or a message of the session's own is newer than what they were told | the model is that message's |
 | no model can be told | no layering for that call or that frame: everything is read as before |
 
@@ -40,7 +40,7 @@ Two calls the same, from two sessions at the same moment, are the one case `call
 
 For a session whose model is known, the frame carries the person's lines whoever wrote them down, the lines of that model's own layer, and the lines whose writer is not known. It does not carry, as standing, a line of another model's layer. Where such lines are, or where messages of the session's voice were made with another model, one sentence near its opening names the other models and says that the door gives them.
 
-A stack written by another model is not carried, and the lines beneath it cross as themselves. Of the lines left at the door, the frame carries the newest one that is not another model's. A session whose model is not known is given the frame with no layer asked about: every line crosses as of no known layer.
+A stack written by another model is not carried, and the lines beneath it cross as themselves. Of the lines left at the door, the frame carries the newest one that is not another model's. A session whose model is not known is given the frame with no layer asked about.
 
 The frame hook takes the model the harness names as the session starts, or failing that the model that is there, as above. The door's `frame` takes the model of the session named with `--session` or `--transcript`.
 
@@ -69,9 +69,9 @@ A label or a message with no model named is read as of no known layer until the 
 python3 crossing/door.py layer <model-key>
 ```
 
-It runs from the person's own terminal; the door's server does not offer it. While the project is switched off it signs nothing and writes nothing: it says in one sentence that Crossings is switched off and nothing was signed, with exit status 1.
+It runs from the person's own terminal; the door's server does not offer it. While the project is switched off it signs nothing, and says so in one sentence, with exit status 1.
 
-Switched on, it signs, as made with that model, every label whose sentence has no line in `models.txt` and every message of the session's voice that has no model, says how many of each it signed, and, where it signed any, makes the index whole. A line that has a model is never changed. A key with a space or a `#` in it, one that begins with `<`, or none, is refused.
+Switched on, it signs, as made with that model, every label whose sentence has no line in `models.txt` and every message of the session's voice that has no model, and says how many of each it signed; where it signed any, it makes the index whole. A line that has a model is never changed. A key with a space or a `#` in it, one that begins with `<`, or none, is refused.
 
 ---
 
