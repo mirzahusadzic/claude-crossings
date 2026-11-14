@@ -1244,6 +1244,71 @@ def test_status_and_look_count_the_labels_alike_and_one_label_is_one_label(tmp_p
     assert "1 more label holds one of these words." in found, found
 
 
+# --- the small paths of the place and mark mends ---------------------------------------------------------------
+
+
+def test_the_places_of_transcripts_gone_cut_short_replaced_or_odd_and_a_mark_kept_by_no_build_twice(tmp_path):
+    project, home_, path = public(tmp_path)
+    path.write_text("", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    known = {
+        name: tmp_path / f"{name}-0000.jsonl" for name in ("partial0", "gone0000", "shorter0", "swapped0", "removed0")
+    }
+    for name, each in known.items():
+        each.write_text(
+            "" if name == "partial0" else json.dumps(row("user", f"{name[:1]}0000001", 1, "On the record.")) + "\n"
+        )
+    with open(known["partial0"], "a", encoding="utf-8") as handle:
+        handle.write('{"type": "user", "uuid": "p0000002')  # a row still being written: its place is its start
+    for each in known.values():
+        assert through("build", "--transcript", str(each), "--cwd", str(project))[0] == 0  # the archive knows each
+    known["gone0000"].unlink()  # gone before the switch is turned off
+    clock, was = {"now": "2026-11-11T10:00:00.000000+00:00"}, off.now
+    off.now = lambda: clock["now"]
+    try:
+        assert through("switch", "off", "--cwd", str(project))[0] == 0
+        places = (home_ / "off-places.jsonl").read_text(encoding="utf-8")
+        assert "gone0000" not in places and "partial0" in places, places
+        with open(home_ / "off-places.jsonl", "a", encoding="utf-8") as handle:
+            handle.write('not json\n[1, 2]\n{"path": 7}\n')  # lines that are no place are passed over
+        later = "2026-11-11T12:00:00.000Z"  # after the span's end, by a clock set forward and back
+        with open(known["partial0"], "a", encoding="utf-8") as handle:
+            handle.write('-0000-4000-8000-000000000000", "timestamp": "' + later + '", "message": {"role": "user", ')
+            handle.write('"content": "Its end, written while off."}}\n')
+            tool = {"type": "user", "uuid": "p0000003-0000-4000-8000-000000000000", "timestamp": later}
+            tool.update(toolUseResult={"stdout": "x"}, message={"content": [{"type": "tool_result", "content": "x"}]})
+            handle.write(json.dumps(tool) + "\n")  # no one's words, and noted nowhere
+        known["shorter0"].write_text("", encoding="utf-8")  # another transcript in its place, shorter
+        swapped = known["swapped0"].read_text(encoding="utf-8").replace("On the record.", "In other words")
+        known["swapped0"].write_text(swapped, encoding="utf-8")  # of the same length, and other bytes
+        says(known["swapped0"], "s0000002", "Said while off in the swapped one.", at=later)
+        known["removed0"].unlink()  # taken away while off
+        clock["now"] = "2026-11-11T10:30:00.000000+00:00"
+        assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["again"] + "\n")
+    finally:
+        off.now = was
+    unsaid = off.unsaid(home_)
+    assert unsaid == {"p0000002-0000-4000-8000-000000000000"}, unsaid  # by place alone; the others by their times
+    for each in (known["partial0"], known["swapped0"]):
+        assert through("build", "--transcript", str(each), "--cwd", str(project))[0] == 0
+    kept = kept_texts(home_)
+    assert "Its end, written while off." not in kept and "Said while off in the swapped one." in kept, kept
+    # A mark that cannot be kept at a second build in the same process is not said a second time.
+    marks = store._minted_path()
+    log = Path(os.environ["CLAUDE_PLUGIN_DATA"]) / "errors.log"
+    before, held = (log.read_text(encoding="utf-8") if log.exists() else ""), marks.read_text(encoding="utf-8")
+    marks.unlink()
+    marks.mkdir()
+    try:
+        for _ in range(2):
+            assert through("build", "--cwd", str(project))[0] == 0  # each build makes the index whole
+    finally:
+        marks.rmdir()
+        marks.write_text(held, encoding="utf-8")
+    added = log.read_text(encoding="utf-8")[len(before) :]
+    assert added.count("the mark of a home's index could not be kept") == 1, added
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

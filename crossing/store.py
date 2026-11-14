@@ -45,6 +45,7 @@ import contextlib
 import datetime
 import difflib
 import hashlib
+import itertools
 import json
 import os
 import re
@@ -521,22 +522,17 @@ def _switched(cwd: Path, folder: Path, on: bool, adopted: bool = False) -> str:
 PLACES = "off-places.jsonl"
 
 
-def _reached(path: Path) -> int | None:
-    """The byte just after the last whole line of a transcript as it stands; nothing where it
-    cannot be read."""
-    try:
-        with open(path, "rb") as handle:
-            end = os.fstat(handle.fileno()).st_size
-            while end > 0:
-                start = max(0, end - 65536)
-                handle.seek(start)
-                at = handle.read(end - start).rfind(b"\n")
-                if at >= 0:
-                    return start + at + 1
-                end = start
-            return 0
-    except OSError:
-        return None
+def _reached(handle) -> int:
+    """The byte just after the last whole line of an open transcript as it stands."""
+    end = os.fstat(handle.fileno()).st_size
+    while end > 0:
+        start = max(0, end - 65536)
+        handle.seek(start)
+        at = handle.read(end - start).rfind(b"\n")
+        if at >= 0:
+            return start + at + 1
+        end = start
+    return 0
 
 
 def _reached_now(folder: Path) -> dict[str, dict]:
@@ -546,9 +542,8 @@ def _reached_now(folder: Path) -> dict[str, dict]:
         name = key[: -len("#unattended")] if key.endswith("#unattended") else key  # a session no person sat in
         try:
             with open(name, "rb") as handle:
-                at = _reached(Path(name))
-                if at is not None:
-                    found[name] = {"offset": at, "check": _check(handle, at)}
+                at = _reached(handle)
+                found[name] = {"offset": at, "check": _check(handle, at)}
         except OSError:  # a transcript that is gone: nothing more is said in it
             continue
     return found
@@ -597,22 +592,21 @@ def _unsaid_by_place(folder: Path) -> None:
     those that were there, is another one, and its rows are judged by their times alone."""
     ids = []
     for name, at in _places(folder).items():
-        path, end = Path(name), _reached(Path(name))
         try:
-            if end is None or end < at["offset"]:
-                continue
-            with open(path, "rb") as handle:
-                if _check(handle, at["offset"]) != at["check"]:
-                    continue
-            for offset, row in transcript.appended(path, at["offset"]):
-                if offset > end:
-                    break
-                uuid = str(row.get("uuid") or "") if row is not None else ""
-                if record.nameable(uuid) and (
-                    transcript.person(row, whole=True) or transcript.session(row, whole=True)
-                ):
-                    ids.append(uuid)
-        except OSError:  # gone since: its rows are judged by their times alone
+            with open(name, "rb") as handle:
+                end = _reached(handle)
+                if end < at["offset"] or _check(handle, at["offset"]) != at["check"]:
+                    continue  # another transcript in its place: its rows are judged by their times alone
+            gained = itertools.takewhile(
+                lambda item, end=end: item[0] <= end, transcript.appended(Path(name), at["offset"])
+            )
+            ids += [
+                uuid
+                for _, row in gained
+                for uuid in [str(row.get("uuid") or "") if row is not None else ""]
+                if record.nameable(uuid) and (transcript.person(row, whole=True) or transcript.session(row, whole=True))
+            ]
+        except OSError:  # gone since: nothing more is said in it
             continue
     off.keep_unsaid(folder, ids)
     try:
@@ -1704,9 +1698,11 @@ def _believed_index(db: sqlite3.Connection, folder: Path) -> bool:
         found = db.execute("select mark from minted").fetchone()
     except sqlite3.Error:
         return False
-    if found is None or not found[0]:
-        return False
-    return found[0] == _kept_mark(folder) or found[0] == _unkept_marks.get(spelled(folder))
+    return (
+        found is not None
+        and bool(found[0])
+        and (found[0] == _kept_mark(folder) or found[0] == _unkept_marks.get(spelled(folder)))
+    )
 
 
 def _put(fresh: Path, made: Path) -> None:
