@@ -28,11 +28,11 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from test_checks import ON  # noqa: E402
 from test_count import set_to  # noqa: E402
-from test_edges import as_the_module, ran, through, words_script  # noqa: E402
+from test_edges import as_the_module, ran, reader, through, words_script  # noqa: E402
 from test_homes import public  # noqa: E402
 from test_off import says  # noqa: E402
 from test_serve import said  # noqa: E402
-from test_store import DATA, ROWS, at_terminal, home, row, started_by  # noqa: E402  (and its data folder: no test reaches the real home)
+from test_store import DATA, ROWS, A, B, D, E, at_terminal, home, row, started_by  # noqa: E402  (and its data folder: no test reaches the real home)
 
 from crossing import count, door, frame, handover, hook, layer, off, record, second, store  # noqa: E402
 
@@ -1716,6 +1716,46 @@ def test_a_label_cannot_rest_on_an_id_two_messages_share_and_the_frame_quotes_no
     framed = through("frame", "--cwd", str(project))[1]
     assert "A label written by hand on the shared id." in framed and "- `cccccccc`: A message of its own id." in framed
     assert "The first under the shared id." not in framed and "The other under it." not in framed, framed
+
+
+# --- the reader -------------------------------------------------------------------------------------------
+
+READER = "This is the person's to run, from their own terminal, so nothing was shown."
+
+
+def test_the_reader_is_the_persons_gives_one_message_an_id_names_alone_and_nothing_the_home_keeps_out(tmp_path):
+    """read.py run by a session's shell shows nothing; the person's, or the plugin's own, shows a
+    message only where the start of its id names one row, and nothing the home believed for the
+    project keeps out: a message struck, said while off, or held by a session no person sat in."""
+    crossings, path = home(tmp_path)  # switched on, with A to E said and archived
+    project = crossings.parent
+    shell = ran("read.py", str(path), A)  # a session's shell: no terminal, no flag
+    assert (shell.returncode, shell.stdout, shell.stderr) == (1, "", READER + "\n"), shell
+    many = tmp_path / "many-0001.jsonl"
+    many.write_text("".join(json.dumps(row("user", f"a{n:07x}", n, f"Said in message {n}.")) + "\n" for n in range(30)))
+    out = reader(str(many), "a")
+    assert out.returncode == 0 and out.stdout == "a: names 30 messages in this transcript; name more of its id\n", out
+    assert reader(str(many), "a000001d").stdout == "a000001d (line 30), the person: Said in message 29.\n"
+    twins = tmp_path / "twins-0001.jsonl"
+    rows = [row("user", "bbbbbbbb", 1, "The first of two."), row("user", "bbbbbbbb", 2, "The second of two.")]
+    rows[1]["uuid"] = "bbbbbbbb-1111-4000-8000-000000000000"
+    twins.write_text("".join(json.dumps(each) + "\n" for each in rows))
+    assert (
+        reader(str(twins), "bbbbbbbb").stdout == "bbbbbbbb: names 2 messages in this transcript; name more of its id\n"
+    )
+    assert reader(str(twins), "bbbbbbbb-1111").stdout == "bbbbbbbb (line 2), the person: The second of two.\n"
+    # What the home keeps out, where the project's home is believed: struck, said while off, a session no one sat in.
+    assert through("strike", A, "--cwd", str(project))[0] == 0
+    (crossings / off.UNSAID).write_text(f"{B}{WHOLE}\n", encoding="utf-8")
+    (crossings / store.UNHELD).write_text(f"{D}{WHOLE}\n", encoding="utf-8")
+    out = reader(str(path), A, B, D, E, "--cwd", str(project)).stdout
+    for each, line in ((A, 1), (B, 2), (D, 5)):
+        assert f"{each} (line {line}): the home keeps this out, so nothing of it is shown" in out, out
+    assert "Tern" not in out and "grey" not in out and f"{E} (line 6), the session: Grey it is." in out, out
+    assert "My boat" in reader(str(path), A).stdout  # a project with no home of the person's keeps nothing out
+    (crossings / "said" / "elsewhere.jsonl").symlink_to(tmp_path / "nowhere.jsonl")
+    linked = reader(str(path), E, "--cwd", str(project))
+    assert (linked.returncode, linked.stdout) == (1, ""), linked
 
 
 if __name__ == "__main__":

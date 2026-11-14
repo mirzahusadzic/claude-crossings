@@ -445,16 +445,20 @@ const plainRead = (part: string): boolean => {
   return READS.has(first) && !/>/.test(said)
 }
 // A shell command that runs the hand-over's words script (crossing/handover.py), which writes a words
-// page into a home: the person's to run, as the door's own verbs are. Read, the script is a file as any.
+// page into a home, or the reader (crossing/read.py), which reads a transcript back: the person's to run,
+// as the door's own verbs are. Read, either script is a file as any. The reader is known by its folder, so
+// that a project's own read.py runs.
 const PYTHON = /^python(?:3(?:\.\d+)?)?$/
+const HELPER = /(?:^|\/)handover\.py$|(?:^|\/)crossing\/read\.py$/
 const runsHelper = (command: string): boolean =>
   command.split(PARTS).some(part => {
     const words = commandOf(part.replace(/['"\\]/g, ''))
-    const first = (words[0] ?? '').replace(/^.*\//, '')
-    if (first === 'handover.py') return true // the script itself, by its own first line
-    if (!PYTHON.test(first)) return false
+    const first = words[0] ?? ''
+    if (HELPER.test(first)) return true // the script itself, by its own first line
+    if (!PYTHON.test(first.replace(/^.*\//, ''))) return false
     const at = words.findIndex((word, n) => n > 0 && !word.startsWith('-'))
-    return (at > 0 && /(?:^|\/)handover\.py$/.test(words[at] ?? '')) || words.some((word, n) => word === '-m' && words[n + 1] === 'crossing.handover')
+    return (at > 0 && HELPER.test(words[at] ?? '')) ||
+      words.some((word, n) => word === '-m' && ['crossing.handover', 'crossing.read'].includes(words[n + 1] ?? ''))
   })
 // A shell command that names a file of `places` in any part of it that is not a plain read.
 const writesTo = (command: string, home: string, found: RegExp[]): boolean =>

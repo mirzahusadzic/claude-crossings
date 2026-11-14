@@ -54,6 +54,12 @@ def words_script(*argv: str) -> subprocess.CompletedProcess:
     return ran("handover.py", "--by-module", *argv, CLAUDE_PLUGIN_ROOT=str(ROOT))
 
 
+def reader(*argv: str) -> subprocess.CompletedProcess:
+    """The reader as a process of its own, as the plugin's own module would start it: with its flag,
+    and the plugin's folder in CLAUDE_PLUGIN_ROOT (see read.main)."""
+    return ran("read.py", "--by-module", *argv, CLAUDE_PLUGIN_ROOT=str(ROOT))
+
+
 def through(*argv: str) -> tuple[int, str]:
     """The door, in this process."""
     out = io.StringIO()
@@ -72,14 +78,14 @@ def test_a_message_is_read_back_from_the_command_line_and_nothing_else_is(tmp_pa
     assert ran("read.py", str(path), "not-an-id!").returncode == 2
     many = ran("read.py", str(path), *["1"] * 21)
     assert many.returncode == 2 and "at most 20 messages a call" in many.stderr
-    by_id = ran("read.py", str(path), A, B)
+    by_id = reader(str(path), A, B)
     assert by_id.returncode == 0
     assert f"{A} (line 1), the person: My boat is called Tern. Its mooring is number 41, by the café." in by_id.stdout
     assert f"{B} (line 2), the session: Noted: Tern, at mooring 41." in by_id.stdout
     assert "private reasoning" not in by_id.stdout and "ls -la" not in by_id.stdout
-    by_line = ran("read.py", str(path), "1", "3").stdout
+    by_line = reader(str(path), "1", "3").stdout
     assert "the person: My boat is called Tern." in by_line and "(line 3): nothing was said here" in by_line
-    assert ran("read.py", str(path), "0a0a0a0a").stdout.strip() == "no such message in this transcript"
+    assert reader(str(path), "0a0a0a0a").stdout.strip() == "no such message in this transcript"
 
 
 # --- the hand-over's words -------------------------------------------------------------------

@@ -690,7 +690,21 @@ test("a shell command that runs the hand-over's words script is the person's, an
     expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(PERSONS)
   }
   expect(reached).toEqual([])
-  for (const command of ['cat crossing/handover.py', 'grep -n main crossing/handover.py', 'python3 crossing/read.py a b']) {
+  for (const command of ['cat crossing/handover.py', 'grep -n main crossing/handover.py']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(undefined)
+  }
+  expect(reached.length).toBe(2)
+})
+
+test("a shell command that runs the reader is the person's, and one that reads it, or a project's own read.py, runs", async ($, on) => {
+  const reached = await tools($, on)
+  for (const command of ['python3 crossing/read.py /x/abcdef01.jsonl aaaaaaaa', 'python3 -I /plugins/crossing/crossing/read.py a b',
+    'cd /p && python crossing/read.py a b', 'FOO=1 python3.9 "crossing/read.py" a b', 'python3 -m crossing.read a b',
+    './crossing/read.py a b', 'CLAUDE_PLUGIN_ROOT=/p python3 /p/crossing/read.py --by-module a b']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(PERSONS)
+  }
+  expect(reached).toEqual([])
+  for (const command of ['cat crossing/read.py', 'grep -n main crossing/read.py', 'python3 scripts/read.py notes.txt']) {
     expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(undefined)
   }
   expect(reached.length).toBe(3)
