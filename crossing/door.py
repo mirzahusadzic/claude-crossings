@@ -160,8 +160,7 @@ def personal(args: argparse.Namespace) -> bool:
     return record.terminal() or ((args.by_hook or args.by_module) and record.from_plugin())
 
 
-def many(n: int, word: str) -> str:
-    return f"{n} {word}{'' if n == 1 else 's'}"
+many = record.many  # a count with its noun: 1 label, 2 labels
 
 
 def joined(items: list[str], last: str = " and ") -> str:
@@ -294,7 +293,7 @@ def show_look(out: dict, bare: bool = False, named: bool = False) -> str:
     them; see store.look."""
     said = sum(d["his"] + d["session"] for d in out["days"])
     lines = [
-        f"The store in outline: {len(out['days'])} day{'s' if len(out['days']) != 1 else ''}, {said} messages, "
+        f"The store in outline: {many(len(out['days']), 'day')}, {many(said, 'message')}, "
         f"{many(out['labels'], 'label')}, {out['struck']} struck"
         + (f"; kept up to {when(out['last'])}." if out["last"] else "."),
         "",
@@ -393,7 +392,7 @@ def show_thread(out: dict, named: bool = False) -> str:
         return f"thread of `{asked}`: no such message in the store."
     # Numbered in the order they were said, with the one that was named marked in words: an order
     # left to be inferred from a list gets retold wrongly.
-    lines = [f"thread of `{asked}`: {len(out['said'])} messages, in the order they were said", ""]
+    lines = [f"thread of `{asked}`: {many(len(out['said']), 'message')}, in the order they were said", ""]
     gaps = out.get("gaps", [])
     for number, s in enumerate(out["said"], 1):
         lines += [gap(g) for g in gaps if g["before"] == s["seq"]]
@@ -659,9 +658,9 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
     elif args.verb in ("status", "build"):
         held = store.status(folder)
         print(
-            f"The store{'' if args.bare else f' at {folder}'} holds {held['his']} messages of the person's and "
-            f"{held['session']} of the "
-            f"session's ({held['characters']} characters, {store.clean(held['from'])} to {store.clean(held['to'])}), "
+            f"The store{'' if args.bare else f' at {folder}'} holds {many(held['his'], 'message')} of the person's and "
+            f"{held['session']} of the session's ({many(held['characters'], 'character')}, "
+            f"{store.clean(held['from'])} to {store.clean(held['to'])}), "
             f"{many(held['labels'], 'label')}, "
             f"and {held['struck']} struck."
             + (
@@ -759,7 +758,7 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             print(f"not copied: {err}")
             return 1
         print(
-            f"copied {out['files']} plain files, encrypted, to {out['image']} ({out['bytes']} bytes), "
+            f"copied {many(out['files'], 'plain file')}, encrypted, to {out['image']} ({many(out['bytes'], 'byte')}), "
             "and read back the same"
             if out["copied"]
             else f"not copied: {out['why']}"
@@ -830,7 +829,7 @@ def struck(out: dict) -> str:
     strike can reach."""
     some = len(out["dropped"]) > 1
     return (
-        f"struck {out['token']}: {out['removed']} line(s) removed, and it will not come back at a build."
+        f"struck {out['token']}: {many(out['removed'], 'line')} removed, and it will not come back at a build."
         + (f" Its words were taken out of {', '.join(out['mended'])}." if out["mended"] else "")
         + (
             f" The hand-over words page{'s' if some else ''} {', '.join(out['dropped'])} could not be mended "

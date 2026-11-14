@@ -467,6 +467,14 @@ def home(cwd: Path) -> Path:
     return place(cwd)[0]
 
 
+def many(n: int, one: str, more: str = "", grouped: bool = False) -> str:
+    """A count with its noun, as a sentence says it: one message, two messages, no messages as 0
+    messages; `more` where the noun takes more than an s, and `grouped` for a count written with
+    its thousands apart (1,000)."""
+    count = f"{n:,}" if grouped else f"{n}"
+    return f"{count} {one if n == 1 else more or one + 's'}"
+
+
 def share(part: int, whole: int) -> str:
     return f"{100 * part / whole:.0f}%" if whole else "none stood"
 
@@ -479,7 +487,8 @@ def _voice_lines(name: str, v: dict) -> list[str]:
         f"| {v['sentences_found']} of {v['sentences']} | {none} |",
     ]
     return lines, [
-        f"{p.get('id') or 'no id'} (line {p['line']}, {p['chars']} characters, {share(p['held'], p['chars'])} held)"
+        f"{p.get('id') or 'no id'} (line {p['line']}, {many(p['chars'], 'character')}, "
+        f"{share(p['held'], p['chars'])} held)"
         for p in least[:LEAST]
     ]
 
@@ -502,7 +511,8 @@ def page(counted: dict, session_id: str, transcript: Path, on: str) -> str:
     if before:
         size = f"{before:,} tokens before" + (f", {after:,} after" if after is not None else "")
         if took:
-            size += f"; the cut took {took / 1000:.0f} seconds"
+            seconds = f"{took / 1000:.0f}"
+            size += f"; the cut took {seconds} second{'' if seconds == '1' else 's'}"
     voices = person["chars"] + own["chars"]
     record = voices + counted["tool_call_chars"] + counted["tool_result_chars"]
     unfinished = (
@@ -571,12 +581,12 @@ def summed(counted: dict) -> str:
     chars = counted.get("summary_chars") or 0
     if counted.get("retold") is None:
         return (
-            f"{chars:,} characters; no summary of an earlier cut of this session was counted with its runs, "
-            "so it is compared with none"
+            f"{many(chars, 'character', grouped=True)}; no summary of an earlier cut of this session was counted with "
+            "its runs, so it is compared with none"
         )
     return (
-        f"{chars:,} characters, {share(counted['retold'], chars)} of them repeating the summary of cut "
-        f"{counted['cut'] - 1} word for word, in runs of {RUN} characters or more"
+        f"{many(chars, 'character', grouped=True)}, {share(counted['retold'], chars)} of them repeating the summary "
+        f"of cut {counted['cut'] - 1} word for word, in runs of {RUN} characters or more"
     )
 
 
@@ -643,7 +653,8 @@ def honest(text: str, counted: dict) -> str:
         said = (
             "### Nothing to compare against\n\nNo summary was handed over for this cut: a plugin answered it "
             "in the harness's place, or the harness gave none. Before it stood "
-            f"{person['messages']} messages of the person's and {own['messages']} replies of the session's. "
+            f"{many(person['messages'], 'message')} of the person's and {many(own['messages'], 'reply', 'replies')} of "
+            "the session's. "
             "How much of them the new context holds was not counted.\n\n"
         )
         return text[: text.index(HELD)] + said + text[text.index(MADE) :]

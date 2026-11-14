@@ -1283,7 +1283,7 @@ def test_status_and_look_count_the_labels_alike_and_one_label_is_one_label(tmp_p
     told = through("status", "--cwd", str(project_))[1]
     assert ", 1 label, and 0 struck." in told and "1 labels" not in told, told
     looked = through("look", "--cwd", str(project_))[1]
-    assert looked.startswith("The store in outline: 1 day, 1 messages, 1 label, 0 struck"), looked
+    assert looked.startswith("The store in outline: 1 day, 1 message, 1 label, 0 struck"), looked
     framed = through("frame", "--cwd", str(project_))[1]
     assert "and 1 label." in framed and "1 labels" not in framed, framed
     # And of the labels that share a word but are not listed, one is one.
@@ -1291,6 +1291,45 @@ def test_status_and_look_count_the_labels_alike_and_one_label_is_one_label(tmp_p
         assert through("mark", "--anchors", "aaaaaaaa", "--cwd", str(project_), f"The hull, label {n}.")[0] == 0
     found = through("find", "hull mast", "--cwd", str(project_))[1]
     assert "1 more label holds one of these words." in found, found
+
+
+# --- one message is one message --------------------------------------------------------------------------------
+
+
+def test_one_message_is_one_message_wherever_a_count_of_them_is_said(tmp_path):
+    """A count of one is said with its noun alone, and a count of two with its plural: in status,
+    in look's outline, in a thread, in the frame, in a strike, in a cut's page and in the printout
+    of the cuts on record."""
+    from crossing import show
+
+    for n in (1, 2):
+        s = "" if n == 1 else "s"
+        project, home_, path = public(tmp_path / str(n))
+        ids = [f"a000000{k}" for k in range(1, n + 1)]
+        path.write_text("".join(json.dumps(row("user", each, 1, "A")) + "\n" for each in ids), encoding="utf-8")
+        assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+        assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+        assert through("mark", "--anchors", ids[0], "--cwd", str(project), "The hull is grey.")[0] == 0
+        told = through("status", "--cwd", str(project))[1]
+        assert f"holds {n} message{s} of the person's and 0 of the session's ({n} character{s}, " in told, told
+        looked = through("look", "--cwd", str(project))[1]
+        assert looked.startswith(f"The store in outline: 1 day, {n} message{s}, 1 label, 0 struck"), looked
+        threaded = through("thread", ids[0], "--cwd", str(project))[1]
+        assert threaded.startswith(f"thread of `{ids[0]}`: {n} message{s}, in the order they were said"), threaded
+        framed = through("frame", "--cwd", str(project))[1]
+        assert f"The store holds {n} message{s} of the person's and 0 " in framed, framed
+        struck = through("strike", ids[-1], "--cwd", str(project))[1]
+        assert struck.startswith(f"struck {ids[-1]}: 1 line removed"), struck
+        page = record.honest(
+            f"{record.HELD}\n{record.MADE}\n", {"person": {"messages": n}, "session": {"messages": n}, "traced": False}
+        )
+        assert f"Before it stood {n} message{s} of the person's and {n} repl{'y' if n == 1 else 'ies'} of" in page, page
+        voice = {"pointers": [], "covered": 0, "chars": 0, "messages": n}
+        sidecar = {"session_id": "abcdef01", "cut": 1, "trigger": "auto", "person": voice, "session": voice}
+        (home_ / "abcdef01-cut-1.json").write_text(json.dumps(sidecar), encoding="utf-8")
+        shown = show.block(project)
+        assert f"nothing held: 0 of {n} message{s} · 0 of {n} repl{'y' if n == 1 else 'ies'}" in shown, shown
+    assert record.many(0, "message") == "0 messages" and record.many(1000, "byte", grouped=True) == "1,000 bytes"
 
 
 # --- the small paths of the place and mark mends ---------------------------------------------------------------

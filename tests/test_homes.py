@@ -320,7 +320,7 @@ def test_a_home_outside_holds_everything_a_projects_own_folder_would(tmp_path):
         assert f"`{D}` the person" in said("thread", id=D)[0]
         more(path, "77777777", 31, "Said only to be struck again.")
         assert hook.run({**event, "hook_event_name": "SessionEnd"}) is None
-        assert through("strike", "77777777", "--cwd", str(project))[1].startswith("struck 77777777: 1 line(s) removed")
+        assert through("strike", "77777777", "--cwd", str(project))[1].startswith("struck 77777777: 1 line removed")
         framed = json.loads(hook.carried(cut))
         text = framed["hookSpecificOutput"]["additionalContext"]
         assert text.startswith(transcript.CARRIED) and "- W1 (both): The hull is painted grey in spring." in text

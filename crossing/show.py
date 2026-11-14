@@ -54,8 +54,8 @@ def block(cwd: Path, session: str | None = None) -> str:
             f"    {size}",
             f"    held word for word: the person's {record.share(person['covered'], person['chars'])}"
             f" · the session's {record.share(own['covered'], own['chars'])}",
-            f"    nothing held: {none(person)} of {person['messages']} messages · "
-            f"{none(own)} of {own['messages']} replies",
+            f"    nothing held: {none(person)} of {record.many(person['messages'], 'message')} · "
+            f"{none(own)} of {record.many(own['messages'], 'reply', 'replies')}",
             f"    {clean(where)}",
         ]
     return "\n".join(out) + "\n"

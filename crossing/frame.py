@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from crossing import store, transcript  # noqa: E402
+from crossing import record, store, transcript  # noqa: E402
 
 SIZE = 9000  # characters of a frame, unless the home's `frame-size` says otherwise
 WORDS = 300  # characters of one message of the person's carried for its tone
@@ -258,7 +258,7 @@ def compose(folder: Path, size: int | None = None, new: bool = False, model: str
         parts.append("## The person's own words, as they stand in the record\n\n" + "\n".join(words))
 
     parts.append(
-        f"The store holds {held['his']} messages of the person's and {held['session']} {closing}, "
+        f"The store holds {record.many(held['his'], 'message')} of the person's and {held['session']} {closing}, "
         f"from {store.clean(held['from'])} to {store.clean(held['to'])}, and {held['labels']} "
         f"label{'' if held['labels'] == 1 else 's'}."
     )

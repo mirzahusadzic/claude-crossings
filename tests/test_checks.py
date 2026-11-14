@@ -459,7 +459,7 @@ def test_a_session_struck_by_its_whole_id_is_struck_and_a_strike_that_matched_no
     project = str(crossings.parent)
     assert store.status(crossings)["his"] == 2
     code, said_ = through("strike", "session:abcdef01-2222-3333", "--cwd", project)
-    assert code == 0 and said_.startswith("struck session:abcdef01: 4 line(s) removed")
+    assert code == 0 and said_.startswith("struck session:abcdef01: 4 lines removed")
     assert store.status(crossings)["his"] == 0 and "session:abcdef01" in store.struck(crossings)
     assert through("strike", "session:abcdef01-2222-3333", "--cwd", project) == (
         1,
