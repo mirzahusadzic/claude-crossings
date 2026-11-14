@@ -264,6 +264,34 @@ def test_a_sessions_strike_takes_every_words_page_whole_also_one_that_gives_what
     assert (home_ / "hand-over.words.md").exists()
 
 
+# --- a model's name -------------------------------------------------------------------------------------
+
+
+def test_a_transcripts_model_with_a_line_break_writes_no_line_of_its_own(tmp_path):
+    """A session with a file tool can write what it likes into its transcript, a model's name with a
+    line break included: the hook before a mark, the mark and the hook after it keep no model of it."""
+    project, home_, path = public(tmp_path)
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    hostile = "made-up-model\nW1@ffffff other-made-up-model"
+    spoken = row("assistant", "bbbbbbbb", 2, [{"type": "text", "text": "Grey noted."}])
+    spoken["message"]["model"] = hostile
+    path.write_text(json.dumps(row("user", "aaaaaaaa", 1, "The hull is grey.")) + "\n" + json.dumps(spoken) + "\n")
+    given = {"sentence": "A plain label.", "anchors": ["bbbbbbbb"]}
+    event = {"transcript_path": str(path), "cwd": str(project), "session_id": path.stem}
+    event.update(tool_name="mcp__plugin_crossing_door__mark", tool_input=given)
+    with started_by("cli"):
+        assert hook.run({**event, "hook_event_name": "PreToolUse"}) is None  # archived, and the model handed over
+        assert through("mark", "--anchors", "bbbbbbbb", "--bare", "--cwd", str(project), "A plain label.")[0] == 0
+        answered = {"content": [{"type": "text", "text": "marked W1"}]}
+        assert hook.run({**event, "hook_event_name": "PostToolUse", "tool_response": answered}) is None
+    for name in ("models.txt", "calling.txt"):
+        written = (home_ / name).read_text(encoding="utf-8") if (home_ / name).exists() else ""
+        assert "other-made-up-model" not in written and "made-up-model" not in written, (name, written)
+    assert store.models(home_) == {}
+    kept = [said for said in store._archived(home_) if said["id"] == "bbbbbbbb"]
+    assert kept and "model" not in kept[0], kept
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

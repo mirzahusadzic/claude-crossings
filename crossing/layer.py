@@ -73,7 +73,7 @@ def current(folder: Path, session: str) -> str:
     A harness that never says the model, or never says it changed, is read by what was said."""
     told, at = there(folder, session)
     said = store.newest(folder, session)
-    model = str(said.get("model") or "")
+    model = named(said.get("model"))  # a model an older make kept from a transcript, checked as a hook's is
     if not (model and told):
         return model or told
     spoken = off.moment(said.get("at"))
@@ -88,7 +88,11 @@ def digest(name: str, given: dict) -> str:
 
 
 def hand(folder: Path, name: str, given: dict, model: str) -> None:
-    """Before a call of the door's server: the model behind it, for the server to take."""
+    """Before a call of the door's server: the model behind it, for the server to take. A model that
+    is no key (see `named`) is handed over as none: no line is written."""
+    model = named(model)
+    if not model:
+        return
     with open(within(folder, CALLING), "a", encoding="utf-8") as handle:
         handle.write(f"{digest(name, given)} {model}\n")
 

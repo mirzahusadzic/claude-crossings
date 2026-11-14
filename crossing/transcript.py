@@ -152,11 +152,14 @@ def session(row: dict, whole: bool = False) -> list[str]:
 
 def model(row: dict) -> str:
     """The model a row of the session's own voice names, or nothing. A row of the person's names
-    none, and a row the harness wrote in the session's place names `<synthetic>`, which is no model."""
+    none, and a row the harness wrote in the session's place names `<synthetic>`, which is no model.
+    A name is taken only where it passes the check a hook's model passes (layer.named): one with a
+    space or a line break in it would be two words, or two lines, of the files that keep it."""
+    from crossing.layer import named  # here: layer reads the store, which reads this file
+
     if row.get("type") != "assistant":
         return ""
-    named = (row.get("message") or {}).get("model")
-    return named.strip() if isinstance(named, str) and not named.strip().startswith("<") else ""
+    return named((row.get("message") or {}).get("model"))
 
 
 def tool_traffic(row: dict) -> tuple[int, int]:

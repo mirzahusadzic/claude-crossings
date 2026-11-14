@@ -79,7 +79,7 @@ Each line of `said/<session>.jsonl` is one message:
 | `voice` | `his` for the person, `session` for the session |
 | `at` | the time the transcript wrote beside it |
 | `text` | what was said, as it was sent |
-| `model` | for the session's voice, the model its row names; left out where it names none |
+| `model` | for the session's voice, the model its row names; left out where it names none, or one with a space, a line break or a `#` in it, which is no model's key |
 
 From a transcript the archive takes the person's text at the prompt, a message the person sent while a turn ran, and the session's text blocks. It never takes a reasoning block, a tool call or a tool result, a compaction summary, the harness's own notes, a note the plugin itself carried across a cut, or a row the harness marks as a subagent's (`isSidechain`). Every rule about what a row is lives in `crossing/transcript.py`; a row these rules do not know is passed over, never guessed at.
 
