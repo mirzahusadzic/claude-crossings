@@ -249,9 +249,16 @@ def _make(folder: Path, dest: Path, name: str, top: Path | None) -> dict:
         cleared(folder)
     except OSError:  # a note that is no file
         raise Failed(UNREAD) from None
-    files = plain(folder)
-    if not files:
-        return {"copied": False, "why": NOTHING}
+    if not plain(folder):  # held to it only while no act writes the home: the first archive may be under way
+        held = store._locked(folder)
+        if held is None:
+            return {"copied": False, "why": HELD}
+        try:
+            empty = not plain(folder)
+        finally:
+            store._unlocked(folder, held)
+        if empty:
+            return {"copied": False, "why": NOTHING}
     where = staging()
     if any(where == place or place in where.parents for place in (folder.resolve(), dest.resolve())):
         return {"copied": False, "why": "the system's temporary folder lies inside the home or the copy's folder"}

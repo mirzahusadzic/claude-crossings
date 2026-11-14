@@ -16,6 +16,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import types
 from pathlib import Path
@@ -26,7 +27,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from test_edges import as_the_module, ran, set_to, through  # noqa: E402
 from test_serve import said  # noqa: E402
-from test_store import A, B, D, E, at_terminal, home, row, started_by, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
+from test_store import A, B, D, E, at_terminal, home, row, started_by, sweep, switched_on  # noqa: E402  (and its data folder: no test reaches the real home)
 
 from crossing import door, frame, handover, record, second, store  # noqa: E402
 
@@ -662,6 +663,35 @@ def test_a_copy_stages_its_files_under_the_homes_lock_and_makes_its_image_after_
     assert [p.name for p in (tmp_path / "cloud").iterdir()] == ["project.dmg"]
     with set_to(CROSSING_COPY_KEY=KEY):
         assert second.make(crossings, tmp_path / "cloud", "project")["copied"]  # once it is let go, a copy is made
+
+
+@stood_in
+def test_a_home_that_holds_nothing_yet_is_seen_so_only_while_no_act_writes_it(tmp_path, seen):
+    # A copy said there was nothing to copy while the first archive held the home to write its first page (pass 5, F5).
+    project = tmp_path / "project"
+    crossings = project / "crossings"
+    crossings.mkdir(parents=True)
+    switched_on(project)
+    held = store._locked(crossings)  # the first archive, under way
+
+    def done():
+        time.sleep(0.3)
+        (crossings / "hand-over.md").write_text("# a hand-over\n", encoding="utf-8")
+        store._unlocked(crossings, held)
+
+    writer = threading.Thread(target=done)
+    writer.start()
+    try:
+        with set_to(CROSSING_COPY_KEY=KEY):
+            out = second.make(crossings, tmp_path / "cloud", "project")
+    finally:
+        writer.join(10)
+    assert out["copied"] and out["files"] == 1, out
+    assert seen[0]["files"] == ["hand-over.md"]
+    (crossings / "hand-over.md").unlink()
+    with set_to(CROSSING_COPY_KEY=KEY):  # and a home that holds nothing is said so, with no image made
+        assert second.make(crossings, tmp_path / "cloud", "project") == {"copied": False, "why": "nothing to copy yet"}
+    assert len(seen) == 1
 
 
 @stood_in
