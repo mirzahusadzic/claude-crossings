@@ -1960,6 +1960,50 @@ def test_status_reads_what_it_told_of_damaged_files_once_however_many_are_damage
         record.lines_in = real
 
 
+# --- a prompt another plugin submitted between turns -------------------------------------------------------
+
+SUBMITTED = (
+    "The made-up plugin sent a message:\nmade-up: a reading of the work landed. Deal with what it found.\n\n"
+    "This is how Claude Code surfaces a prompt a plugin submits between turns; the person did not type it."
+)
+
+
+def test_a_prompt_another_plugin_submitted_between_turns_is_not_the_persons_words(tmp_path):
+    """Through a hook's own process: a prompt the harness wraps as another plugin's, between two of the
+    person's, is not archived, not counted at a cut and on no words page; a message that only opens
+    the same way is the person's."""
+    project, home_, path = public(tmp_path)
+    sent = [
+        ("10000001", "The first prompt of the person's."),
+        ("10000002", SUBMITTED),
+        ("10000003", "The made-up plugin sent a message: so I say, in my own words."),
+        ("10000004", "The second prompt of the person's."),
+    ]
+    path.write_text(
+        "".join(json.dumps(row("user", uid, n, text)) + "\n" for n, (uid, text) in enumerate(sent, 1)), encoding="utf-8"
+    )
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    event = {"transcript_path": str(path), "cwd": str(project), "session_id": path.stem}
+    for name in ("PreToolUse", "PostCompact"):
+        given = {**event, "hook_event_name": name, "tool_name": "mcp__plugin_crossing_door__find"}
+        done = ran(
+            "hook.py",
+            stdin=json.dumps({**given, "compact_summary": "A.", "trigger": "auto"}),
+            CLAUDE_CODE_ENTRYPOINT="cli",
+        )
+        assert (done.returncode, done.stderr) == (0, ""), done
+    kept = [text for uid, text in sent if uid != "10000002"]
+    assert kept_texts(home_) == kept, kept_texts(home_)
+    cut = json.loads((home_ / "abcdef01-cut-1.json").read_text(encoding="utf-8"))
+    assert cut["person"]["messages"] == 3 and "10000002" not in [p["id"] for p in cut["person"]["pointers"]], cut
+    (home_ / "hand-over.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n| R1 | A line. | his | `10000002` `10000001` |\n"
+    )
+    assert words_script(str(path), str(home_ / "hand-over.md")).returncode == 0
+    words = (home_ / "hand-over.words.md").read_text(encoding="utf-8")
+    assert "a reading of the work landed" not in words and "The first prompt" in words, words
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

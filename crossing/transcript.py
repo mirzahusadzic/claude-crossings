@@ -25,6 +25,11 @@ HARNESS_OPENINGS = ("[SYSTEM NOTIFICATION", "Another Claude session", "Caveat:",
 # digits and hyphens (`system-reminder`, `local-command-stdout`, `command-name`). A text of the turn made of
 # such blocks alone, and white space, is the harness's (see `harness`); any other is the person's words.
 OPENED = re.compile(r"<([a-z0-9-]+)(?:\s[^<>]*)?>")
+# How the harness wraps a prompt another plugin submitted between turns, in the person's turn: it opens
+# so, and its last paragraph begins with the harness's own sentence. It is no one's words here; knowing
+# it rests on the harness's wording.
+PLUGIN_SENT = re.compile(r"The [^\n]+? plugin sent a message:")
+PLUGIN_SURFACED = "This is how Claude Code surfaces a prompt a plugin submits between turns"
 # What the person pasted into a message. The harness wraps it in a pair of tags that carry one id.
 PASTE = re.compile(r'<pasted_content(?:\s+id="[^"]*")?\s*>(.*?)</pasted_content(?:\s+id="[^"]*")?\s*>', re.S)
 
@@ -46,6 +51,14 @@ def harness(text: str) -> bool:
         if end < 0:
             return False
         at, blocks = end + len(closing), blocks + 1
+
+
+def submitted(text: str) -> bool:
+    """Whether a text of the person's turn is a prompt another plugin submitted between turns, as the
+    harness wraps one: it opens "The <name> plugin sent a message:" (PLUGIN_SENT), and its last
+    paragraph begins with the harness's sentence that says so (PLUGIN_SURFACED). Both are asked."""
+    text = text.strip()
+    return bool(PLUGIN_SENT.match(text)) and text.rsplit("\n\n", 1)[-1].lstrip().startswith(PLUGIN_SURFACED)
 
 
 def norm(text: str) -> str:
@@ -157,7 +170,7 @@ def person(row: dict, whole: bool = False) -> list[str]:
         origin = held.get("origin") if isinstance(held.get("origin"), dict) else {}
         human = origin.get("kind") == "human" or held.get("humanTurn") is True
         prompt = held.get("prompt") if isinstance(held.get("prompt"), str) else ""
-        if held.get("type") == "queued_command" and human and norm(prompt):
+        if held.get("type") == "queued_command" and human and norm(prompt) and not submitted(prompt):
             return [prompt.strip() if whole else norm(prompt)]
         return []
     # A tool's result, of whatever shape the harness gives it, is no one's words.
@@ -169,7 +182,7 @@ def person(row: dict, whole: bool = False) -> list[str]:
             continue
         sent = block.get("text", "")
         typed = norm(PASTE.sub(" ", sent))
-        if typed.startswith(HARNESS_OPENINGS) or harness(PASTE.sub(" ", sent)):
+        if typed.startswith(HARNESS_OPENINGS) or harness(PASTE.sub(" ", sent)) or submitted(sent):
             continue
         if whole and (typed or PASTE.search(sent)):
             said.append(sent.strip())  # a message that is only a paste is still kept
