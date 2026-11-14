@@ -30,6 +30,10 @@ HEAD = (
 UTC = datetime.timezone.utc
 STAMP = re.compile(r"(\d{4})-(\d\d)-(\d\d)[T ](\d\d):(\d\d):(\d\d)(?:[.,](\d{1,9}))?(Z|[+-]\d\d:?\d\d)", re.I)
 
+# The shape of a moment as a transcript writes one, its zone given or not: a time of any other shape is
+# no time, and the archive keeps none for it (see store.archive).
+SHAPE = re.compile(r"\d{4}-\d\d-\d\d[T ]\d\d:\d\d:\d\d(?:[.,]\d{1,9})?(?:Z|[+-]\d\d:?\d\d)?", re.I)
+
 Span = tuple  # (start, end): two moments, the end None while the span is open
 
 

@@ -173,7 +173,9 @@ def unclaimed(held: dict) -> str:
 
 
 def when(at: str) -> str:
-    return at[:16].replace("T", " ") + " UTC" if at else "no time"
+    """A message's time as the door shows it, to the minute; cleaned (store.clean), since a home
+    an older make wrote may hold a time a transcript gave that is no time."""
+    return store.clean(at[:16]).replace("T", " ") + " UTC" if at else "no time"
 
 
 def transcript_of(session: str) -> Path | None:
@@ -253,7 +255,7 @@ def row_of(label: dict, whole: bool = True, named: bool = False) -> str:
     text = store.clean(
         label["text"] if whole or len(label["text"]) <= SHORT else label["text"][:SHORT].rstrip() + " […]"
     )
-    day = f", {label['day']}" if label.get("day") else ""
+    day = f", {store.clean(label['day'])}" if label.get("day") else ""
     state = label.get("state", "carried")
     state = "" if state == "carried" else f", cooled beneath {label['parent']}" if state == "cooled" else f", {state}"
     written = f", written by {store.clean(label['model'])}" if whole and label.get("model") else by(label, named)
@@ -278,7 +280,7 @@ def show_look(out: dict, bare: bool = False, named: bool = False) -> str:
     days = [
         (
             (d["day"], 0, ""),
-            f"- {d['day'] or 'no date'}: {d['his']} of the person's, "
+            f"- {store.clean(d['day']) or 'no date'}: {d['his']} of the person's, "
             f"{d['session']} of the session's" + (f", {d['pasted']} pasted" if d["pasted"] else ""),
         )
         for d in out["days"]
@@ -636,7 +638,8 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         print(
             f"The store{'' if args.bare else f' at {folder}'} holds {held['his']} messages of the person's and "
             f"{held['session']} of the "
-            f"session's ({held['characters']} characters, {held['from']} to {held['to']}), {held['labels']} labels, "
+            f"session's ({held['characters']} characters, {store.clean(held['from'])} to {store.clean(held['to'])}), "
+            f"{held['labels']} labels, "
             f"and {held['struck']} struck."
             + (
                 " Of the labels: {cooled} cooled, {misaligned} misaligned, {unresolved} unresolved.".format(

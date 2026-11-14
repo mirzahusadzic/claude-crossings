@@ -49,7 +49,7 @@ def block(cwd: Path, session: str | None = None) -> str:
         out += [
             "",
             f"  {c.get('counted_on', '')} · session {str(c.get('session_id', ''))[:8]}, cut {c.get('cut')} · "
-            f"{c.get('trigger') or 'trigger not given'}",
+            f"{store.clean(c.get('trigger') or 'trigger not given')}",
             f"    {size}",
             f"    held word for word: the person's {record.share(person['covered'], person['chars'])}"
             f" · the session's {record.share(own['covered'], own['chars'])}",

@@ -485,7 +485,10 @@ def _voice_lines(name: str, v: dict) -> list[str]:
 
 
 def page(counted: dict, session_id: str, transcript: Path, on: str) -> str:
+    from crossing.store import clean  # here: the store reads this file. What the harness gave is shown cleaned
+
     person, own = counted["person"], counted["session"]
+    trigger, transcript = clean(counted["trigger"] or "trigger not given"), clean(transcript)
     (row_p,), least_p = _voice_lines("the person's", person)
     (row_s,), least_s = _voice_lines("the session's", own)
     size = "not given by the harness"
@@ -510,7 +513,7 @@ called, and this page holds no text of either voice: counts and pointers only.
 {unfinished}
 | | |
 | --- | --- |
-| Kind | context compaction, {counted["trigger"] or "trigger not given"} |
+| Kind | context compaction, {trigger} |
 | Size | {size} |
 | The summary | {summed(counted)} |
 | Session | `{session_id}` |

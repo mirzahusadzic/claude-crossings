@@ -77,7 +77,7 @@ Each line of `said/<session>.jsonl` is one message:
 | `id` | its first eight characters, by which the door names it |
 | `session` | the first eight characters of the transcript's name |
 | `voice` | `his` for the person, `session` for the session |
-| `at` | the time the transcript wrote beside it |
+| `at` | the time the transcript wrote beside it, where it has the shape of a moment (`2026-11-11T09:01:00.000Z`, its zone given or not); empty where it has not, as for a row that gives none. A time an older make kept as it came is still read, and shown cleaned |
 | `text` | what was said, as it was sent |
 | `model` | for the session's voice, the model its row names; left out where it names none, or one with a space, a line break or a `#` in it, which is no model's key |
 

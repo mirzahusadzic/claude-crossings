@@ -53,7 +53,7 @@ Crossings is a small Claude Code plugin that keeps what was said in a project, w
 - A note to a session asks for no inventory, no numbers of its own and no account.
 - A cut's page and sidecar hold no text of either voice; a summary's runs are kept only as digests keyed with the home's own key.
 - The frame stays within `frame.MOST` characters, cutting the line at the door to the room left where it must, and names only the door's tools that exist. A label's sentence is at most `store.LONGEST` characters.
-- What is shown is cleaned by `store.clean` alone; the pages keep what was written.
+- What is shown is cleaned by `store.clean` alone, a message's or a label's words and every scalar a transcript or the harness gave (a time, a trigger, a transcript's path) alike; the pages keep what was written, and the archive keeps a row's time only where it has the shape of a moment (`off.SHAPE`).
 - A label that speaks for the person, a standing line, and a line left at the door are shown to the person when marked through the door; a label that came into the pages any other way is noted by a build and named once by the person's next `status`; nothing is blocked.
 - An archive, a mark, a strike, `layer` and the switch hold the home's lock (`store._locked`), and every file a strike or `layer` rewrites is written beside itself and put in its place; the person's record has one lock for its two writers (`store._recording`), taken after the home's and never before it.
 - An index added to is the database a whole build makes from the same files; where that cannot be trusted, it is made whole. `door.py build` always makes it whole.

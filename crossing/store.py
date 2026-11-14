@@ -944,6 +944,13 @@ def archive(path: Path, folder: Path, whole: bool = False, taken: bool = False) 
         _unlocked(folder, held)
 
 
+def its_time(row: dict) -> str:
+    """A row's time as the archive keeps it: as the transcript wrote it, where it has the shape of a
+    moment (off.SHAPE); else no time, as for a row that gives none."""
+    at = row.get("timestamp")
+    return at if isinstance(at, str) and off.SHAPE.fullmatch(at) else ""
+
+
 def _archive(path: Path, folder: Path, whole: bool, taken: bool, kept_off: list, session: str) -> int:
     """`archive`, with the home's lock held."""
     key = str(path.resolve())
@@ -978,7 +985,7 @@ def _archive(path: Path, folder: Path, whole: bool, taken: bool, kept_off: list,
                 "id": uuid[:8],
                 "session": session,
                 "voice": HIS if his else OWN,
-                "at": str(row.get("timestamp") or ""),
+                "at": its_time(row),
                 "text": "\n\n".join(his or own),
             }
             if own and transcript.model(row):  # which model spoke; a row that names none keeps none
