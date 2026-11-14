@@ -3009,12 +3009,15 @@ def kept_form(token: str) -> str:
 def matches(folder: Path, token: str) -> bool:
     """Whether anything the home keeps is named by this token: a message of the archive (by its
     id or its whole id), a session of it, or a label; or, for a session, a line of the small files
-    that name sessions or a marker of its transcripts."""
+    that name sessions, a marker of its transcripts, or any hand-over words page, which may give a
+    message of that session the archive does not hold yet (see `_cleared`)."""
     gone = {token}
     if any(_is_struck(row, gone) for row in _archived(folder)) or any(label["id"] == token for label in labels(folder)):
         return True
     if not token.startswith("session:"):
         return False
+    if any(within(folder).glob("*.words.md")):
+        return True
     session = token[len("session:") :]
     for name in BY_SESSION + (MARKERS,):
         try:

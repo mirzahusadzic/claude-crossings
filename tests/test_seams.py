@@ -929,6 +929,35 @@ def test_a_home_with_a_link_made_inside_it_after_switching_on_is_refused_whole(t
     assert not (crossings / "hand-over.words.md").exists()
 
 
+# --- a session's strike where only a words page holds its words ---------------------------------------------
+
+
+def test_a_sessions_strike_takes_every_words_page_whole_where_the_archive_holds_none_of_its_messages(tmp_path):
+    project, home_, path = public(tmp_path)
+    path.write_text("", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    says(path, "abcd1234", "A message only the hand-over words page holds.")  # no hook has read it
+    (home_ / "hand-over.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n| W1 | Only in the page. | his | `abcd1234` |\n",
+        encoding="utf-8",
+    )
+    assert words_script(str(path), str(home_ / "hand-over.md")).returncode == 0
+    assert "A message only the hand-over words page holds." in (home_ / "hand-over.words.md").read_text(
+        encoding="utf-8"
+    )
+    assert kept_texts(home_) == []  # the archive holds nothing of that session
+    code, out = through("strike", f"session:{path.stem}", "--cwd", str(project))
+    assert code == 0 and not out.startswith("not struck"), out
+    assert not (home_ / "hand-over.words.md").exists(), out
+    assert "The hand-over words page hand-over.words.md was removed whole, as a session's strike takes every one" in out
+    assert f"session:{path.stem[:8]}" in store.struck(home_)  # and a later reading brings none of it back
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    assert kept_texts(home_) == []
+    # A session's strike in a home that holds nothing of it, and no words page, still strikes nothing.
+    code, out = through("strike", "session:0f0f0f0f", "--cwd", str(project))
+    assert (code, out) == (1, "not struck: nothing in this home is named session:0f0f0f0f, so nothing was struck\n")
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
