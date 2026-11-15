@@ -345,6 +345,8 @@ def show_look(out: dict, bare: bool = False, named: bool = False) -> str:
         lines.append(f"Resting on what the archive no longer holds: {store.some(out['unresolved'])}.")
     if out["left"]:
         lines += ["", "Left at the door:", row_of({**out["left"], "whose": "the session's"}, named=named)]
+        if out["left"].get("since"):
+            lines.append(f"Marked since it: {store.some(out['left']['since'])}.")
     if out["newest"]:
         lines += ["", "The newest about the work:"] + [
             row_of(label, whole=False, named=named) for label in out["newest"]
@@ -388,6 +390,10 @@ def gap(span: dict) -> str:
 
 
 QUOTED = "    > "  # before each line of a message in a thread: no line of the door's own begins so
+
+
+# Said once a line, as the first work label is marked after the newest line left at the door.
+OVERTAKEN = "The line at the door was left before this label: where it no longer holds, a new one can be left."
 
 
 def show_thread(out: dict, named: bool = False) -> str:
@@ -676,6 +682,7 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             f"marked {out['id']}"
             + (f", in place of {' and '.join(out['replaced'])}" if out["replaced"] else "")
             + ("" if args.bare else f" in {out['page']}")
+            + (f". {OVERTAKEN}" if (args.kind or "work") == "work" and store.overtaken(folder, out["id"]) else "")
         )
     elif args.verb == "frame":
         print(frame.compose(folder, frame.bounded(args.size) if args.size else None, model=facing), end="")

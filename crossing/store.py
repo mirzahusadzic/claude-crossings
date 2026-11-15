@@ -1680,6 +1680,18 @@ def labels(folder: Path) -> list[dict]:
     return found
 
 
+def overtaken(folder: Path, key: str) -> bool:
+    """Whether a work label just marked is the first marked after the newest line left at the door, in the
+    pages' order, which is the order of writing: the moment that line may have been overtaken by the work.
+    Said once a line, on that first label alone, since a session marks often and leaves lines rarely."""
+    gone = struck(folder)
+    kept = [label for label in labels(folder) if label["id"] not in gone]
+    at = max((n for n, label in enumerate(kept) if label["kind"] == "next"), default=None)
+    if at is None:
+        return False
+    return [label["id"] for label in kept[at + 1 :] if label["kind"] == "work"] == [key]
+
+
 def rests(label: dict) -> str:
     """What a label rests on, as its brackets give it: the lines stacked beneath it by their
     keys, then the ids of messages."""
@@ -3018,7 +3030,13 @@ def look(folder: Path, newest: int = 8) -> dict:
     }
     left = db.execute("select id, text from label where kind = 'next' order by n desc limit 1").fetchone()
     if left is not None:
-        out["left"] = {**dict(left), "anchors": _anchors(db, left["id"])}
+        # and the work labels marked after it, in the order they were written (the index's `n`): a line
+        # older than the work it speaks of is seen as one
+        since = db.execute(
+            "select id from label where kind = 'work' and n > (select n from label where id = ?) order by n",
+            (left["id"],),
+        ).fetchall()
+        out["left"] = {**dict(left), "anchors": _anchors(db, left["id"]), "since": [r[0] for r in since]}
     for label in out["newest"]:
         label["anchors"], label["beneath"] = _anchors(db, label["id"]), _beneath(db, label["id"])
     db.close()

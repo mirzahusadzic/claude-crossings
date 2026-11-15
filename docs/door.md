@@ -10,11 +10,11 @@ The server is started by the plugin's `.mcp.json` as `python3 -I crossing/serve.
 
 | Tool | Gives |
 | --- | --- |
-| `look` | the room, with no word needed: the days and how many messages each voice has on each, the labels by kind and how many, those misaligned or unresolved, the newest line left at the door, and the eight newest labels about the work that are not cooled |
+| `look` | the room, with no word needed: the days and how many messages each voice has on each, the labels by kind and how many, those misaligned or unresolved, the newest line left at the door with the work labels marked after it, and the eight newest labels about the work that are not cooled |
 | `labels` | the labels themselves, newest first: with nothing named, those about the work and the lines at the door; or one kind (`relation`, `work`, `next`), one day, or labels by key, a stack with every line beneath it |
 | `find` | the messages and labels that hold the words, all of them or, failing that, any; `voice` narrows it to the person's or the session's |
 | `thread` | a message by its id in its place: what stood before and after it (`around`, two by default and fifty at most), numbered in the order said, with the labels resting there |
-| `mark` | writes a label: one sentence, the ids it rests on, its kind (`relation`, or `work` by default) and whose it is (`his`, `both`, or `session` by default) |
+| `mark` | writes a label: one sentence, the ids it rests on, its kind (`relation`, or `work` by default) and whose it is (`his`, `both`, or `session` by default). For the first work label marked after the newest line left at the door, its answer adds, once a line: "The line at the door was left before this label: where it no longer holds, a new one can be left." |
 | `leave` | writes a line for the session that wakes after the next cut: the session's own, resting on messages |
 | `status` | what the store holds, in one line |
 
@@ -148,7 +148,7 @@ It holds, in this order:
 
 1. Its opening: that it is a frame made from the store, held as read and not as lived; how a line of it is read; and the door's tools by name.
 2. Where other models made lines in this home, one sentence that says so, naming eight at most ([Layers](layers.md)).
-3. The newest line left at the door: whole where the room allows, and otherwise as far as it does, with the words that say where it is whole. A line left through the door is at most 4,000 characters, so it crosses whole in a frame of the usual size.
+3. The newest line left at the door: whole where the room allows, and otherwise as far as it does, with the words that say where it is whole. A line left through the door is at most 4,000 characters, so it crosses whole in a frame of the usual size. Beneath it, "Marked after this line:" and the work labels written after it, in the order they were written, so that a line older than the work it speaks of is seen as one.
 4. The standing lines, whole while they fit, up to 80% of the frame.
 5. The labels about the work, newest first, up to 90%.
 6. By key, the standing lines that did not fit, how many more labels the store holds, and the labels that rest on what the archive no longer holds.

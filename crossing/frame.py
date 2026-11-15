@@ -188,10 +188,16 @@ def compose(folder: Path, size: int | None = None, new: bool = False, model: str
     door_line = ""
     if left:
         door_line = line(left[0])
-        room = max(DOOR, size - used - 60)
+        # the work labels marked after it, in the order of writing: a line older than the work it speaks of
+        # is seen as one. Its room is kept before the line is cut to what is left.
+        since = [row["id"] for row in rows if row["kind"] == "work" and row["n"] > left[0]["n"]]
+        after = f"\n\nMarked after this line: {store.some(since, 12)}." if since else ""
+        # the line and what was marked after it share the door's room, never more than the line alone had
+        room = max(DOOR, size - used - 60) - len(after)
         if len(door_line) > room:
             more = f" […] `labels {left[0]['id']}` gives it whole."
             door_line = door_line[: room - len(more)].rstrip() + more
+        door_line += after
         used += len(door_line) + 60
     standing = [row for row in tops if row["kind"] == "relation"]
     work = [row for row in tops if row["kind"] == "work"][::-1]  # the newest first

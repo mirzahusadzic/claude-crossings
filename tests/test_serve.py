@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 from test_edges import set_to  # noqa: E402
 from test_store import ROWS, A, B, D, E, home, in_person, row, started_by, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import frame, hook, serve, store  # noqa: E402
+from crossing import door, frame, hook, serve, store  # noqa: E402
 
 
 def said(name: str, **given) -> tuple[str, bool]:
@@ -146,7 +146,9 @@ def test_what_a_session_is_told_names_the_handles_that_exist_and_no_file(tmp_pat
         assert str(tmp_path) not in text and "/Users/" not in text and ".py" not in text and ".jsonl" not in text
         # What a label holds, "what the person tells and asks", is the one sentence where the word is the person's.
         assert "python" not in text.lower() and not re.search(r"\bask(s|ed|ing)?\b", text.replace(store.FOR, ""), re.I)
-    assert "marked W2" in told and "marked N2" in told  # and nothing after the key
+    # and nothing after the key but, for the first work label after the newest line left at the door, the one
+    # sentence that asks for a fresh line, which names no file either
+    assert f"marked W2. {door.OVERTAKEN}" in told and "marked N2" in told
     # Nor a shell's way of saying things, in the door's own sentences.
     with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)):
         own = [

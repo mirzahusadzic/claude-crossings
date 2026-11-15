@@ -269,7 +269,11 @@ def test_a_label_marked_through_the_server_is_signed_by_the_hook_after_the_call(
         assert store.listed(tmp_path / "ours", ids=("W1",))["labels"][0]["model"] == SOUTH
         assert store.listed(crossings, ids=("W1",))["labels"][0]["model"] == ""  # this home's W1 is another label
         # A session whose newest message names no model signs nothing: its model is not known.
-        assert said("mark", sentence="Marked by the first session.", anchors=[D]) == ("marked W3", False)
+        # the first work label after the line left at the door, which asks once for a fresh one
+        assert said("mark", sentence="Marked by the first session.", anchors=[D]) == (
+            f"marked W3. {door.OVERTAKEN}",
+            False,
+        )
         first = {
             **done,
             "transcript_path": "",

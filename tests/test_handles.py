@@ -275,6 +275,7 @@ def test_a_line_left_at_the_door_opens_the_frame_and_only_the_newest_is_carried(
         "id": "N2",
         "text": "The hull is done; the mooring is next.",
         "anchors": [A],
+        "since": [],  # no work label marked after it
     }
     assert (
         "Left at the door:\n- N2 (the session's): The hull is done; the mooring is next. [aaaaaaaa]"
