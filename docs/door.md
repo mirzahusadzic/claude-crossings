@@ -157,4 +157,4 @@ It holds, in this order:
 
 Of a stack it carries the top, with the keys of its lines in its brackets. A misaligned stack crosses with its lines, and says it is to be written again. An unresolved label is named by its key, and not carried.
 
-A session started new is given a frame in words true for it: it lived none of what follows, meets the person first, and does not say it remembers. It is given nothing where the store holds no label to carry. A resumed, forked or cleared session holds its own context, and is given none. How the frame reaches a session at a cut depends on the home's `mode` and `carry` ([Cuts](cuts.md)).
+A session started new is given a frame in words true for it: it lived none of what follows, meets the person first, and does not say it remembers. It is given nothing where the store holds no label to carry. A resumed or forked session holds its own context, and is given none; a cleared one is left clear, as the person asked by clearing it, and reaches through the door, with `look`, when the conversation calls for it. How the frame reaches a session at a cut depends on the home's `mode` and `carry` ([Cuts](cuts.md)).
