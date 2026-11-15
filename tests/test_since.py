@@ -43,11 +43,12 @@ def test_the_room_names_the_work_labels_marked_after_the_line_at_the_door(tmp_pa
     project = str(crossings.parent)
     mark(project, "next", "Two calls are open: the quotes and the caps.", A)
     assert "since" in store.look(crossings)["left"] and store.look(crossings)["left"]["since"] == []
-    assert "Marked since it" not in run(project, "look")[1]
+    assert "Marked after this line" not in run(project, "look")[1]
     mark(project, "work", "Both calls are settled: the quotes fixed and the caps gone.")
     mark(project, "work", "Three more commits are made.")
     assert store.look(crossings)["left"]["since"] == ["W2", "W3"]
-    assert "Marked since it: W2, W3." in run(project, "look")[1]
+    assert "Marked after this line: W2, W3." in run(project, "look")[1]
+    assert "Marked since" not in run(project, "look")[1], "one wording for one fact, the frame's"
     mark(project, "next", "All is pushed.", A)  # a fresh line: nothing marked since it
     assert store.look(crossings)["left"]["since"] == []
 

@@ -346,7 +346,7 @@ def show_look(out: dict, bare: bool = False, named: bool = False) -> str:
     if out["left"]:
         lines += ["", "Left at the door:", row_of({**out["left"], "whose": "the session's"}, named=named)]
         if out["left"].get("since"):
-            lines.append(f"Marked since it: {store.some(out['left']['since'])}.")
+            lines.append(f"Marked after this line: {store.some(out['left']['since'])}.")  # as the frame says it
     if out["newest"]:
         lines += ["", "The newest about the work:"] + [
             row_of(label, whole=False, named=named) for label in out["newest"]
