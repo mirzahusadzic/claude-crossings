@@ -64,16 +64,48 @@ def test_the_frame_names_them_beside_the_line_it_carries(tmp_path):
     assert len(composed) <= frame.MOST
 
 
-def test_a_long_line_and_the_labels_after_it_stay_within_the_frame(tmp_path):
+def test_a_long_line_is_kept_as_it_was_and_the_list_beside_it_gives_way(tmp_path):
+    """A reading of the first make: the line is what a cold session reads first, and the note means something only beside
+    it, so where the room runs out the list of labels is shortened, never the line cut further than before."""
     crossings, _ = home(tmp_path)
     project = str(crossings.parent)
-    mark(project, "next", " ".join(["The mooring is next and the line runs long."] * 90), A)
+    long = " ".join(["The mooring is next and the line runs long."] * 90)
+    mark(project, "next", long, A)
     for n in range(20):
         mark(project, "work", f"Work label number {n} after the long line.")
+    whole = frame.compose(crossings, frame.MOST)
+    assert long in whole, "in a frame of the usual size the long line crosses whole"
+    assert "Marked after this line: W2, W3" in whole and "and 8 more." in whole
+    assert len(whole) <= frame.MOST
+    for size in (2000, 2300, 3000):  # the line cut anyway, which `labels` gives whole
+        tight = frame.compose(crossings, size)
+        assert len(tight) <= size, "the frame stays within its size"
+        assert "`labels N1` gives it whole" in tight
+    assert "Marked after this line: W2 and 19 more." in frame.compose(crossings, 3000)
+    short = "The mooring is next."
+    mark(project, "next", short, A)  # a line that crosses whole, with labels marked after it
+    for n in range(20):
+        mark(project, "work", f"Another work label, number {n}.")
     for size in (2000, frame.MOST):
         composed = frame.compose(crossings, size)
-        assert "Marked after this line: W2, W3" in composed and "and 8 more." in composed
-        assert len(composed) <= size
+        assert f"- N2 (session): {short}" in composed and len(composed) <= size, "a whole line is never cut for it"
+
+
+def test_the_frame_stays_within_its_size_whatever_the_lines_length(tmp_path):
+    """The 420 characters a frame keeps for its headings take the note beside a line that crosses whole, and a
+    line cut anyway keeps the note within its own room: so no length of line, at any size, makes the frame
+    larger than it may be, or cuts a line that would have crossed whole."""
+    crossings, _ = home(tmp_path)
+    project = str(crossings.parent)
+    for n, length in enumerate(range(200, 4000, 270)):
+        text = ("moor " * (length // 5))[:length].strip() + "."
+        mark(project, "next", text, A)
+        mark(project, "work", f"Work after the line {n}.")
+        for size in (frame.LEAST, 3000, frame.MOST):
+            composed = frame.compose(crossings, size)
+            assert len(composed) <= size, (length, size)
+            assert "Marked after this line:" in composed, (length, size)
+            assert text in composed or "gives it whole." in composed, (length, size)
 
 
 def test_the_first_work_label_after_the_newest_line_asks_once_for_a_fresh_one(tmp_path):

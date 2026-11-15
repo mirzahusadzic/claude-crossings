@@ -186,18 +186,27 @@ def compose(folder: Path, size: int | None = None, new: bool = False, model: str
     # The line at the door is carried whole where the room left allows, and otherwise as far as it
     # does, with the words that say where it is whole: the frame stays within its size.
     door_line = ""
+    since: list[str] = []
+    notes: list[str] = []
     if left:
-        door_line = line(left[0])
-        # the work labels marked after it, in the order of writing: a line older than the work it speaks of
-        # is seen as one. Its room is kept before the line is cut to what is left.
+        whole = line(left[0])
+        room = max(DOOR, size - used - 60)
+        more = f" […] `labels {left[0]['id']}` gives it whole."
+
+        def cut(text: str, to: int) -> str:
+            return text if len(text) <= to else text[: to - len(more)].rstrip() + more
+
+        # the work labels marked after it, in the order of writing: a line older than the work it speaks of is
+        # seen as one. A line that crosses whole is never cut for the note, which then takes only the room
+        # left beside it, as many labels as fit and at the least the first with how many follow; a line cut
+        # anyway gives the note's shortest form a little more of its tail, since `labels` gives it whole.
         since = [row["id"] for row in rows if row["kind"] == "work" and row["n"] > left[0]["n"]]
-        after = f"\n\nMarked after this line: {store.some(since, 12)}." if since else ""
-        # the line and what was marked after it share the door's room, never more than the line alone had
-        room = max(DOOR, size - used - 60) - len(after)
-        if len(door_line) > room:
-            more = f" […] `labels {left[0]['id']}` gives it whole."
-            door_line = door_line[: room - len(more)].rstrip() + more
-        door_line += after
+        notes = [f"\n\nMarked after this line: {store.some(since, most)}." for most in (12, 6, 3, 1)] if since else []
+        if len(whole) <= room:
+            door_line = whole + next((x for x in notes if len(whole) + len(x) <= room), notes[-1] if notes else "")
+        else:
+            note = notes[-1] if notes else ""
+            door_line = cut(whole, room - len(note)) + note
         used += len(door_line) + 60
     standing = [row for row in tops if row["kind"] == "relation"]
     work = [row for row in tops if row["kind"] == "work"][::-1]  # the newest first
