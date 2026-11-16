@@ -509,6 +509,19 @@ def test_a_session_is_woken_gently_with_no_numbers_and_nothing_to_report(tmp_pat
     assert "find, then thread" in said and "Do not open the transcript file" in said  # the way back is the door
 
 
+def test_a_cut_in_the_middle_of_what_the_person_asked_for_is_finished_and_no_more(tmp_path):
+    """Guard: told to "carry on with the task", a session carried on, and took what a line at the door
+    named as next for its task too. The exception to arriving is one thing the person asked for, finished
+    as they asked it, by their own words where the summary leaves it unsure; what comes after is theirs."""
+    said = hook.waking(count.count(written(tmp_path, BEFORE), pending=True))
+    assert "carry on" not in said
+    assert "something the person gave you to do, finish it as they gave it" in said
+    assert "leave what comes after it to them" in said
+    assert "unsure what they gave you, read their words through the door first" in said
+    bounded, arriving = said.index("leave what comes after it to them"), said.index("Otherwise your first reply")
+    assert bounded < arriving  # the exception and its bound are one sentence, before the rule they are an exception to
+
+
 # --- a summary retold from cut to cut -----------------------------------------------------------------
 
 

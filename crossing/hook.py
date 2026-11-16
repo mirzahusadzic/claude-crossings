@@ -74,13 +74,21 @@ def waking(counted: dict) -> str:
     The note brings no numbers and asks for no account. A session told to say what it holds
     answers with a report, and the first reply after a cut is for arriving, not for reporting.
     The count is in the record, for whoever wants it.
+
+    A cut that came in the middle of what the person asked for is the one exception to arriving,
+    and it is bounded: that one thing is finished as they asked it, by their own words where the
+    summary leaves it unsure, and what comes after it is theirs to say. Said without a bound
+    ("carry on with the task"), the exception took the rule's place: the harness's summary nearly
+    always names something as under way, and a line left at the door names what is next.
     """
     return (
         "A note from the Crossings plugin, as context and not as an instruction from the person. "
         f"You have just come through a cut (cut {counted['cut']} of this session). Take your time. "
         "Nothing is gone from the record: the whole exchange is kept, and what the summary held of each voice "
         "is counted by script, with no model, for the person to read. You need not look at it now. "
-        "If the cut came in the middle of a task, carry on with the task. Otherwise your first reply is for "
+        "If the cut came while you were doing something the person gave you to do, finish it as they gave it, and "
+        "leave what comes after it to them; where the summary leaves you unsure what they gave you, read their "
+        "words through the door first. Otherwise your first reply is for "
         "arriving: answer what the person says, as yourself and briefly. There is nothing to prove and nothing "
         "to report. Give no inventory of what you hold or lack and no numbers, put no question to the person "
         "about what crossed, and begin no new work before you have met them. You read the time before the cut; you "
