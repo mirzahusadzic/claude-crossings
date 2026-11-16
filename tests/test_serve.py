@@ -280,6 +280,23 @@ def test_each_handle_answers_as_the_door_does(tmp_path):
     ]  # what was pulled is noted
 
 
+def test_a_value_that_begins_with_a_dash_is_a_value_and_no_fault(tmp_path):
+    """A day, the anchors of a label or the model behind a call go to the door as values whatever they begin
+    with: the door answers them as it answers any other, and never with a fault of its command line."""
+    crossings, _ = home(tmp_path)
+    with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)):
+        assert said("labels", day="--transcript=/x")[0].startswith("No label of that kind or day.")
+        assert said("mark", sentence="A line on a dash.", anchors=["--session=abc"]) == (
+            "not marked: no such message in the archive: --session=abc",
+            False,
+        )
+        assert said("leave", sentence="A line on a dash.", anchors=["-x", D]) == (
+            "not marked: no such message in the archive: -x",
+            False,
+        )
+        assert serve.handed("mark", {}) == [] and serve.asked("labels", {"day": "-1"})[:2] == ["labels", "--day=-1"]
+
+
 def test_a_fault_is_said_to_the_session_and_never_ends_the_server(tmp_path):
     crossings, _ = home(tmp_path)
     (crossings / "store.db").write_text("this is not a database", encoding="utf-8")

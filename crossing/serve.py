@@ -169,7 +169,8 @@ def project() -> Path:
 
 
 def asked(name: str, given: dict) -> list[str] | str:
-    """The door's own command line for a call, or the plain sentence that refuses it."""
+    """The door's own command line for a call, or the plain sentence that refuses it. A value a session
+    gives goes after its option's `=`, or after the `--`: whatever it begins with, it is a value."""
     strings = lambda value: [v for v in value if isinstance(v, str) and v.strip()] if isinstance(value, list) else []  # noqa: E731
     said = given.get("sentence") if isinstance(given.get("sentence"), str) else ""
     if name == "labels":
@@ -177,7 +178,7 @@ def asked(name: str, given: dict) -> list[str] | str:
         if given.get("kind") in ("relation", "work", "next"):
             argv += ["--kind", given["kind"]]
         if isinstance(given.get("day"), str) and given["day"].strip():
-            argv += ["--day", given["day"].strip()]
+            argv += [f"--day={given['day'].strip()}"]
         return argv + ["--", *strings(given.get("ids"))]
     if name == "find":
         if not (isinstance(given.get("words"), str) and given["words"].strip()):
@@ -208,8 +209,7 @@ def asked(name: str, given: dict) -> list[str] | str:
             kind,
             "--whose",
             whose,
-            "--anchors",
-            ",".join(strings(given.get("anchors"))),
+            "--anchors=" + ",".join(strings(given.get("anchors"))),
             "--touch",
             "--",
             said,
@@ -223,7 +223,7 @@ def handed(name: str, given: dict) -> list[str]:
     told neither the session nor the model. Nothing where none was handed over."""
     folder = store.kept(project()) if name == "mark" else None
     model = layer.handed(folder, name, given) if folder is not None else ""
-    return ["--model", model] if model else []
+    return [f"--model={model}"] if model else []
 
 
 UNATTENDED = "The door is for sessions a person sits in, and this one is not, so nothing was read."
