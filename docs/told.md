@@ -364,6 +364,26 @@ find "zeppelin" (no message holds all of these words; any of them)
 Nothing in the store holds these words. That is a miss, not a no: try other words.
 ````
 
+### `find` {"words": "moring"}
+
+````text
+find "moring" (no message holds all of these words; any of them)
+Nothing in the store holds these words. That is a miss, not a no: try other words.
+Nearest words that are there: mooring (2).
+````
+
+### `find` {"words": ""}
+
+````text
+find needs words.
+````
+
+### `thread` {"id": ""}
+
+````text
+thread needs an id.
+````
+
 ### `thread` {"id": "dddddddd"}
 
 ````text
@@ -477,6 +497,45 @@ This file of the home is written through the door (a label by mark or leave) or 
 
 ````text
 thread of `…`: … messages are named `…`, … and …; thread with a whole id gives each.
+````
+
+## While the person has Crossings switched off, and once it is on again
+
+### `mark`, while it is off
+
+````text
+not marked: Crossings is switched off for this project
+````
+
+### `look`, once it is on again
+
+````text
+The store in outline: 1 day, 4 messages, 2 labels, 0 struck; kept up to 2026-11-11 09:05 UTC.
+
+Days:
+- 2026-11-11: 2 of the person's, 2 of the session's
+- off the record from 2026-11-11 09:10:00 UTC to 2026-11-11 09:30:00 UTC: nothing said then was kept
+
+Labels: 1 (R1 to R1) standing, about the two of you; 1 (W1 to W1) about the work.
+
+The newest about the work:
+- W1 (both): The hull is to be painted grey in spring. [dddddddd, eeeeeeee]
+
+From here: labels (by kind, by day or by id), find, thread.
+````
+
+## What the door's server says where it could not answer
+
+````text
+The door could not answer: ….
+````
+
+````text
+The door has these handles: ….
+````
+
+````text
+Nothing came back.
 ````
 
 ## What the door says in place of an answer

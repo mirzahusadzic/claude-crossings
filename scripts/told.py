@@ -35,7 +35,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 from test_edges import set_to  # noqa: E402
 from test_store import DATA, D, E, home, started_by  # noqa: E402  (and its data folder: nothing reaches the real home)
 
-from crossing import door, frame, hook, serve, store  # noqa: E402
+from crossing import door, frame, hook, off, serve, store  # noqa: E402
 
 DAY = "2026-11-12"  # the day of the made-up labels, so that the page is the same on every run
 
@@ -91,6 +91,9 @@ def answered(project: Path) -> str:
         ("labels", {}),
         ("find", {"words": "hull"}),
         ("find", {"words": "zeppelin"}),
+        ("find", {"words": "moring"}),  # a miss beside a word that is there: the nearest words are named
+        ("find", {"words": ""}),
+        ("thread", {"id": ""}),
         ("thread", {"id": D}),
         ("thread", {"id": "ffffffff"}),
         ("labels", {"ids": ["W99"]}),
@@ -135,6 +138,42 @@ def refusals() -> list[str]:
             if said != docs and len(said.split()) >= 3 and not said.lower().lstrip().startswith("select "):
                 found.append(said.strip())
     return list(dict.fromkeys([*found, store.UNTEXT, store.BUSY.format("marked")]))
+
+
+def said_by_server(words: str) -> str:
+    """One sentence the door's server builds as it answers, found in its source by words it holds, with an
+    ellipsis where it names what it was given."""
+    tree = ast.parse((ROOT / "crossing" / "serve.py").read_text(encoding="utf-8"))
+    for each in ast.walk(tree):
+        if isinstance(each, ast.JoinedStr):
+            said = "".join(part.value if isinstance(part, ast.Constant) else "…" for part in each.values)
+            if words in said:
+                return said.strip()
+    raise SystemExit(f"crossing/serve.py no longer says: {words}")
+
+
+# The two sentences the server answers with where it could not run a call, or was asked for a tool it has not.
+SERVER_REFUSES = ("The door could not answer", "The door has these handles")
+
+
+def off_and_on() -> tuple[str, str]:
+    """What a session's mark is answered while the person has Crossings switched off, and how the room looks
+    once it is on again: the span off the record has a line of its own. In a home of its own, with a clock that
+    reads the made-up store's morning, so that the page is the same on every run."""
+    crossings, _ = home(Path(tempfile.mkdtemp(prefix="told-", dir=DATA)))
+    project = crossings.parent
+    reads = iter(("2026-11-11T09:10:00.000000+00:00", "2026-11-11T09:30:00.000000+00:00"))
+    was = off.now
+    off.now = lambda: next(reads)
+    try:
+        with started_by("cli"), set_to(CLAUDE_PROJECT_DIR=str(project)):
+            store.switch(project, "off")
+            refused, _ = serve.call("mark", {"sentence": "The paint is bought.", "anchors": [D]})
+            store.switch(project, "on")
+            room, _ = serve.call("look", {})
+    finally:
+        off.now = was
+    return refused, room
 
 
 def fenced(text: str) -> str:
@@ -229,6 +268,15 @@ def page() -> str:
         "## What the hooks module says as it refuses a session's call\n\n"
         + "\n\n".join(fenced(module_said(name)) for name in MODULE_REFUSES),
         "## What `thread` answers for an id two messages share\n\n" + fenced(shared()),
+        "## While the person has Crossings switched off, and once it is on again\n\n"
+        + "### `mark`, while it is off\n\n"
+        + fenced(off_and_on()[0])
+        + "\n\n### `look`, once it is on again\n\n"
+        + fenced(off_and_on()[1]),
+        "## What the door's server says where it could not answer\n\n"
+        + "\n\n".join(fenced(said_by_server(words)) for words in SERVER_REFUSES)
+        + "\n\n"
+        + fenced("Nothing came back."),  # what it says where the door gave no words
         "## What the door says in place of an answer\n\n"
         + "\n\n".join(
             fenced(text)

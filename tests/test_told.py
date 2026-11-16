@@ -110,6 +110,25 @@ def test_what_a_mark_is_answered_and_refused_with_is_on_the_page():
     assert pieces >= 14
 
 
+def test_the_doors_answers_the_made_up_store_never_called_for_are_on_the_page():
+    """Guard: the page showed the door's answers from one made-up store, so an answer that store never called
+    for was not on it: the nearest words after a miss, the server's own refusals, a mark while Crossings is
+    off, and the line of a span off the record. Each is on it now, as the door says it."""
+    assert "Nearest words that are there: mooring (2)." in PAGE
+    assert "find needs words." in PAGE and "thread needs an id." in PAGE
+    assert "not marked: Crossings is switched off for this project" in PAGE
+    assert (
+        "- off the record from 2026-11-11 09:10:00 UTC to 2026-11-11 09:30:00 UTC: nothing said then was kept" in PAGE
+    )
+    for words in told.SERVER_REFUSES:
+        assert told.said_by_server(words) in PAGE, words
+    # and the server's own sentences, whole: every one its source writes out that ends as a sentence does
+    for runs in literals(ROOT / "crossing" / "serve.py"):
+        for run in runs:
+            if len(run.split()) >= 3 and run.rstrip().endswith("."):
+                assert run.strip() in PAGE, run
+
+
 def test_what_the_module_refuses_a_call_with_is_on_the_page():
     """Guard: a session whose call the hooks module refuses is told why in a sentence of the module's own, and
     none of the three was on the page; nor was what `thread` answers for an id two messages share."""
