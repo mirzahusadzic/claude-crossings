@@ -378,7 +378,7 @@ def test_the_standing_lines_cross_whole_before_the_work_takes_room(tmp_path):
     carried = standing.count("\n") + 1
     assert "- R1 (his)" in standing
     assert "## The work, newest first\n\n- W11 (both)" in text  # and the newest work still crosses
-    assert 45 < carried < 70  # far more than half the frame's room, where it stopped before
+    assert 40 < carried < 70  # far more than half the frame's room, where it stopped before
     assert (
         f"{70 - carried} standing lines did not fit and are not carried: R{carried + 1} to R70; `labels` gives them."
         in text
@@ -421,6 +421,22 @@ def test_what_is_pulled_through_the_door_is_noted_and_a_strike_takes_it_out(tmp_
     assert [json.loads(line)["ids"] for line in log.read_text(encoding="utf-8").splitlines()] == [["W2"]]
     store.strike(crossings, "W2")
     assert log.read_text(encoding="utf-8") == ""
+
+
+def test_a_frame_says_what_it_is_for_and_where_that_question_can_go(tmp_path):
+    """A frame leans the session it is given to toward carrying the work on. It says so, and names the three places
+    the question of what for can go, each there already: what the session marks and leaves, which makes the next
+    frame; the person; and the door, which holds the whole record. It asks for nothing."""
+    crossings, _ = home(tmp_path)
+    for new in (False, True):
+        why = frame.ARRIVALS["new" if new else "cut"]["why"]
+        # a session started new is given no frame at the least size, where its longer opening leaves no label room
+        for size in (frame.SIZE, frame.MOST) if new else (frame.LEAST, frame.SIZE, frame.MOST):
+            text = frame.compose(crossings, size, new=new)
+            assert text.count(why) == 1 and text.index(why) < text.index(frame.TOOL)  # once, in its opening
+        assert "What you mark and leave is what the next one is given." in why
+        assert "the person is the one who can answer it" in why and "the door holds the whole record" in why
+        assert not re.search(r"\bask(s|ed|ing)?\b", why, re.I)
 
 
 if __name__ == "__main__":

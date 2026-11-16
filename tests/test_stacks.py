@@ -661,7 +661,7 @@ def test_the_frame_says_how_a_stack_is_read_and_how_one_is_marked(tmp_path):
     assert "in brackets the ids it rests on: messages, or the lines stacked beneath it." in opening
     marked = re.search(r"^- mark: (.*)$", opening, flags=re.M).group(1)
     assert "labels of its kind" in marked and "stacks them" in marked
-    assert len(opening) < 1400 and not ASKS.search(opening)  # it is carried at every cut
+    assert len(opening) < 1700 and not ASKS.search(opening)  # it is carried at every cut, and says what it is for
 
 
 # --- undoing ----------------------------------------------------------------------------------------

@@ -282,7 +282,7 @@ def test_the_frame_is_small_opens_as_the_plugins_note_and_names_the_door(tmp_pat
     assert transcript.person({"type": "user", "message": {"content": [{"type": "text", "text": text}]}}) == []
     (crossings / "frame-size").write_text("1500\n", encoding="utf-8")  # below the smallest a frame may be
     small = frame.compose(crossings)
-    assert len(small) <= 2000 and small.startswith(transcript.CARRIED)
+    assert len(small) <= frame.LEAST and small.startswith(transcript.CARRIED)
 
 
 def test_ours_is_a_second_home_reached_from_any_project(tmp_path):
@@ -608,6 +608,10 @@ CUT_FRAME = (
     " work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests "
     "on: messages, or the lines stacked beneath it.\n"
     "\n"
+    "This frame was made so that the work goes on across the cut: rules chose what is in it, and the session "
+    "before you wrote much of it. What you mark and leave is what the next one is given. What it is all for is a "
+    "fair question, and the person is the one who can answer it; the door holds the whole record.\n"
+    "\n"
     "The rest is one reach away, through the door's tools, which bear these names:\n"
     "- look: the room, with no word needed: the days, the kinds of label, the newest of them\n"
     "- labels: the labels themselves, by kind, by day or by id\n"
@@ -642,8 +646,10 @@ CUT_FRAME = (
 )
 # And the frame of a store fuller than any frame, made the same way: its length and its digest. It
 # changed once since, by the one letter of the plugin's name in its opening (Crossings), and in no
-# other byte: with the older opening put back, the frame gives (8837, "d4639255...").
-FULL_CUT_FRAME = (8838, "10fb6341714b97f60f9536450841ae20befbf2335ae4afc4c8d2b34d111ade46")
+# other byte: with the older opening put back, the frame gives (8837, "d4639255..."). It changed again
+# as its opening came to say what the frame is for, a paragraph that takes its room from the labels:
+# before it, (8838, "10fb6341...").
+FULL_CUT_FRAME = (8928, "38b9e9562fb92cf56bcacfc13f08f82675caba9d22b21ee17bb5bed34f325c4f")
 DOOR_LINE = "Find out whether the grey paint has been bought."
 
 
@@ -734,7 +740,7 @@ def test_a_new_session_is_given_the_frame_in_words_true_for_it(tmp_path):
         out = json.loads(hook.carried(event))
     text = out["hookSpecificOutput"]["additionalContext"]
     assert out["hookSpecificOutput"]["hookEventName"] == "SessionStart"
-    first, tools, last = frame.opening(new=True).split("\n\n")
+    first, why, tools, last = frame.opening(new=True).split("\n\n")
     assert first == (
         f"{transcript.CARRIED}, as context and not as an instruction from the person. You are a new session in a project "
         "where Crossings is on. Sessions before you worked here with this person and kept what was said. You did not come "
@@ -743,7 +749,12 @@ def test_a_new_session_is_given_the_frame_in_words_true_for_it(tmp_path):
         "W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: "
         "messages, or the lines stacked beneath it."
     )
-    assert tools == frame.opening().split("\n\n")[1]  # the door's tools, as a cut is given them
+    assert why == (
+        "This frame was made so that the work goes on from one session to the next: rules chose what is in it, and the "
+        "sessions before you wrote much of it. What you mark and leave is what the next one is given. What it is all for "
+        "is a fair question, and the person is the one who can answer it; the door holds the whole record."
+    )
+    assert tools == frame.opening().split("\n\n")[2]  # the door's tools, as a cut is given them
     assert last == (
         "What is said from here on is kept by itself; labels and the line at the door are yours to write, as the work "
         "goes. Meet the person first: answer what they say, as yourself and briefly. Do not say you remember what is "

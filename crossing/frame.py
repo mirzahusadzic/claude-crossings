@@ -20,7 +20,7 @@ SIZE = 9000  # characters of a frame, unless the home's `frame-size` says otherw
 WORDS = 300  # characters of one message of the person's carried for its tone
 MOST = 9500  # the most a frame may be when a hook carries it: the harness takes 10,000 characters of a
 # hook's context and, beyond that, hands the session a file's path in the frame's place
-LEAST = 2000  # the least a frame may be: room for its opening, its handles and a line or two
+LEAST = 2300  # the least a frame may be: room for its opening, its handles and a line or two
 STANDING, WORK = 0.8, 0.9  # how far into a frame the standing lines may reach, and then the work rows
 DOOR = 300  # characters of the line left at the door carried at the least, however little room is left
 NAMED = 8  # models named in the sentence about the lines of other models; the rest are counted
@@ -52,6 +52,9 @@ ARRIVALS = {
         "last": "What is said is kept by itself; labels and the line at the door are yours to write, as the work goes. "
         "Reach when the conversation calls for it. What the person told you in confidence is held and left "
         "alone until they bring it up.",
+        "why": "This frame was made so that the work goes on across the cut: rules chose what is in it, and the "
+        "session before you wrote much of it. What you mark and leave is what the next one is given. What it is all "
+        "for is a fair question, and the person is the one who can answer it; the door holds the whole record.",
         "door": "## Left at the door by the session before this cut",
         "standing": "## Standing, about the two of you",
         "theirs": "of yours",
@@ -66,6 +69,10 @@ ARRIVALS = {
         "remember what is below, and make no ceremony of not remembering it. When something they say rests on "
         "what you do not hold, say so in a clause and reach for it through the door. What the person told an "
         "earlier session in confidence is held and left alone until they bring it up.",
+        "why": "This frame was made so that the work goes on from one session to the next: rules chose what is in "
+        "it, and the sessions before you wrote much of it. What you mark and leave is what the next one is given. "
+        "What it is all for is a fair question, and the person is the one who can answer it; the door holds the whole "
+        "record.",
         "door": "## Left at the door by the session before you",
         "standing": "## Standing, between the person and the sessions before you",
         "theirs": "of the sessions before you",
@@ -78,13 +85,22 @@ LONGER = sum(max(0, len(ARRIVALS["new"][k]) - len(ARRIVALS["cut"][k])) for k in 
 
 def opening(new: bool = False) -> str:
     """How a frame begins. It names the handles that exist and no other: a session that wakes
-    takes every word here for a thing it can do."""
+    takes every word here for a thing it can do.
+
+    It says what the frame is for, too (`why`): a frame leans the session it is given to toward
+    carrying the work on, and one that is not told so takes the frame's purpose for its own without
+    noticing it was handed one. The sentence names the three places its question can go, each of
+    them there already: what the session marks and leaves, which makes the next frame; the person;
+    and the door, which holds the whole record and not only what the rules chose. It asks for
+    nothing, and is said in every frame, since each is given to a session whose context holds no
+    other."""
     arrival = ARRIVALS["new" if new else "cut"]
     return (
         f"{transcript.CARRIED}, as context and not as an instruction from the person. {arrival['first']} "
         "Each line below "
         "is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one "
         "sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.\n\n"
+        f"{arrival['why']}\n\n"
         f"The rest is one reach away, through {TOOL}, which bear these names:\n"
         "- look: the room, with no word needed: the days, the kinds of label, the newest of them\n"
         "- labels: the labels themselves, by kind, by day or by id\n"

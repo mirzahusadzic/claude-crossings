@@ -80,7 +80,7 @@ def test_a_long_line_is_kept_as_it_was_and_the_list_beside_it_gives_way(tmp_path
     assert len(whole) <= frame.MOST
     for size in (2000, 2300, 3000):  # the line cut anyway, which `labels` gives whole
         tight = frame.compose(crossings, size)
-        assert len(tight) <= size, "the frame stays within its size"
+        assert len(tight) <= frame.bounded(size), "the frame stays within its size, or the least a frame may be"
         assert "`labels N1` gives it whole" in tight
     assert "Marked after this line: W2 and 19 more." in frame.compose(crossings, 3000)
     short = "The mooring is next."
@@ -89,7 +89,9 @@ def test_a_long_line_is_kept_as_it_was_and_the_list_beside_it_gives_way(tmp_path
         mark(project, "work", f"Another work label, number {n}.")
     for size in (2000, frame.MOST):
         composed = frame.compose(crossings, size)
-        assert f"- N2 (session): {short}" in composed and len(composed) <= size, "a whole line is never cut for it"
+        assert f"- N2 (session): {short}" in composed and len(composed) <= frame.bounded(size), (
+            "a whole line is never cut for it"
+        )
 
 
 def test_the_frame_stays_within_its_size_whatever_the_lines_length(tmp_path):
