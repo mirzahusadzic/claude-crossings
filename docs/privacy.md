@@ -56,7 +56,7 @@ The switch keeps each span in the home's `off.txt`, in UTC. A message whose time
 | Event | Crossings |
 | --- | --- |
 | a message with no time | is kept only where the rows on either side of it are outside every span, with no span between them |
-| the clock was set back while it was off | switching on closes the span by the steady clock, and keeps a second span up to that moment, so what was said after the clock went back is off too |
+| the clock was set back while it was off, by any amount the steady clock can tell | switching on closes the span by the steady clock, and keeps a second span up to that moment, so what was said after the clock went back is off too. What was said before switching off, in a transcript the archive had not met, and what is said after switching on, in any transcript, is kept off as well, for as long each way as the clock was set back |
 | `off.txt` is there and cannot be read | nothing is archived until it can be |
 | the record of when it was off is missing, cut short, damaged, or changed for another | nothing is archived, counted at a cut or given on a words page, and `status` and `look` say why; the next `/crossings on` keeps everything before that moment off the record, and archiving goes on from there |
 | a cut comes while it is off | is not counted, noted or answered |
@@ -70,7 +70,7 @@ What it does not do:
 
 - It does not reach back. What was kept before it was switched off stays until it is struck.
 - It does not touch the harness's own transcript, which still holds everything said, for as long as the harness keeps it.
-- It judges a transcript the archive had not met when it was switched off by its rows' times alone, so a clock set forward and back there is not met. Nor is a clock set back after it is on again.
+- It judges a transcript the archive had not met when it was switched off by its rows' times alone, so a clock set forward and back there is not met. Nor is a clock set back after it is on again. The steady clock tells only the net of a setback at the moment of switching on: a clock set back and then partly forward again, or any setback on a computer that was started again meanwhile, can leave a row said while off to be kept from such a transcript.
 - It tells only the session it was switched off from. Every session's `mark` and `leave` refuse all the same.
 
 ---

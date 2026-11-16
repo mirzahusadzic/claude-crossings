@@ -175,16 +175,27 @@ def closed(folder: Path, since: float | None = None) -> bool:
     whether there was one to close.
 
     Where the clock reads earlier now than when the span was opened, it was set back while the
-    switch was off. What was said before it went back bears times after this moment's, and what
-    was said after it bears times before the span's opening. The span is then closed as far past
+    switch was off. So it was where it shows less time gone than the steady clock ran since `since`,
+    by more than SLACK: set back by less than the time the switch was off, it reads later than the
+    opening, and only the steady clock tells. What was said before it went back bears times after
+    this moment's, and what was said after it bears times before the span's opening, or before the
+    moment it went back. The span is then closed as far past
     its opening as the steady clock (see `steady`) has run since `since`, its reading as the span
     was opened; where that cannot be told (none was kept, or the computer was started again
     since), as far past its opening as the clock was found to have gone back. And a second span
     is kept, closed at this moment, of the line's own form: from this moment less what the steady
     clock ran, so that what was said after the clock went back is off as well; where that cannot
-    be told, from FIRST, as `everything_before` keeps it. Spans closed so may keep off what is
-    said in the moments before the switch was turned off, or after it is turned on: nothing said
-    while it was off is kept."""
+    be told, from FIRST, as `everything_before` keeps it. Spans closed so also keep off what was
+    said before the switch was turned off, from a transcript the archive had not met, and what is
+    said after it is turned on, from any transcript, for as long each way as the clock was set
+    back: nothing said while it was off is kept.
+
+    What the steady clock tells is the net of it at this moment. A clock set back and then partly
+    forward again leaves outside both spans what was said while it read furthest back. And on a
+    computer started again meanwhile the steady clock began anew: where it reads less than `since`
+    nothing is told by it, and where it reads more, the time off is told too short. In each of
+    these a row said while off can be kept, from a transcript the archive had not met; one it
+    knew is kept off by its place."""
     lines = _lines(folder)
     found, _ = _parsed(lines)
     if not found or found[-1][2] is not None:
@@ -193,8 +204,10 @@ def closed(folder: Path, since: float | None = None) -> bool:
     stamp = now()
     end = moment(stamp)
     more = []
-    if end is not None and end < opened:  # the clock was set back while the switch was off
-        ran = steady() - since if since is not None else -1.0
+    ran = steady() - since if since is not None else -1.0
+    # by less than the time off: the clock reads later than the opening, and shows less time gone than ran
+    by_less = end is not None and end >= opened and ran >= 0 and (end - opened).total_seconds() + SLACK < ran
+    if end is not None and (end < opened or by_less):  # the clock was set back while the switch was off
         back = (end - datetime.timedelta(seconds=ran)).isoformat(timespec="microseconds") if ran >= 0 else FIRST
         more = [f"{back} {stamp}"]  # what was said after the clock went back, by the clock as it reads now
         stamp = (opened + (datetime.timedelta(seconds=ran) if ran >= 0 else opened - end)).isoformat(
@@ -206,6 +219,7 @@ def closed(folder: Path, since: float | None = None) -> bool:
 
 
 FIRST = "1970-01-01T00:00:00.000000+00:00"  # earlier than any transcript's time: "everything before"
+SLACK = 2.0  # seconds the clock of the day may fall behind the steady clock and not be taken as set back
 
 
 def everything_before(folder: Path) -> None:

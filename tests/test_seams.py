@@ -98,6 +98,61 @@ def test_what_is_said_after_the_clock_went_back_while_off_is_kept_off_too(tmp_pa
         assert unread == 0 and len(spans) == 2 and not store.lost(home_), spans
 
 
+def test_a_clock_set_back_by_less_than_the_time_off_keeps_what_was_said_then_off_too(tmp_path):
+    """Guard: the clock's going back was seen only where it read earlier at the switching on than at the
+    switching off. Set back by less than the time Crossings was off, it read later than that, the span was
+    closed at its reading, and what was said while off before the clock went back, which bears a later time,
+    was kept. The steady clock tells it: it ran longer than the clock of the day shows. As with any clock set
+    back, what was said just before the switching off may be kept off too, by as much as the clock went back."""
+    project, home_, path = public(tmp_path)
+    path.write_text("", encoding="utf-8")
+    says(path, "10000001", "Said on the record, well before switching off.", at="2026-11-11T09:10:00.000Z")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    clock, steady = {"now": "2026-11-11T10:00:00.000000+00:00"}, {"at": 1000.0}
+    was_now, was_steady = off.now, off.steady
+    off.now, off.steady = (lambda: clock["now"]), (lambda: steady["at"])
+    try:
+        assert through("switch", "off", "--cwd", str(project))[0] == 0
+        says(path, "10000002", "Said while off, before the clock went back.", at="2026-11-11T10:30:00.000Z")
+        says(path, "10000003", "Said while off, after the clock went back.", at="2026-11-11T10:05:00.000Z")
+        # an hour by the steady clock, in which the clock of the day was set back by forty minutes
+        clock["now"], steady["at"] = "2026-11-11T10:20:00.000000+00:00", 4600.0
+        assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["again"] + "\n")
+    finally:
+        off.now, off.steady = was_now, was_steady
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    kept = kept_texts(home_)
+    assert "Said while off, before the clock went back." not in kept
+    assert "Said while off, after the clock went back." not in kept
+    assert "Said on the record, well before switching off." in kept
+    spans, unread = off.spans(home_)
+    assert unread == 0 and len(spans) == 2 and not store.lost(home_), spans
+
+
+def test_a_clock_that_runs_with_the_steady_one_closes_its_span_as_it_reads(tmp_path):
+    """And where the two clocks agree, to within the slack, nothing is taken as set back: one span, closed at
+    the clock's reading, and what is said after switching on is kept."""
+    project, home_, path = public(tmp_path)
+    path.write_text("", encoding="utf-8")
+    assert through("switch", "on", "--cwd", str(project)) == (0, ON)
+    clock, steady = {"now": "2026-11-11T10:00:00.000000+00:00"}, {"at": 1000.0}
+    was_now, was_steady = off.now, off.steady
+    off.now, off.steady = (lambda: clock["now"]), (lambda: steady["at"])
+    try:
+        assert through("switch", "off", "--cwd", str(project))[0] == 0
+        says(path, "10000002", "Said while off.", at="2026-11-11T10:30:00.000Z")
+        clock["now"], steady["at"] = "2026-11-11T10:59:59.000000+00:00", 4600.0  # a second behind the steady clock
+        assert through("switch", "on", "--cwd", str(project)) == (0, door.SWITCHED["again"] + "\n")
+    finally:
+        off.now, off.steady = was_now, was_steady
+    says(path, "10000004", "Said after switching on again.", at="2026-11-11T11:00:30.000Z")
+    assert through("build", "--transcript", str(path), "--cwd", str(project))[0] == 0
+    kept = kept_texts(home_)
+    assert "Said while off." not in kept and "Said after switching on again." in kept
+    spans, unread = off.spans(home_)
+    assert unread == 0 and len(spans) == 1, spans
+
+
 # --- a switch while an archive is under way ---------------------------------------------------------------
 
 
