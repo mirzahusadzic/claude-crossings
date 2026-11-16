@@ -69,11 +69,12 @@ Crossings keeps nothing for a project until you switch it on there. The switch i
 | --- | --- |
 | `/crossings on` | switches the project on: makes its home where it has none, and keeps the line in your record |
 | `/crossings adopt` | switches on a home that already holds files this computer has no record of switching on |
+| `/crossings join`, `here` | in a folder below another home's, shares that home from it, or gives the folder a home of its own |
 | `/crossings off` | speaks off the record: nothing either voice says until it is on again is kept |
 | `/crossings` | turns the switch over |
 | `/crossings status`, `look`, `find <words>`, `labels`, `frame` | show what the store holds |
 
-A project with a `crossings/` folder of its own keeps its home there, beside the work; any other gets a home outside it, under `~/.claude/crossing/homes/`. Where a folder already holds something this computer has no record of switching on, `/crossings on` names what it holds and leaves it, and `adopt` takes it; nothing in it is changed ([Settings](docs/settings.md)).
+A project with a `crossings/` folder of its own keeps its home there, beside the work; any other gets a home outside it, under `~/.claude/crossing/homes/`. Where a folder already holds something this computer has no record of switching on, `/crossings on` names what it holds and leaves it, and `adopt` takes it; nothing in it is changed ([Settings](docs/settings.md)). A session started in a folder below another home's keeps nothing of it until you answer once for that folder, with `join` or `here`.
 
 Switching on in a running session takes that session in from its first message. An earlier session is brought in by hand, one transcript at a time:
 

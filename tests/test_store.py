@@ -392,9 +392,10 @@ def test_a_session_that_ends_is_not_held_up_and_what_was_said_is_kept_all_the_sa
     assert hook.keep(path, project, wait=True) is None  # done here, there is no process to wait for
 
 
-def test_the_door_opens_the_projects_store_from_any_folder_inside_it(tmp_path):
-    """A folder inside a project means that project's store. A shell standing in crossings/ itself
-    must not open an empty home outside the project and copy the archive there."""
+def test_the_door_opens_the_projects_store_from_a_folder_inside_it_once_shared_from_there(tmp_path):
+    """A folder inside a project finds that project's store, and opens it once the person shared it from
+    that folder (see tests/test_below.py). A shell standing in crossings/ itself must not open an empty
+    home outside the project and copy the archive there."""
     import contextlib
     import io
 
@@ -403,10 +404,19 @@ def test_the_door_opens_the_projects_store_from_any_folder_inside_it(tmp_path):
     deeper = crossings.parent / "src" / "deep"
     deeper.mkdir(parents=True)
     for inside in (crossings, crossings / "said", deeper):
-        out = io.StringIO()
-        with at_terminal(), contextlib.redirect_stdout(out):  # the person's own shell
-            assert door.main(["status", "--cwd", str(inside), "--transcript", str(path)]) == 0
-        assert f"The store at {crossings.resolve()} holds 2 messages of the person's" in out.getvalue()
+        for shared in (False, True):
+            out = io.StringIO()
+            with at_terminal(), contextlib.redirect_stdout(out):  # the person's own shell
+                if shared:
+                    assert door.main(["switch", "join", "--cwd", str(inside)]) == 0
+                code = door.main(["status", "--cwd", str(inside), "--transcript", str(path)])
+            if shared:
+                assert (
+                    code == 0
+                    and f"The store at {crossings.resolve()} holds 2 messages of the person's" in out.getvalue()
+                )
+            else:
+                assert code == 1 and "/crossings join shares it" in out.getvalue()
     assert not record.outside(crossings.parent.resolve()).exists(), "nothing of the project's is kept outside it"
 
 

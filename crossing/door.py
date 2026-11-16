@@ -97,10 +97,27 @@ SWITCHED = {
     "off": "Crossings is off for this project: no cut is counted, noted or answered, and nothing said from now "
     "until it is switched on again will be kept.",
     "never": "Crossings was never switched on for this project.",
+    "joined": "Crossings is on for this folder: it shares the home of the folder above it, and what is said here "
+    "is kept there from now on.",
+    "alone": "This folder is its home's own, so there is no home above it to share: nothing was changed.",
+    "occupied": "This folder's own home already holds files this computer has no record of switching on, so "
+    "nothing was changed.",
     "restored": "Crossings is on again for this project. Its record of when Crossings was off had been taken "
     "away, cut short or damaged, so everything said before this moment that was not kept already is kept "
     "off the record; what is said from now on is kept.",
 }
+# Said where a folder lies below the folder of a home that is believed, and the person has not answered for
+# it (see store.waiting): to the person at the switch and at their own door, and to a session's shell or the
+# server without naming the folder.
+BELOW = (
+    "This folder lies below {}, whose home Crossings keeps, and nothing of that home is kept or read from here "
+    "until you answer once for this folder: /crossings join shares it, /crossings here gives this folder a home of "
+    "its own."
+)
+BELOW_BARE = (
+    "This folder lies below the folder of another home, and the person has not shared it from here, so nothing "
+    "is kept or read."
+)
 UNKEPT = (
     "The record of when Crossings was off could not be written in this project's home ({}), so the switch may "
     "not stand as asked: status says how it stands."
@@ -514,8 +531,8 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         # key, no key the person alone is shown, and nothing said once is taken from the person's own status.
         args.bare = True
     if args.verb == "switch":
-        if said.lower() not in ("on", "off", "toggle", "adopt"):
-            print("switch takes one word: on, off, toggle or adopt.")
+        if said.lower() not in ("on", "off", "toggle", "adopt", "join", "here"):
+            print("switch takes one word: on, off, toggle, adopt, join or here.")
             return 2
         try:
             state = store.switch(cwd, said.lower())
@@ -530,6 +547,12 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             return 1
         if state == "linked":
             print(LINKED_HOME.format(store.here(cwd).resolve()))
+            return 1
+        if state == "below":
+            print(BELOW.format(store.belongs(cwd)))
+            return 1
+        if state in ("alone", "occupied"):
+            print(SWITCHED[state])
             return 1
         if state in ("on", "again", "restored"):
             folder = store.here(cwd)
@@ -553,13 +576,17 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
     # where the person switched Crossings on in this project, and it is on.
     ours = args.home == "ours"
     folder = store.offered(cwd) if ours else store.kept(cwd)
+    # A folder below another home's, not answered for: no home is kept or read, and the guard on the archive's
+    # files is still told where that home lies, so that it keeps a session here from opening it.
+    above = None if ours or folder is not None else store.waiting(cwd)
     if args.verb == "home":
+        folder = folder or above
         if folder is None or not folder.is_dir():
             return 1  # and nothing is said: there is no folder to name
         print(folder)
         return 0
     if folder is None:
-        print(NOT_ON)
+        print(NOT_ON if above is None else BELOW_BARE if args.bare else BELOW.format(store.belongs(cwd)))
         return 1
     record.sound(folder)  # a link anywhere in the home, and nothing is read or written
     if narrowing:

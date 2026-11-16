@@ -160,7 +160,7 @@ def test_switching_on_makes_the_home_outside_and_says_which_project_it_belongs_t
     for wrong in (["sideways"], [], ["on", "off"]):  # a word that is none of the three changes nothing
         assert through("switch", *wrong, "--cwd", str(project)) == (
             2,
-            "switch takes one word: on, off, toggle or adopt.\n",
+            "switch takes one word: on, off, toggle, adopt, join or here.\n",
         )
     assert (outside / "switch").read_text(encoding="utf-8") == "on\n" and inside(project) == BARE
 
@@ -453,6 +453,8 @@ def test_a_home_outside_holds_everything_a_projects_own_folder_would(tmp_path):
     assert inside(project) == BARE  # and not one file of it lies in the repository
     shown = show.block(project)
     assert "1 cut on record in this project" in shown and f"    {outside / 'abcdef01-cut-1.md'}\n" in shown
+    assert "/crossings join shares it" in through("status", "--cwd", str(project / "src"))[1]  # a folder below asks
+    assert through("switch", "join", "--cwd", str(project / "src"))[0] == 0
     assert through("status", "--cwd", str(project / "src"))[1].startswith(
         f"The store at {outside} holds 3 messages of the person's"
     )

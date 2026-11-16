@@ -118,11 +118,32 @@ def place(cwd: Path) -> tuple[Path, Path | None]:
     if named:
         return Path(named), None
     folder, top, out = record.located(cwd)
+    own = _own(cwd, folder, top, out)
+    if own is not None:  # a folder below its project's that the person gave a home of its own
+        return own, Path(spelled(cwd))
     if not out and not believed(top, folder):
         away = record.outside(top)
         if away.is_dir() and believed(top, away):
             return away, top
     return folder, top if out else None
+
+
+def _owner(folder: Path, top: Path, out: bool) -> Path:
+    """The folder a home found for a folder belongs to: the project's top, for a home outside it, or
+    the folder that holds the home, for a `crossings/` folder."""
+    return top if out else folder.parent
+
+
+def _own(cwd: Path, folder: Path, top: Path, out: bool) -> Path | None:
+    """The home of its own the person gave a folder that lies below the folder its home belongs to
+    (`switch here`): outside the project, as the home of a project with no `crossings/` folder is,
+    named by the folder's own path, and believed where the person's record names it for this folder
+    as a project of its own. Nothing otherwise."""
+    spot = Path(spelled(cwd))
+    if record._same(spot, _owner(folder, top, out)):
+        return None
+    away = record.outside(spot)
+    return away if believed(spot, away) else None
 
 
 def spelled(path: Path) -> str:
@@ -204,7 +225,9 @@ def _record_objects() -> list[dict]:
         if (
             isinstance(given, dict)
             and isinstance(given.get("home"), str)
-            and not any(isinstance(given.get(name), str) and "\0" in given[name] for name in ("home", "project"))
+            and not any(
+                isinstance(given.get(name), str) and "\0" in given[name] for name in ("home", "project", "joined")
+            )
         ):
             found.append(given)
     return found
@@ -221,12 +244,35 @@ def consented() -> set[tuple[str, str]]:
     return {(given["project"], given["home"]) for given in _record_lines()}
 
 
-def consent(cwd: Path) -> None:
+# The person's record also keeps, for a folder below the folder its home belongs to, that they shared
+# that home from it (`switch join`): a line {"home": ..., "joined": <the folder>} beside the project's
+# own, which names no project and so switches nothing on, and which an earlier make passes over.
+
+
+def joined(cwd: Path, folder: Path) -> bool:
+    """Whether the person shared this home from the folder `cwd` (see `_found`): by the same text, or,
+    for a line written with another spelling of the same folders, by the files themselves."""
+    spot, home_ = spelled(cwd), spelled(folder)
+    held = {(given["joined"], given["home"]) for given in _record_objects() if isinstance(given.get("joined"), str)}
+    if (spot, home_) in held:
+        return True
+    return any(record._same(Path(each), Path(spot)) and record._same(Path(made), folder) for each, made in held)
+
+
+def join(cwd: Path, folder: Path) -> None:
+    """Keep in the person's record that they shared this home from the folder `cwd`."""
+    with _recording():
+        if not joined(cwd, folder):
+            line = {"home": spelled(folder), "joined": spelled(cwd)}
+            record.add(switched(), json.dumps(line, ensure_ascii=False) + "\n")
+
+
+def consent(cwd: Path, given: tuple[Path, Path] | None = None) -> None:
     """Keep in the person's record that they switched Crossings on in the project `cwd` stands
-    in, for the home it has (see `place`: a home named outright by CROSSING_HOME too). `switch
-    on` is the one act that calls this."""
-    folder, _ = place(cwd)
-    top = record.located(cwd)[1]
+    in, for the home it has (see `place`: a home named outright by CROSSING_HOME too); or, `given`,
+    for that home and that project, as a folder given a home of its own is (`switch here`). `switch`
+    is the one act that calls this."""
+    folder, top = given if given is not None else (place(cwd)[0], record.located(cwd)[1])
     with _recording():
         if believed(top, folder):
             return
@@ -423,13 +469,42 @@ def kept(cwd: Path) -> Path | None:
     outright (CROSSING_HOME) is believed by the same rule: only where the record holds a line for
     this project that names it, which `switch on` writes while that setting stands. Another
     project's home, whose name can be told from its path, is not opened by naming it."""
+    folder, beneath = _found(cwd)
+    return None if beneath else folder
+
+
+def belongs(cwd: Path) -> Path:
+    """The folder the home found for `cwd` belongs to: the project's top for a home outside it, else
+    the folder that holds the home (see `_found`)."""
+    folder, project = place(cwd)
+    return project if project is not None else folder.parent
+
+
+def waiting(cwd: Path) -> Path | None:
+    """The home believed for the project `cwd` stands in, where `cwd` lies below the folder that home
+    belongs to and the person has not yet answered for it (see `kept`); nothing otherwise."""
+    folder, beneath = _found(cwd)
+    return folder if beneath else None
+
+
+def _found(cwd: Path) -> tuple[Path | None, bool]:
+    """The home believed for the project `cwd` stands in, or nothing; and whether `cwd` lies below the
+    folder that home belongs to, unanswered: neither joined to it (`switch join`) nor given a home of its
+    own (`switch here`). A session that starts below another's home is not taken into it by finding it
+    on the way up: what it says is kept, and what that home holds is read, only from the person's
+    answer for that folder on. A home named outright (CROSSING_HOME) is the person's own choice, and is
+    never below."""
     if record.astray(cwd):  # a setting that names a place inside the project is not followed
-        return None
-    folder, _ = place(cwd)
+        return None, False
+    folder, project = place(cwd)
     if folder.is_symlink() and folder == linked(cwd):  # a project's crossings that is a link is no home
-        return None
-    top = record.located(cwd)[1]
-    return folder if folder.is_dir() and believed(top, folder) else None
+        return None, False
+    top = project if project is not None else record.located(cwd)[1]
+    if not (folder.is_dir() and believed(top, folder)):
+        return None, False
+    if os.environ.get("CROSSING_HOME"):
+        return folder, False
+    return folder, not record._same(Path(spelled(cwd)), belongs(cwd)) and not joined(cwd, folder)
 
 
 def offered(cwd: Path) -> Path | None:
@@ -479,8 +554,12 @@ def unclaimed(cwd: Path) -> dict | None:
     and labels: whether it holds an index (`store.db`), a hand-over page, which setting files of
     SETTINGS, whether `models.txt`, and how many other files. A home named outright
     (CROSSING_HOME) is asked about as any other."""
-    folder, _ = place(cwd)
-    top = record.located(cwd)[1]
+    folder, project = place(cwd)
+    return _unclaimed_at(folder, project if project is not None else record.located(cwd)[1])
+
+
+def _unclaimed_at(folder: Path, top: Path) -> dict | None:
+    """`unclaimed`, for this home of the project whose top this is."""
     if not folder.is_dir() or believed(top, folder):
         return None
     record.sound(folder)
@@ -550,18 +629,48 @@ def switch(cwd: Path, to: str) -> str:
     whatever time that bears (see `_unsaid_by_id`); archiving goes on from here; it gives `restored`.
 
     Where the home lies inside a repository and holds no ignore file, switching on writes one
-    (see `ignored`)."""
+    (see `ignored`).
+
+    A folder below the folder its home belongs to switches nothing of that home until the person
+    answers for it (see `_found`): any word but these gives `below`, and nothing is written. `join`
+    shares the home from that folder, kept in the person's record (see `join`), and gives `joined`;
+    asked where nothing waits on the folder, it gives `joined` where it was shared already, `alone`
+    where the folder is its home's own, and `never` where nothing is switched on. `here` gives the
+    folder a home of its own, outside the project and named by the folder's path, and switches that
+    on as `on` does, as a project of its own; one that holds what this computer has no record of
+    switching on gives `occupied`, and nothing is written. Anywhere else `here` is `on`. Switching on
+    a project's home from a folder below it, where none was believed, shares it from that folder too."""
     if record.astray(cwd):
         return "astray"
+    above = waiting(cwd)
+    if above is not None and to == "join":
+        join(cwd, above)
+        return "joined"
+    if above is not None and to != "here":
+        return "below"  # a folder below another's home switches nothing of it until the person answers for it
     folder, project = place(cwd)
-    believed = kept(cwd) is not None
-    on = to in ("on", "adopt") or (to == "toggle" and not (believed and active(folder)))
-    if not on and not believed:
+    trusted = kept(cwd) is not None
+    if to == "join":  # nothing waits on this folder: it is its home's own, joined already, or never switched on
+        if not trusted:
+            return "never"
+        return "joined" if joined(cwd, folder) else "alone"
+    given = None
+    if to == "here":  # a folder of its own, where it lies below the folder its home belongs to; else as `on`
+        located, top, out = record.located(cwd)
+        spot = Path(spelled(cwd))
+        if not os.environ.get("CROSSING_HOME") and not record._same(spot, _owner(located, top, out)):
+            folder, project = record.outside(spot), spot
+            trusted = folder.is_dir() and believed(spot, folder)
+            given = (folder, spot)
+            if _unclaimed_at(folder, spot) is not None:
+                return "occupied"  # what was made there before is not taken with no word said
+    on = to in ("on", "adopt", "here") or (to == "toggle" and not (trusted and active(folder)))
+    if not on and not trusted:
         return "never"
     if on and folder.is_symlink() and folder == linked(cwd):
         return "linked"  # nothing is located, made or switched on through it
     record.sound(folder)  # nothing is switched in a home with a link in it
-    adopted = on and unclaimed(cwd) is not None
+    adopted = on and given is None and unclaimed(cwd) is not None
     if adopted and to != "adopt":
         return "unclaimed"  # content someone else made is not trusted with no word said
     if not folder.is_dir() or (on and empty(folder)):  # judged before the switch writes a file of its own
@@ -578,12 +687,17 @@ def switch(cwd: Path, to: str) -> str:
     if held is None:
         raise OSError(f"the home was held by another act for {WAIT:.0f} seconds")
     try:
-        return _switched(cwd, folder, on, adopted, fresh=on and not believed)
+        state = _switched(cwd, folder, on, adopted, fresh=on and not trusted, given=given)
     finally:
         _unlocked(folder, held)
+    if on and given is None and waiting(cwd) is not None:  # switched on from a folder below it: shared from there
+        join(cwd, folder)
+    return state
 
 
-def _switched(cwd: Path, folder: Path, on: bool, adopted: bool = False, fresh: bool = False) -> str:
+def _switched(
+    cwd: Path, folder: Path, on: bool, adopted: bool = False, fresh: bool = False, given: tuple | None = None
+) -> str:
     """`switch`, from its span on, with the home's lock held. A home `adopted` has met no line of
     its `models.txt` and no label of its pages: none of them was signed or marked through the door
     (see `_signs_unmet` and `_labels_unmet`), and each is noted as come by no other way, for the
@@ -601,7 +715,7 @@ def _switched(cwd: Path, folder: Path, on: bool, adopted: bool = False, fresh: b
     within(folder, "switch").write_text("on\n" if on else "off\n", encoding="utf-8")
     if not on:
         return "off"
-    consent(cwd)
+    consent(cwd, given)
     ignored(folder)
     was_lost = lost(folder)  # a home adopted with a damaged record is restored as it is switched on, too
     closed = off.closed(folder, since=steadied(folder))

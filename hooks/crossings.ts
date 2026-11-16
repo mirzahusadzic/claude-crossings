@@ -195,7 +195,7 @@ const registerCommand = (on: Parameters<Register>[0]) => {
       name: 'crossings',
       description:
         'Switch Crossings on or off for this project (/crossings on, off, or bare to turn it over; adopt takes a home that came ' +
-        'with the project), or see what its store holds: ' +
+        'with the project; in a folder below another home, join shares it and here gives the folder its own), or see what its store holds: ' +
         '/crossings status, look, find <words>, labels [relation|work|door|a day|ids], frame',
     })
     await askHome($) // where this project's home is, for the guard on the archive's files, before any tool call
@@ -232,8 +232,8 @@ const registerCommand = (on: Parameters<Register>[0]) => {
     }
     // Only a bare /crossings turns the switch over. A word it does not know changes nothing:
     // a slip of the hand must not switch Crossings off.
-    if (said !== '' && said !== 'on' && said !== 'off' && said !== 'adopt') {
-      return { text: `/crossings takes: on, off, adopt, status, look, find <words>, labels, frame. "${first}" is none of these; nothing was changed.` }
+    if (said !== '' && said !== 'on' && said !== 'off' && said !== 'adopt' && said !== 'join' && said !== 'here') {
+      return { text: `/crossings takes: on, off, adopt, join, here, status, look, find <words>, labels, frame. "${first}" is none of these; nothing was changed.` }
     }
     // The session the person turns the switch from is told what it now means, as context after
     // the answer, which the person is not shown: switched off, that nothing said from now until

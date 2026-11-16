@@ -327,14 +327,19 @@ test("the switch is turned by the door, and the door's sentence is the answer", 
   expect(await say($, '')).toBe('the door said: switch toggle') // a bare command turns it over
   expect(lastOf(seen, 'switch')).toEqual(['switch', 'toggle', ...tail])
   // A slip of the hand changes nothing: only a bare command turns the switch over.
-  expect(await say($, 'lok')).toBe('/crossings takes: on, off, adopt, status, look, find <words>, labels, frame. "lok" is none of these; nothing was changed.')
+  expect(await say($, 'lok')).toBe('/crossings takes: on, off, adopt, join, here, status, look, find <words>, labels, frame. "lok" is none of these; nothing was changed.')
   // A home that came with the project is taken by the word adopt, which the door is given as it is.
   expect(await say($, 'Adopt')).toBe('the door said: switch adopt')
   expect(lastOf(seen, 'switch')).toEqual(['switch', 'adopt', ...tail])
-  // Switched off, on, adopted, or turned over, the door is asked where the home now is, and what the session is
-  // to be told; the slip of the hand asked nothing.
+  // In a folder below another home, join shares it and here gives the folder its own: the door's words too.
+  expect(await say($, 'join')).toBe('the door said: switch join')
+  expect(lastOf(seen, 'switch')).toEqual(['switch', 'join', ...tail])
+  expect(await say($, 'Here')).toBe('the door said: switch here')
+  expect(lastOf(seen, 'switch')).toEqual(['switch', 'here', ...tail])
+  // Switched off, on, adopted, joined, given its own, or turned over, the door is asked where the home now is, and
+  // what the session is to be told; the slip of the hand asked nothing.
   const turned = ['switch', 'home', 'welcome']
-  expect(verbs(seen)).toEqual(['home', ...turned, ...turned, ...turned, ...turned])
+  expect(verbs(seen)).toEqual(['home', ...turned, ...turned, ...turned, ...turned, ...turned, ...turned])
   expect(seen.files).toEqual({}) // the module writes no switch of its own, in the project or anywhere
 })
 

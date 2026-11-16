@@ -29,7 +29,7 @@ Outside every home, the plugin's data folder (`CLAUDE_PLUGIN_DATA`, else `~/.cla
 
 ### The switch
 
-Crossings keeps nothing for a project until the person switches it on there. The switch lives in the person's own record, `~/.claude/crossing/switched` (or the file `CROSSING_SWITCHED` names), outside every project, so no repository can switch it on. A line of it names a project's top and its home, spelled as the disk spells them; switching on writes it, and nothing else does.
+Crossings keeps nothing for a project until the person switches it on there. The switch lives in the person's own record, `~/.claude/crossing/switched` (or the file `CROSSING_SWITCHED` names), outside every project, so no repository can switch it on. A line of it names a project's top and its home, spelled as the disk spells them; switching on writes it, and nothing else does. A folder below another home's folder that the person shared it from (`/crossings join`) has a line beside them that names the folder and the home, and no project: it switches nothing on ([The store](store.md)).
 
 Beside the record, under its one lock, lie the mark of each home's index (`switched.indexes`) and the receipts of what the door wrote into each home (`switched.receipts`). The record also keeps, for a home switched off before, what its record of when it was off held (see below).
 
@@ -38,6 +38,7 @@ Beside the record, under its one lock, lie the mark of each home's index (`switc
 | a project with no line in the record | was never switched on: nothing is kept, though a `crossings/` folder or an old home is there |
 | `/crossings on`, where the home already holds files this computer has no record of | names what it holds and where, and switches nothing on |
 | `/crossings adopt` | takes that home as the person's own, and switches it on |
+| a session or the door in a folder below another home's folder | keeps and reads nothing of that home until the person answers for that folder: `join` shares it, `here` gives the folder its own |
 | switching on or adopting a home that holds an index | makes the index anew: no database that came with the folder is read |
 | a project's own `crossings` that is a link | is no home: refused in one sentence that names where it leads, and nothing is made in its place |
 | a home named outright (`CROSSING_HOME`) that is a link | is believed only where the record names where it leads |

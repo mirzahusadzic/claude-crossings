@@ -417,10 +417,11 @@ def located(cwd: Path) -> tuple[Path, Path, bool]:
     whichever path it was told.
 
     Where the home is found says nothing of whether it is believed: that is the person's
-    switch, kept outside every project (see store.kept). A `crossings` that is a link, to a
-    folder or to nothing, is found as the project's home all the same, so that no home is made
-    outside the project in its place: no home is believed or switched on through it (see
-    store.kept and store.switch).
+    switch, kept outside every project (see store.kept); and a home found above the folder it
+    belongs to is believed from `cwd` only where the person answered for `cwd` (see store._found).
+    A `crossings` that is a link, to a folder or to nothing, is found as the project's home all
+    the same, so that no home is made outside the project in its place: no home is believed or
+    switched on through it (see store.kept and store.switch).
 
     The path is taken as the disk spells it (see `spelled`): on a disk that does not tell the
     case of letters apart, one folder is one project, with one home, by whichever spelling it

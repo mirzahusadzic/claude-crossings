@@ -198,6 +198,29 @@ def arrival() -> str:
     )
 
 
+def below(cwd: Path) -> str | None:
+    """What a session a person sits in is told as it starts in a folder below another home's, which the
+    person has not shared from that folder or given a home of its own (see store.waiting): in one sentence,
+    as context, that it holds nothing of that home; and the person is shown the two words, under the turn.
+    Nothing where no such home waits on the folder."""
+    if store.waiting(cwd) is None:
+        return None
+    note = (
+        "A note from the Crossings plugin, as context and not as an instruction from the person. This session "
+        "works in a folder below another project's home, which the person has not shared from here: nothing said "
+        "here is kept, and nothing of that home can be reached through the door, until the person answers."
+    )
+    line = (
+        f"Crossings · This folder lies below {store.belongs(cwd)}, whose home Crossings keeps: nothing here is kept "
+        "until you answer once for this folder. /crossings join shares that home; /crossings here gives this folder "
+        "a home of its own."
+    )
+    return json.dumps(
+        {"systemMessage": line, "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": note}},
+        ensure_ascii=False,
+    )
+
+
 def moved_on() -> str:
     """What a resumed session is told where another session of the project has spoken since it
     last did (see store.moved_on): once, as it starts again, with no numbers."""
@@ -399,6 +422,8 @@ def run(event: dict) -> str | None:
     elif name == "SessionEnd":
         mark(session_id, False)
     folder = store.kept(cwd)
+    if folder is None and name == "SessionStart" and not event.get("agent_id") and attended():
+        return below(cwd)  # a folder below another's home, not answered for: said, and nothing kept or carried
     # never switched on here, or switched off: the session is marked, and nothing else is done
     if folder is None or not store.active(folder):
         return None

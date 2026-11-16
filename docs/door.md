@@ -64,6 +64,8 @@ Wherever the door shows a label, a model or a message's words, one function, `cl
 | `/crossings on` | switches the project on; the running session is told, as context, what is due (below). Where the project's own `crossings` is a link, it says where it leads and switches nothing on |
 | `/crossings off` | switches it off, and tells the running session that nothing said from now on is kept |
 | `/crossings adopt` | switches on a home that holds what this computer has no record of switching on |
+| `/crossings join` | in a folder below another home's folder, shares that home from this folder ([The store](store.md)) |
+| `/crossings here` | in a folder below another home's folder, gives this folder a home of its own; elsewhere, as `on` |
 | `/crossings` | turns the switch over |
 | `/crossings status` | whether Crossings is on, and what the store holds |
 | `/crossings look`, `frame` | the room, and the frame as it would be made now |
@@ -86,7 +88,7 @@ A word the command does not know changes nothing and says what it takes. The wor
 | `status` | what the store holds, or that it holds nothing yet. From the person's own terminal or command it says more than the server: once each, the labels that came by no mark through the door, an id two messages share and a file with a line that is no text; and, until it is struck, a message that looks like it holds a key ([Privacy](privacy.md)). A session's shell is answered as the server is |
 | `build` | makes the index whole from the plain files |
 | `home` | prints the folder of the project's home, or nothing; the hooks module asks it as a session starts, after `/crossings` turns the switch, and at a cut |
-| `switch on\|off\|toggle\|adopt` | the switch, as `/crossings` turns it |
+| `switch on\|off\|toggle\|adopt\|join\|here` | the switch, as `/crossings` turns it |
 | `strike <id \| key \| session:id> [--why text]` | removes a message, a label or a whole session ([Privacy](privacy.md)) |
 | `layer <model-key>` | signs every label and message of the session's that has no model ([Layers](layers.md)) |
 | `copy` | makes the second copy now ([Privacy](privacy.md)) |
