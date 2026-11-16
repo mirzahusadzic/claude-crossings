@@ -227,26 +227,30 @@ def person(row: dict, whole: bool = False) -> list[str]:
         held = row.get("attachment") if isinstance(row.get("attachment"), dict) else {}
         origin = held.get("origin") if isinstance(held.get("origin"), dict) else {}
         human = origin.get("kind") == "human" or held.get("humanTurn") is True
-        prompt = told(held.get("prompt")) if isinstance(held.get("prompt"), str) else ""
-        if held.get("type") == "queued_command" and human and norm(prompt) and not submitted(prompt):
-            return [prompt.strip() if whole else norm(prompt)]
-        return []
+        prompt = held.get("prompt") if isinstance(held.get("prompt"), str) else ""
+        kept = _typed(prompt, whole) if held.get("type") == "queued_command" and human else ""
+        return [kept] if kept else []
     # A tool's result, of whatever shape the harness gives it, is no one's words.
     if row.get("type") != "user" or row.get("toolUseResult") is not None or row.get("isMeta") or is_summary(row):
         return []
     said = []
     for block in _blocks(row):
-        if block.get("type") != "text":
-            continue
-        sent = told(block.get("text", ""))
-        typed = norm(PASTE.sub(" ", sent))
-        if typed.startswith(HARNESS_OPENINGS) or harness(PASTE.sub(" ", sent)) or submitted(sent):
-            continue
-        if whole and (typed or PASTE.search(sent)):
-            said.append(sent.strip())  # a message that is only a paste is still kept
-        elif typed and not whole:
-            said.append(typed)
+        kept = _typed(block.get("text", ""), whole) if block.get("type") == "text" else ""
+        said += [kept] if kept else []
     return said
+
+
+def _typed(sent: str, whole: bool) -> str:
+    """One text of the person's turn, typed at the prompt or sent while a turn ran, as `person` gives it; or
+    nothing where it is the harness's, or another plugin's. With `whole`, as it was sent, pastes included, and a
+    text that is only a paste is still kept; otherwise folded, and what was pasted left out."""
+    sent = told(sent)
+    typed = norm(PASTE.sub(" ", sent))
+    if typed.startswith(HARNESS_OPENINGS) or harness(PASTE.sub(" ", sent)) or submitted(sent):
+        return ""
+    if whole:
+        return sent.strip() if typed or PASTE.search(sent) else ""
+    return typed
 
 
 SYNTHETIC = "<synthetic>"  # the model a row names where the harness wrote it in the session's place
