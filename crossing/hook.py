@@ -487,7 +487,8 @@ def run(event: dict) -> str | None:
             # The harness asks for this note before it hands over the summary (PostCompact), so
             # the note is about this cut by its ordinal and never about an earlier record.
             ordinal, _, _ = transcript.locate(path)
-            notes.append(waking(record.read(folder, session_id, ordinal) or count.count(path, pending=True)))
+            # a sidecar that cannot be read (cut short by a write, or no record) is passed over for the count
+            notes.append(waking(_sidecar(folder, session_id, ordinal) or count.count(path, pending=True)))
         told = welcomed(folder, str(event.get("session_id") or ""), event.get("agent_id"))
         notes += [told] if told else []
         # Which model the session starts with; a resume on another model than the one that spoke last is told so.

@@ -209,6 +209,24 @@ def test_a_log_of_calls_that_cannot_be_written_stops_no_hook(tmp_path):
     assert not (data / "errors.log").exists() or "calls.log" not in (data / "errors.log").read_text(encoding="utf-8")
 
 
+def test_a_sidecar_cut_short_silences_no_note_at_a_sessions_start(tmp_path):
+    """A cut's sidecar that a write left cut short is passed over where the waking note looks for it: the note is
+    made from the count of the transcript, and the session is told what it is told at any start."""
+    crossings, path = home(tmp_path)
+    (crossings / "session--cut-1.json").write_text('{"cut": 1, "person": {"mess', encoding="utf-8")
+    started = {
+        "hook_event_name": "SessionStart",
+        "source": "compact",
+        "transcript_path": str(path),
+        "session_id": "session-0001",
+        "cwd": str(crossings.parent),
+    }
+    hooked = ran("hook.py", stdin=json.dumps(started), CLAUDE_CODE_ENTRYPOINT="cli")
+    assert hooked.returncode == 0 and hooked.stdout.strip(), hooked.stderr
+    told = json.loads(hooked.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert told.startswith(transcript.CARRIED)
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
