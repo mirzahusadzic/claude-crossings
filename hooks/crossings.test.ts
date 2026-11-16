@@ -544,7 +544,10 @@ test("a shell command that runs the door with what is the person's alone is refu
     'cd /x && python3 /plugins/crossing/crossing/door.py layer some-model', 'python3 door.py copy',
     'python3 door.py SWITCH on', 'python3 door.py look --transcript /tmp/x.jsonl', 'python3 door.py status --session "*"',
     'python3 door.py find hull --by-hook', 'CLAUDE_PLUGIN_ROOT=/p python3 /p/crossing/door.py switch on --by-module',
-    "echo hi; python3 door.py 'switch' adopt"]) {
+    "echo hi; python3 door.py 'switch' adopt",
+    // as the shell reads them, with their quotes and backslashes taken out
+    "python3 crossing/door.py sw''itch off", 'python3 crossing/door.py st\\rike aaaaaaaa',
+    'python3 door.py look --se""ssion abcdef01', 'python3 do"or".py layer some-model']) {
     expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(PERSONS)
   }
   expect(reached).toEqual([])

@@ -426,13 +426,14 @@ const places = (at: Where, files: string, byName: string): RegExp[] => {
 
 // A shell command that runs the door with what is the person's alone: in any one of its commands
 // (split at ; & | and line breaks), door.py, or the module crossing.door, and, after it, a verb or
-// an option of theirs.
+// an option of theirs. Its quotes and backslashes are taken out first, as the shell takes them out:
+// `sw''itch` and `st\rike` are the verbs they spell.
 const DOOR = /door\.py\b|\bcrossing\.door\b/i
 const THEIRS =
   /(?:^|[\s'"=])(?:switch|strike|layer|copy|trace|welcome|--transcript|--session|--model|--by-hook|--by-module)(?=$|[\s'"=])/i
 const PARTS = /[;&|\n]/ // where one command of a shell's line ends and the next begins
 const runsTheirs = (command: string): boolean =>
-  command.split(PARTS).some(part => DOOR.test(part) && THEIRS.test(part.slice(part.search(DOOR))))
+  command.replace(/['"\\]/g, '').split(PARTS).some(part => DOOR.test(part) && THEIRS.test(part.slice(part.search(DOOR))))
 
 // The commands that only read the files they name.
 const READS = new Set(['cat', 'head', 'tail', 'less', 'more', 'grep', 'egrep', 'fgrep', 'rg', 'wc', 'ls', 'stat', 'file',
