@@ -1056,8 +1056,9 @@ STALE = 120.0
 
 def _locked(folder: Path):
     """The home's lock, held; or nothing, where another process held it for WAIT seconds. Held by
-    an archive, a mark, a strike, `layered`, the switch and a build of the index (see `_built`),
-    each from what it reads to the last file it writes. It is taken before the person's record's
+    an archive, a reading for a session no person sits in (`unattended`), a mark, a signing, a
+    strike, `layered`, the switch and a build of the index (see `_built`), each from what it reads
+    to the last file it writes. It is taken before the person's record's
     lock (`_recording`), never after it."""
     held = _held_at(within(folder, LOCK))
     if held is not None:
@@ -1174,7 +1175,23 @@ def unattended(path: Path, folder: Path) -> int:
     person sits in (see record.attended): what its prompts said is not the person's, and no
     archive takes it, from this transcript or from a fork or a resume that repeats it under the
     same ids. Nothing of what was said is written. The transcript is read from where the last
-    such reading stopped, by a marker of its own. Gives how many ids were added."""
+    such reading stopped, by a marker of its own. Gives how many ids were added.
+
+    It holds the home's lock, as an archive does, from its read of the markers to its move of its
+    own: a marker file written whole by it and by an archive at once would keep only one of the two
+    moves, and a transcript whose marker was lost so names no place as the switch turns it off. One
+    not had within WAIT seconds reads nothing this time, and the next reads on from its marker."""
+    held = _locked(folder)
+    if held is None:
+        return 0
+    try:
+        return _unattended(path, folder)
+    finally:
+        _unlocked(folder, held)
+
+
+def _unattended(path: Path, folder: Path) -> int:
+    """`unattended`, with the home's lock held."""
     key = str(path.resolve()) + "#unattended"
     stored = markers(folder).get(key)
     start = _resume(path, stored)
@@ -1528,7 +1545,21 @@ def _layered(folder: Path, model: str) -> tuple[int, int]:
 def sign(folder: Path, key: str, sentence: str, model: str) -> bool:
     """Keep beside a label which model wrote it, where that was not kept when it was marked: the
     door's server is not told which session calls it, and a hook that is told signs the label
-    after it. Only the label of that key and that sentence is signed, and only once."""
+    after it. Only the label of that key and that sentence is signed, and only once.
+
+    It holds the home's lock, as a mark does: a strike writes `models.txt` again whole, and a line
+    signed while it did so would be written over. One not had within WAIT seconds signs nothing."""
+    held = _locked(folder)
+    if held is None:
+        return False
+    try:
+        return _sign(folder, key, sentence, model)
+    finally:
+        _unlocked(folder, held)
+
+
+def _sign(folder: Path, key: str, sentence: str, model: str) -> bool:
+    """`sign`, with the home's lock held."""
     label = next((each for each in labels(folder) if each["id"] == key), None)
     if not model or label is None or label["text"] != plain(sentence) or (key, digest(label["text"])) in models(folder):
         return False
