@@ -228,6 +228,20 @@ def test_the_plugin_is_named_crossings_and_its_door_tools_by_that_name_everywher
     assert shown and all(line.startswith("Crossings · ") for line in shown), shown
 
 
+def test_a_release_is_named_by_one_version_wherever_it_is_named():
+    """The version stands in the plugin's manifest, in the citation file and on the README's status badge,
+    and the commit `version: X.Y.Z` changes all three: whichever of them a reader meets says the same."""
+    version = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]
+    assert re.fullmatch(r"\d+\.\d+\.\d+", version), version
+    cited = re.findall(r"^version: (\S+)$", (ROOT / "CITATION.cff").read_text(encoding="utf-8"), re.M)
+    assert cited == [version], (cited, version)
+    badges = re.findall(
+        r"!\[([^\]]*)\]\(https://img\.shields\.io/badge/status-([^)]*)\)",
+        (ROOT / "README.md").read_text(encoding="utf-8"),
+    )
+    assert badges == [(f"early alpha {version}", f"early%20alpha%20{version}-e5a50a")], (badges, version)
+
+
 def test_each_handle_answers_as_the_door_does(tmp_path):
     rows = ROWS + [row("user", "77777777", 20, "-x marks nothing; a dash begins this message.")]
     crossings, _ = home(tmp_path, rows)
