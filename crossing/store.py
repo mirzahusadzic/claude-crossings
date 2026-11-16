@@ -804,19 +804,34 @@ def ignored(folder: Path) -> bool:
 
 def leaves_said(folder: Path) -> bool:
     """Whether the home lies inside a repository and its ignore file, there already, does not
-    cover `said/` by any plain line of its own (`*`, `said`, `said/`, `/said`, `/said/`, `said/*`
-    or `/said/*`) with no later line that takes it back (`!said` and the like). A rule made of
-    other patterns is not read, and is taken as not covering it."""
+    cover `said/` by any plain line of its own with no later line that takes it back.
+
+    A line covers the folder itself (`*`, `**`, `said`, `said/`, `/said`, `/said/`), and then only a
+    later line that takes that folder back (`!said/` and the like) uncovers it, since git looks into
+    no folder it leaves out; or a line covers what the folder holds (`said/*`, `said/**`, and `*` and
+    `**` too), and then any later line that could take back a page of it uncovers it: one that begins
+    with `said/`, or one with no `/` but at its end that holds a wildcard, ends in `.jsonl` or names
+    `runs.key`, as git reads such a line in every folder. A rule made of other patterns is not read,
+    and is taken as not covering it."""
     path = within(folder, ".gitignore")
     if repository(folder) is None or not path.is_file():
         return False
-    covered = False
+    folder_out = pages_out = False
     for line in lines_of(path.read_text(encoding="utf-8", errors="replace")):
         line = line.strip()
-        bare = line.lstrip("!").rstrip("/").lstrip("/")
-        if bare in ("*", "said", "said/*", "said/**", "**"):
-            covered = not line.startswith("!")
-    return not covered
+        back = line.startswith("!")
+        bare = line.lstrip("!").lstrip("/")
+        name = bare.rstrip("/")
+        if name in ("*", "**", "said"):
+            folder_out = not back
+        if name in ("*", "**", "said/*", "said/**"):
+            pages_out = not back
+        elif back and (
+            bare.startswith("said/")
+            or ("/" not in name and (any(ch in name for ch in "*?[") or name.endswith(".jsonl") or name == "runs.key"))
+        ):
+            pages_out = False
+    return not (folder_out or pages_out)
 
 
 # --- what was struck -------------------------------------------------------------------------

@@ -99,7 +99,7 @@ Every folder the plugin makes is its owner's alone (0700), and every file it wri
 
 No file of a home is read or written through a link: one check, `within` in `crossing/record.py`, is used by every piece, and a home with a link anywhere below it is refused whole.
 
-Where a home lies inside a repository and has no `.gitignore`, switching on writes one that keeps out everything but the label pages, `hand-over.md` and the pages of the cuts. An ignore file that is there is left as it is, and `status` says once where it lets in `said/`, where the words are kept.
+Where a home lies inside a repository and has no `.gitignore`, switching on writes one that keeps out everything but the label pages, `hand-over.md` and the pages of the cuts. An ignore file that is there is left as it is, and `status` says once where it lets in `said/`, where the words are kept: where no line of it leaves out the folder or what it holds, or a later line takes the pages back (`!said/*.jsonl`, or a line such as `!*.jsonl` that git reads in every folder). It is read by those lines alone, and one it cannot read is taken as letting `said/` in.
 
 ---
 

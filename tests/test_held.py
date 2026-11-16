@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import contextlib
 import json
+import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -83,6 +85,40 @@ def test_a_mark_whose_sentence_holds_no_text_writes_nothing(tmp_path):
     assert sorted((crossings / "labels").glob("*.md")) == pages  # no page left holding its heading alone
     out = store.mark(crossings, "work", "session", "The hull is grey.", [D], model="made-\udcffmodel")
     assert out["written"] and store.listed(crossings, ids=(out["id"],))["labels"][0]["model"] == ""
+
+
+def test_an_ignore_file_that_takes_the_pages_back_leaves_said_in(tmp_path):
+    folder = tmp_path / "repository" / "crossings"
+    (folder / "said").mkdir(parents=True)
+    (tmp_path / "repository" / ".git").mkdir()
+    page = "said/abcdef01.jsonl"
+    (folder / page).write_text("{}\n", encoding="utf-8")
+    real = (
+        shutil.which("git")
+        and subprocess.run(["git", "init", "-q", str(tmp_path / "real")], timeout=30).returncode == 0
+    )
+    for rules, left in (
+        (store.IGNORE, False),  # the plugin's own: the folder is left out whole
+        ("said/\n", False),
+        ("said/*\n", False),
+        ("said/\n!said/*.jsonl\n", False),  # git looks into no folder it leaves out
+        ("said/*\n!said/*.jsonl\n", True),  # the pages taken back
+        ("said/*\n!*.jsonl\n", True),  # by a line read in every folder
+        ("said/*\n!abcdef01.jsonl\n", True),
+        ("said/*\n!.gitignore\n", False),  # a name no page of said/ bears
+        ("*\n!said/\n!said/*\n", True),
+        ("said\n!said\n", True),
+    ):
+        (folder / ".gitignore").write_text(rules, encoding="utf-8")
+        assert store.leaves_said(folder) is left, rules
+        if real:  # and never quiet where git would keep a page of said/
+            (tmp_path / "real" / "crossings").mkdir(exist_ok=True)
+            shutil.copyfile(folder / ".gitignore", tmp_path / "real" / "crossings" / ".gitignore")
+            kept = subprocess.run(
+                ["git", "-C", str(tmp_path / "real"), "check-ignore", "-q", "--no-index", f"crossings/{page}"],
+                timeout=30,
+            ).returncode
+            assert not (kept == 1 and not left), rules
 
 
 if __name__ == "__main__":
