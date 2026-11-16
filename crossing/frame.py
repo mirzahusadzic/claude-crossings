@@ -116,7 +116,20 @@ def compose(folder: Path, size: int | None = None, new: bool = False, model: str
     writer is not known; not, as standing, a line of another model's layer (see store.foreign),
     and it says in one sentence that such lines are here. A stack written by another model is
     not carried, and the lines beneath it then cross as themselves. Where `model` is not known,
-    the frame is as it was before layers."""
+    the frame is as it was before layers.
+
+    A label's key is short wherever a mark gave it, but a page written by hand or brought by a pull
+    can hold one of any length; and the sentences that name labels outside their own lines (marked
+    after the line at the door, not fitted, resting on nothing held) are not fitted to the room as
+    lines are. Where such keys would take the frame past what a hook may carry (MOST), it is made
+    again with those sentences saying how many labels they are about, and `labels` naming them."""
+    made = _composed(folder, size, new, model)
+    return made if len(made) <= MOST else _composed(folder, size, new, model, by_count=True)
+
+
+def _composed(folder: Path, size: int | None, new: bool, model: str, by_count: bool = False) -> str:
+    """`compose`, with the sentences that name labels outside their own lines naming them by key, or, with
+    `by_count`, saying how many they are."""
     arrival = ARRIVALS["new" if new else "cut"]
     # room for the headings and the closing lines, so the whole stays within the size
     size = bounded(size or size_of(folder)) - 420 - (LONGER if new else 0)
@@ -176,9 +189,8 @@ def compose(folder: Path, size: int | None = None, new: bool = False, model: str
     unheld = ""
     if lost:
         some = len(lost) != 1
-        unheld = (
-            f"{len(lost)} label{'s' if some else ''} rest{'' if some else 's'} on what the archive no longer "
-            f"holds: {store.some(lost)}; `labels` gives them."
+        unheld = f"{len(lost)} label{'s' if some else ''} rest{'' if some else 's'} on what the archive no longer " + (
+            "holds; `labels` gives them." if by_count else f"holds: {store.some(lost)}; `labels` gives them."
         )
         used += len(unheld) + 2
     tops = [row for row in among if row["state"] in ("carried", "misaligned")]
@@ -191,10 +203,10 @@ def compose(folder: Path, size: int | None = None, new: bool = False, model: str
     if left:
         whole = line(left[0])
         room = max(DOOR, size - used - 60)
-        more = f" […] `labels {left[0]['id']}` gives it whole."
+        more = " […] `labels` gives it whole." if by_count else f" […] `labels {left[0]['id']}` gives it whole."
 
         def cut(text: str, to: int) -> str:
-            return text if len(text) <= to else text[: to - len(more)].rstrip() + more
+            return text if len(text) <= to else text[: max(0, to - len(more))].rstrip() + more
 
         # the work labels marked after it, in the order of writing: a line older than the work it speaks of is
         # seen as one. A line that crosses whole is never cut for the note, which then takes only the room
@@ -202,6 +214,9 @@ def compose(folder: Path, size: int | None = None, new: bool = False, model: str
         # anyway gives the note's shortest form a little more of its tail, since `labels` gives it whole.
         since = [row["id"] for row in rows if row["kind"] == "work" and row["n"] > left[0]["n"]]
         notes = [f"\n\nMarked after this line: {store.some(since, most)}." for most in (12, 6, 3, 1)] if since else []
+        notes = (
+            [f"\n\nMarked after this line: {record.many(len(since), 'work label')}."] if since and by_count else notes
+        )
         if len(whole) <= room:
             door_line = whole + next((x for x in notes if len(whole) + len(x) <= room), notes[-1] if notes else "")
         else:
@@ -262,9 +277,10 @@ def compose(folder: Path, size: int | None = None, new: bool = False, model: str
     missing = standing[len(kept_standing) :]
     if missing:  # said by name: these are the lines a session must not go without knowing it lacks
         some = len(missing) != 1
+        named = f": {missing[0]['id']}{' to ' + missing[-1]['id'] if some else ''}" if not by_count else ""
         parts.append(
             f"{len(missing)} standing line{'s' if some else ''} did not fit and {'are' if some else 'is'} not "
-            f"carried: {missing[0]['id']}{' to ' + missing[-1]['id'] if some else ''}; `labels` gives them."
+            f"carried{named}; `labels` gives them."
         )
     more = len(work) - len(kept_work)
     if more:

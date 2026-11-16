@@ -144,7 +144,7 @@ Nothing is blocked by any of these. A label for the person or a standing line ma
 
 ### The frame
 
-The frame is what crosses a cut with the session, made from the store by `compose` in `crossing/frame.py`. It is about 9,000 characters. A home's `frame-size`, and `frame --size`, are held between 2,000 and 9,500 (`LEAST` and `MOST`), 9,500 being the most a hook may carry as context; the frame never exceeds it, whatever its lines hold.
+The frame is what crosses a cut with the session, made from the store by `compose` in `crossing/frame.py`. It is about 9,000 characters. A home's `frame-size`, and `frame --size`, are held between 2,000 and 9,500 (`LEAST` and `MOST`), 9,500 being the most a hook may carry as context; the frame never exceeds it, whatever its lines hold. A key is short wherever a mark gave it; where keys of a page written by hand or pulled would take the frame past 9,500, it is made again with the sentences that name labels outside their own lines (marked after the line, not fitted, resting on nothing held) saying how many they are, and `labels` naming them.
 
 It holds, in this order:
 

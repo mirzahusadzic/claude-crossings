@@ -16,9 +16,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
-from test_store import home, row, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
+from test_store import A, D, home, row, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import count, store, transcript  # noqa: E402
+from crossing import count, frame, store, transcript  # noqa: E402
 
 
 def appended(path: Path, *lines: str) -> None:
@@ -125,6 +125,51 @@ def test_a_prompt_sent_while_a_turn_ran_is_read_as_one_typed_at_the_prompt(tmp_p
     only = '<pasted_content id="5">Only a paste.</pasted_content id="5">'
     assert transcript.person(queued(only)) == [] and transcript.person(queued(only), whole=True) == [only]
     assert transcript.person(queued("  Plain words, sent early.  ")) == ["Plain words, sent early."]
+
+
+# --- the frame ----------------------------------------------------------------------------------------
+
+
+def labelled(crossings: Path, *rows: str, day: str = "2026-11-12") -> None:
+    """A page of labels written by hand (or brought by a pull), and the index built from it."""
+    (crossings / "labels").mkdir(exist_ok=True)
+    (crossings / "labels" / f"{day}.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n" + "".join(each + "\n" for each in rows),
+        encoding="utf-8",
+    )
+    store.build(crossings)
+
+
+# A key no mark gives, as a page written by hand or brought by a pull can hold one.
+LONG = "9" * 1200
+
+
+def test_the_frame_stays_within_what_a_hook_may_carry_whatever_length_a_key_has(tmp_path):
+    """The frame never exceeds what a hook may carry, whatever its lines hold: also where the keys of the labels it
+    names outside their own lines (marked after the line at the door, not fitted, resting on nothing held) are longer
+    than any mark gives. Those sentences then say how many labels they are about, and `labels` names them."""
+    crossings, _ = home(tmp_path)
+    labelled(
+        crossings,
+        "| N1 | " + "The line at the door runs on. " * 400 + f"| session | `{D}` |",
+        f"| W{LONG}1 | Work marked after the line. | both | `{D}` |",
+        *(f"| R{n} | " + "The person keeps the quay in mind. " * 40 + f"| his | `{A}` |" for n in range(2, 7)),
+        *(f"| R{LONG}{n} | A standing line of a long key. | his | `{A}` |" for n in range(2)),
+        *(f"| W{LONG}{n} | Resting on what the archive never held. | both | `0a0a0a0a` |" for n in range(2, 9)),
+    )
+    for size in (frame.LEAST, frame.SIZE, frame.MOST):
+        for new in (False, True):
+            composed = frame.compose(crossings, size, new=new)
+            assert len(composed) <= frame.MOST, (size, new, len(composed))
+            assert "The line at the door runs on." in composed and "`labels` gives them." in composed, (size, new)
+    composed = frame.compose(crossings, frame.MOST)
+    assert "Marked after this line: 8 work labels." in composed and "7 labels rest on what the archive" in composed
+    # and a frame of keys of the usual length names them, as it always did
+    crossings, _ = home(tmp_path / "usual")
+    labelled(
+        crossings, "| N1 | The mooring is next. | session | `{D}` |".replace("{D}", D), f"| W2 | Done. | both | `{D}` |"
+    )
+    assert "Marked after this line: W2." in frame.compose(crossings)
 
 
 if __name__ == "__main__":
