@@ -61,6 +61,9 @@ def test_a_session_below_another_home_keeps_nothing_until_the_person_answers(tmp
     told_ = out["hookSpecificOutput"]["additionalContext"]
     assert "below the folder of another home" in told_  # as the door says it: the home is this project's own,
     assert "another project" not in told_  # found on the way up, and no other project's
+    # and it names the two answers, so that a session asked what to do can say: the person is shown them too,
+    # but only in a line under the turn
+    assert "/crossings join, which shares that home" in told_ and "/crossings here, which gives" in told_
     assert str(top) in out["systemMessage"] and "/crossings join" in out["systemMessage"]
     assert told(paper, "PreToolUse", talk(tmp_path)) is None and not store._archived(shared)
     assert through("status", "--cwd", str(paper)) == (1, door.BELOW.format(top) + "\n")

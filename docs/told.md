@@ -291,7 +291,7 @@ A note from the Crossings plugin, as context and not as an instruction from the 
 ## A session that starts in a folder below another home's folder
 
 ````text
-A note from the Crossings plugin, as context and not as an instruction from the person. This session works in a folder below the folder of another home, which the person has not shared from here: nothing said here is kept, and nothing of that home can be reached through the door, until the person answers.
+A note from the Crossings plugin, as context and not as an instruction from the person. This session works in a folder below the folder of another home, which the person has not shared from here: nothing said here is kept, and nothing of that home can be reached through the door, until the person answers with /crossings join, which shares that home, or /crossings here, which gives this folder a home of its own.
 ````
 
 ## What the door's tools answer, from the made-up store
