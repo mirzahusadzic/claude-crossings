@@ -57,6 +57,7 @@ import threading
 import time
 import unicodedata
 from pathlib import Path
+from typing import Callable
 
 try:
     import fcntl
@@ -2456,12 +2457,19 @@ SHELLED = "shelled.txt"
 
 
 def shell_marked(folder: Path, key: str) -> None:
-    """Keep that the label of this key was marked from a shell."""
-    record.add(
-        within(folder, SHELLED),
-        key + "\n",
-        head="# Labels marked from a shell as the person's or about the two of them, by key: status says them.\n",
-    )
+    """Keep that the label of this key was marked from a shell: under the home's lock, so that the
+    person's `status` letting go of what it said (see `_told`) does not write over it; where the lock
+    is not had within WAIT seconds, kept all the same, since a label never said is worse."""
+    held = _locked(folder)
+    try:
+        record.add(
+            within(folder, SHELLED),
+            key + "\n",
+            head="# Labels marked from a shell as the person's or about the two of them, by key: status says them.\n",
+        )
+    finally:
+        if held is not None:
+            _unlocked(folder, held)
 
 
 def shelled(folder: Path) -> list[str]:
@@ -2625,9 +2633,9 @@ def signs_arrived(folder: Path) -> list[str]:
     return list(dict.fromkeys(line.strip() for line in lines if line.strip() in there))
 
 
-def signs_arrived_told(folder: Path) -> None:
-    """The person was told the lines of `models.txt` that arrived: the file goes."""
-    within(folder, SIGNS_ARRIVED).unlink(missing_ok=True)
+def signs_arrived_told(folder: Path, told: list[str]) -> None:
+    """The person was told these lines of `models.txt` that arrived: see `_told`."""
+    _told(folder, SIGNS_ARRIVED, told, signs_arrived)
 
 
 def _noticed(folder: Path) -> None:
@@ -2807,19 +2815,47 @@ def arrived(folder: Path) -> list[str]:
     return list(dict.fromkeys(line.strip().split("@")[0] for line in lines if line.strip() in there))
 
 
-def arrived_told(folder: Path) -> None:
-    """The person was told the labels that arrived: the file goes, file by file."""
-    within(folder, ARRIVED).unlink(missing_ok=True)
+def _told(folder: Path, name: str, told: list[str], still: Callable[[Path], list[str]], key=lambda line: line) -> None:
+    """The person's `status` said `told`, read from the small file `name`: what was said goes from
+    it, and so does a line no reading would say again (`still`, the file's own reader, read anew);
+    a line noted since that `status` read the file stays, for the next. Its writers hold the home's
+    lock as they note a line (an archive, a build, a mark), and so does this, from its read of the
+    file to its place: the file is written whole beside itself and put there, or goes where nothing
+    is left but its heading. Where the lock is not had within WAIT seconds, nothing goes, and the
+    next `status` says it again."""
+    held = _locked(folder)
+    if held is None:
+        return
+    try:
+        path = within(folder, name)
+        try:
+            text = _text(path)
+        except FileNotFoundError:
+            return
+        left = set(still(folder)) - set(told)
+        kept = [line for line in lines_of(text) if key(line.strip()) in left]
+        if kept:
+            heading = [line for line in lines_of(text)[:1] if line.startswith("#")]
+            _replaced(folder, path, "".join(line + "\n" for line in heading + kept))
+        else:
+            path.unlink(missing_ok=True)
+    finally:
+        _unlocked(folder, held)
 
 
-def collided_told(folder: Path) -> None:
-    """The person was told the ids two messages share: the file goes, file by file."""
-    within(folder, COLLIDED).unlink(missing_ok=True)
+def arrived_told(folder: Path, told: list[str]) -> None:
+    """The person was told these labels that arrived, by key: see `_told`."""
+    _told(folder, ARRIVED, told, arrived, key=lambda line: line.split("@")[0])
 
 
-def shelled_told(folder: Path) -> None:
-    """The person was told the labels marked from a shell: the file goes, file by file."""
-    within(folder, SHELLED).unlink(missing_ok=True)
+def collided_told(folder: Path, told: list[str]) -> None:
+    """The person was told these ids two messages share: see `_told`."""
+    _told(folder, COLLIDED, told, collided)
+
+
+def shelled_told(folder: Path, told: list[str]) -> None:
+    """The person was told these labels marked from a shell, by key: see `_told`."""
+    _told(folder, SHELLED, told, shelled)
 
 
 def _flagged(folder: Path, db: sqlite3.Connection) -> list[str]:

@@ -7,6 +7,7 @@ Run with pytest, or without it:  python3 tests/test_held.py
 from __future__ import annotations
 
 import contextlib
+import io
 import json
 import shutil
 import subprocess
@@ -18,9 +19,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
-from test_store import D, E, home, row, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
+from test_store import D, E, at_terminal, home, row, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import store  # noqa: E402
+from crossing import door, store  # noqa: E402
 
 
 @contextlib.contextmanager
@@ -119,6 +120,62 @@ def test_an_ignore_file_that_takes_the_pages_back_leaves_said_in(tmp_path):
                 timeout=30,
             ).returncode
             assert not (kept == 1 and not left), rules
+
+
+HAND = "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n"
+
+
+def status(crossings: Path) -> str:
+    out = io.StringIO()
+    with at_terminal(), contextlib.redirect_stdout(out):  # the person's own shell
+        assert door.main(["status", "--cwd", str(crossings.parent)]) == 0
+    return out.getvalue()
+
+
+def test_what_status_said_goes_and_what_arrived_since_stays(tmp_path):
+    crossings, _ = home(tmp_path)
+    status(crossings)  # what the home came with is said, and let go
+    page = crossings / "labels" / "2026-11-12.md"
+    page.parent.mkdir(exist_ok=True)
+    page.write_text(HAND + f"| R7 | A line written by hand. | his | `{D}` |\n", encoding="utf-8")
+    store.build(crossings)
+    assert store.arrived(crossings) == ["R7"]
+    read, came = store.arrived, []
+
+    def read_then_another_arrives(folder: Path) -> list[str]:
+        found = read(folder)
+        if not came:  # as status reads it, a pull brings another label, and a build notes it
+            came.append(True)
+            with open(page, "a", encoding="utf-8") as handle:
+                handle.write(f"| R8 | Another written by hand. | his | `{E}` |\n")
+            store.build(folder)
+        return found
+
+    store.arrived = read_then_another_arrives
+    try:
+        assert "R7" in status(crossings)
+    finally:
+        store.arrived = read
+    assert store.arrived(crossings) == ["R8"]  # the next status says it
+    assert "R8" in status(crossings) and store.arrived(crossings) == []
+    assert not (crossings / store.ARRIVED).exists()  # nothing left but its heading: the file goes
+
+
+def test_what_status_lets_go_of_waits_for_the_homes_lock(tmp_path):
+    crossings, _ = home(tmp_path)
+    store.shell_marked(crossings, "R1")  # a label of the person's marked from a shell
+    with held_elsewhere(crossings):
+        store.shelled_told(crossings, ["R1"])  # nothing goes meanwhile: the next status says it again
+        store.shell_marked(crossings, "W1")  # and one marked meanwhile is kept all the same
+    assert store.shelled(crossings) == ["R1", "W1"]
+    with open(crossings / store.SHELLED, "a", encoding="utf-8") as handle:
+        handle.write("R99\n")  # one whose label is no longer there
+    store.shelled_told(crossings, ["R1"])
+    heading, *left = (crossings / store.SHELLED).read_text(encoding="utf-8").splitlines()
+    assert heading.startswith("# ") and left == ["W1"]  # R99 is never said again, so it goes too
+    (crossings / store.SHELLED).unlink()
+    store.shelled_told(crossings, ["W1"])  # a file already gone is nothing to let go of
+    assert not (crossings / store.SHELLED).exists()
 
 
 if __name__ == "__main__":

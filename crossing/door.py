@@ -761,13 +761,13 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             + told_once(args, folder, held, quiet)
         )
         if held["shelled"] and not quiet and personal(args):
-            store.shelled_told(folder)  # told the person: the next status says only what is marked since
+            store.shelled_told(folder, held["shelled"])  # told: the next status says only what is marked since
         if held["arrived"] and args.verb == "status" and not quiet and personal(args):
-            store.arrived_told(folder)
+            store.arrived_told(folder, held["arrived"])
         if held["signs_arrived"] and args.verb == "status" and not quiet and personal(args):
-            store.signs_arrived_told(folder)
+            store.signs_arrived_told(folder, held["signs_arrived"])
         if held["collided"] and args.verb == "status" and not quiet and personal(args):
-            store.collided_told(folder)
+            store.collided_told(folder, held["collided"])
     elif args.verb == "strike":
         out = store.strike(folder, said, args.why)
         print(struck(out) if out["struck"] else f"not struck: {out['why']}")
