@@ -680,12 +680,13 @@
   <!-- what a label holds, and what it never holds: it crosses every cut as standing -->
   <text x="172" y="564" class="s warm">what you tell and ask,</text>
   <text x="172" y="588" class="s warm">never how you seem</text>
-  <text x="172" y="668" class="b earth halo">The archive<tspan dx="12" class="s i dim" font-weight="400">sediment</tspan></text>
-  <text x="172" y="694" class="s dim halo">every word, under its id;</text>
-  <text x="172" y="718" class="s dim halo">never retold</text>
-  <text x="172" y="934" class="b earth deep">The index<tspan dx="12" class="s i dim" font-weight="400">scaffold</tspan></text>
-  <text x="172" y="960" class="s dim deep">made from these files;</text>
-  <text x="172" y="984" class="s dim deep">may be deleted</text>
+  <text x="172" y="668" class="b earth">The archive<tspan dx="12" class="s i dim" font-weight="400">sediment</tspan></text>
+  <text x="172" y="712" class="s dim">every word, under its id;</text>
+  <text x="172" y="736" class="s dim">never retold</text>
+  <rect x="162" y="913" width="204" height="84" rx="8" fill="#ece0c9"/>
+  <text x="172" y="934" class="b earth">The index<tspan dx="12" class="s i dim" font-weight="400">scaffold</tspan></text>
+  <text x="172" y="960" class="s dim">made from these files;</text>
+  <text x="172" y="984" class="s dim">may be deleted</text>
   <rect x="991" y="651.8" width="18" height="4.4" rx="2.2" fill="#e59a35"/>
   <circle cx="1000" cy="654" r="7" fill="none" stroke="#dd8e0b" stroke-width="1.4"/>
   <path d="M698 526 C722 526 726 500 754 500 H1016 C1030 500 1036 494 1038 482 M966 526 C1000 526 1030 530 1036 546 M1016 574 C1027 574 1034 581 1037 593 M1007 654 C1022 654 1033 646 1037 632" fill="none" stroke="#dd8e0b" stroke-width="2.6" stroke-linecap="round" opacity=".9"/>

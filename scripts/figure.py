@@ -479,18 +479,23 @@ def svg(theme: str) -> str:
     add('  <text x="172" y="588" class="s warm">never how you seem</text>')
 
     add(
-        '  <text x="172" y="668" class="b earth halo">The archive<tspan dx="12" class="s i dim" '
+        '  <text x="172" y="668" class="b earth">The archive<tspan dx="12" class="s i dim" '
         'font-weight="400">sediment</tspan></text>'
     )
-    add('  <text x="172" y="694" class="s dim halo">every word, under its id;</text>')
-    add('  <text x="172" y="718" class="s dim halo">never retold</text>')
+    # the two lines stand inside the second layer, clear of the line that parts it from the first: a layer's
+    # line drawn through a line of words reads as words struck out. None of these words is drawn with a halo:
+    # a stroke painted under a text is a second text to whatever reads the words out of a PDF made from this
+    add('  <text x="172" y="712" class="s dim">every word, under its id;</text>')
+    add('  <text x="172" y="736" class="s dim">never retold</text>')
 
+    # a clearing in the scaffold for its own words: the lattice's dashes drawn through them made them hard to read
+    add(f'  <rect x="162" y="913" width="204" height="84" rx="8" fill="{p["deep"]}"/>')
     add(
-        '  <text x="172" y="934" class="b earth deep">The index<tspan dx="12" class="s i dim" '
+        '  <text x="172" y="934" class="b earth">The index<tspan dx="12" class="s i dim" '
         'font-weight="400">scaffold</tspan></text>'
     )
-    add('  <text x="172" y="960" class="s dim deep">made from these files;</text>')
-    add('  <text x="172" y="984" class="s dim deep">may be deleted</text>')
+    add('  <text x="172" y="960" class="s dim">made from these files;</text>')
+    add('  <text x="172" y="984" class="s dim">may be deleted</text>')
 
     # what rises: the frame, fed from the standing stack, the line at the door, the work and your words
     add(f'  <rect x="{wx - 9}" y="{wy - 2.2}" width="18" height="4.4" rx="2.2" fill="{p["gyou"]}"/>')
