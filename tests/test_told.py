@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import told  # noqa: E402  (and with it the tests' data folder: nothing reaches the real home)
 from test_store import sweep  # noqa: E402
 
-from crossing import frame, serve  # noqa: E402
+from crossing import door, frame, serve, store  # noqa: E402
 
 PAGE = told.page()
 OPENS = "A note from the Crossings plugin"
@@ -83,6 +83,30 @@ def test_everything_the_server_says_is_on_the_page():
         assert each["description"] in PAGE
         for given in each["inputSchema"].get("properties", {}).values():
             assert given.get("description", "") in PAGE
+
+
+def test_what_a_mark_is_answered_and_refused_with_is_on_the_page():
+    """Guard: the page held every note, every sentence of the frame and every tool, and of what the door answers
+    a mark with only "marked": not the sentence that follows the first label marked past a line at the door,
+    which leans a session toward leaving a new line, nor any sentence a mark is refused with. Each is on it now,
+    the first as the door says it and the refusals as the store's refusing functions write them."""
+    assert f"marked W11. {door.OVERTAKEN}" in PAGE and "marked W12\n" in PAGE  # said once a line, and not again
+    assert "not marked: no such message in the archive: ffffffff" in PAGE
+    assert "thread of `ffffffff`: no such message in the store." in PAGE and "No such label: W99." in PAGE
+    assert store.UNTEXT in PAGE and store.BUSY.format("marked") in PAGE
+    tree = ast.parse((ROOT / "crossing" / "store.py").read_text(encoding="utf-8"))
+    refusing = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in told.REFUSING]
+    assert [node.name for node in refusing] == ["mark", "_unmarked", "_unstackable", "_scoped"]
+    pieces = 0
+    for node in refusing:  # the test's own walk: every piece of plain text of three words or more, a query aside
+        for each in ast.walk(node):
+            said = each.value if isinstance(each, ast.Constant) and isinstance(each.value, str) else ""
+            if said == ast.get_docstring(node, clean=False) or len(said.split()) < 3:
+                continue
+            if not said.lower().lstrip().startswith("select "):
+                assert said.strip() in PAGE, said
+                pieces += 1
+    assert pieces >= 14
 
 
 def test_the_modules_own_note_is_on_the_page():

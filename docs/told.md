@@ -394,10 +394,17 @@ Labels resting here:
 - W10 (work, session): The tiller is to be varnished.
 ````
 
-### `mark` {"sentence": "The paint is to be bought before spring.", "anchors": ["dddddddd"]}
+### `thread` {"id": "ffffffff"}
 
 ````text
-marked W11
+thread of `ffffffff`: no such message in the store.
+````
+
+### `labels` {"ids": ["W99"]}
+
+````text
+No label of that kind or day.
+No such label: W99.
 ````
 
 ### `leave` {"sentence": "The paint is the next thing to settle.", "anchors": ["dddddddd"]}
@@ -406,10 +413,50 @@ marked W11
 marked N2
 ````
 
+### `mark` {"sentence": "The paint is to be bought before spring.", "anchors": ["dddddddd"]}
+
+````text
+marked W11. The line at the door was left before this label: where it no longer holds, a new one can be left.
+````
+
+### `mark` {"sentence": "The brushes are bought.", "anchors": ["dddddddd"]}
+
+````text
+marked W12
+````
+
 ### `mark` {"sentence": "", "anchors": []}
 
 ````text
 mark needs a sentence and at least one anchor.
+````
+
+### `mark` {"sentence": "The keel is sound.", "anchors": ["ffffffff"]}
+
+````text
+not marked: no such message in the archive: ffffffff
+````
+
+## What a mark, or a line left at the door, can be refused with
+
+Each follows `not marked: `; an ellipsis stands where the sentence names a key, an id or a model.
+
+````text
+a label needs a sentence and at least one anchor
+a label is one sentence, and this one is longer than … characters
+… messages are named `…`, … and …, so a label cannot rest on that id
+no such message in the archive:
+… is a stack of the person's, and only the person writes it again
+a line left at the door rests on messages alone, never on labels
+… already stands over stacks, and stacking goes no deeper than that
+no such label:
+a stack holds labels of its own kind alone, and of another kind here:
+… already stands beneath …, and a line stands beneath one stack alone
+… is misaligned and this stack would take its place, so it cannot also stand beneath it
+… was written by another model, …, and a stack stands over the person's lines, its own model's and those of no known model alone
+… is a stack of another model's, …, and is written again by that model alone
+a label's sentence and its anchors are to be text, and this holds a character that is none
+another act was writing this home, so nothing was marked: try again in a moment
 ````
 
 ## What the door says in place of an answer
@@ -432,8 +479,4 @@ This is the person's to run, from their own terminal or with the plugin's comman
 
 ````text
 The frame and the hand-over are for sessions a person sits in, and this one is not, so nothing was carried.
-````
-
-````text
-another act was writing this home, so nothing was marked: try again in a moment
 ````

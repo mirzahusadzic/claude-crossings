@@ -19,6 +19,7 @@ session is told now that it was not before.
 
 from __future__ import annotations
 
+import ast
 import contextlib
 import json
 import os
@@ -69,9 +70,14 @@ def answered(project: Path) -> str:
         ("find", {"words": "hull"}),
         ("find", {"words": "zeppelin"}),
         ("thread", {"id": D}),
-        ("mark", {"sentence": "The paint is to be bought before spring.", "anchors": [D]}),
+        ("thread", {"id": "ffffffff"}),
+        ("labels", {"ids": ["W99"]}),
         ("leave", {"sentence": "The paint is the next thing to settle.", "anchors": [D]}),
+        # the first label about the work marked after a line at the door: the answer says the line may be overtaken
+        ("mark", {"sentence": "The paint is to be bought before spring.", "anchors": [D]}),
+        ("mark", {"sentence": "The brushes are bought.", "anchors": [D]}),  # and the next one does not
         ("mark", {"sentence": "", "anchors": []}),
+        ("mark", {"sentence": "The keel is sound.", "anchors": ["ffffffff"]}),
     ]
     out = []
     with started_by("cli"), set_to(CLAUDE_PROJECT_DIR=str(project)):
@@ -79,6 +85,34 @@ def answered(project: Path) -> str:
             text, _ = serve.call(name, given)
             out.append(f"### `{name}` {json.dumps(given, ensure_ascii=False)}\n\n{fenced(text)}")
     return "\n\n".join(out)
+
+
+# The functions of the store that refuse a mark or a line left at the door, each with a sentence of its own.
+REFUSING = ("mark", "_unmarked", "_unstackable", "_scoped")
+
+
+def refusals() -> list[str]:
+    """Each sentence a mark, or a line left at the door, can be refused with, as the store's refusing functions
+    write them (REFUSING): gathered from their source, in its order, with an ellipsis where a sentence names a
+    key, an id or a model. A session meets them after `not marked: `. One made of fewer than three words, or a
+    query of the index, is none of them."""
+    tree = ast.parse((ROOT / "crossing" / "store.py").read_text(encoding="utf-8"))
+    found: list[str] = []
+    for node in tree.body:
+        if not (isinstance(node, ast.FunctionDef) and node.name in REFUSING):
+            continue
+        docs = ast.get_docstring(node, clean=False)
+        inside = {id(part) for each in ast.walk(node) if isinstance(each, ast.JoinedStr) for part in each.values}
+        for each in ast.walk(node):
+            if isinstance(each, ast.JoinedStr):
+                said = "".join(part.value if isinstance(part, ast.Constant) else "…" for part in each.values)
+            elif isinstance(each, ast.Constant) and isinstance(each.value, str) and id(each) not in inside:
+                said = each.value
+            else:
+                continue
+            if said != docs and len(said.split()) >= 3 and not said.lower().lstrip().startswith("select "):
+                found.append(said.strip())
+    return list(dict.fromkeys([*found, store.UNTEXT, store.BUSY.format("marked")]))
 
 
 def fenced(text: str) -> str:
@@ -167,6 +201,9 @@ def page() -> str:
         "## A session resumed where another worked since it last spoke\n\n" + fenced(hook.moved_on()),
         "## A session that starts in a folder below another home's folder\n\n" + fenced(below()),
         "## What the door's tools answer, from the made-up store\n\n" + answered(project),
+        "## What a mark, or a line left at the door, can be refused with\n\n"
+        "Each follows `not marked: `; an ellipsis stands where the sentence names a key, an id or a model.\n\n"
+        + fenced("\n".join(refusals())),
         "## What the door says in place of an answer\n\n"
         + "\n\n".join(
             fenced(text)
@@ -176,7 +213,6 @@ def page() -> str:
                 door.BELOW_BARE,
                 door.PERSONS,
                 door.UNSEATED,
-                store.BUSY.format("marked"),
             )
         ),
     ]
