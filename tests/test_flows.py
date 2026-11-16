@@ -72,6 +72,32 @@ def test_a_row_nested_deeper_than_the_parser_reads_is_passed_over_and_the_rest_i
     assert count.count(path, "The person said the new rope is blue, and so it is.", pending=True)["traced"]
 
 
+def test_a_row_the_parser_gives_up_on_is_passed_over_at_whatever_depth_it_gives_up(tmp_path):
+    """How deep a parser follows a row differs from one Python to the next, and the row above is past it only
+    for some. Here the parser is made to give up on the row, as each does at its own depth, so that the
+    passing over is held on every Python."""
+    crossings, path = home(tmp_path)
+    appended(
+        path,
+        '{"type": "user", "uuid": "c3c3c3c3-0000", "toolUseResult": ' + "[" * 50 + "]" * 50 + "}",
+        json.dumps(row("user", "d4d4d4d4", 8, "The new rope is blue.")),
+    )
+    whole = json.loads
+
+    def shallow(text, *args, **kwargs):
+        if "[" * 50 in (text if isinstance(text, str) else ""):
+            raise RecursionError("maximum recursion depth exceeded while decoding a JSON array")
+        return whole(text, *args, **kwargs)
+
+    transcript.json.loads = shallow
+    try:
+        assert store.archive(path, crossings) == 1
+        assert str(list(transcript.rows(path))[-1][1]["uuid"]).startswith("d4d4d4d4"), "the reading goes on past it"
+    finally:
+        transcript.json.loads = whole
+    assert "The new rope is blue." in "".join(pages(crossings))
+
+
 def test_a_tool_result_nested_deep_is_measured_by_its_length_as_any_other(tmp_path):
     """Tool traffic is measured by its length alone, however deep its result is nested."""
     _, path = home(tmp_path)
