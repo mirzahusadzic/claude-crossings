@@ -58,7 +58,9 @@ def test_a_session_below_another_home_keeps_nothing_until_the_person_answers(tmp
     shared = store.kept(top)
     assert shared is not None and store.kept(paper) is None and store.waiting(paper) == shared
     out = json.loads(told(paper))  # the session is told in one sentence, and the person is shown the two words
-    assert "below another project's home" in out["hookSpecificOutput"]["additionalContext"]
+    told_ = out["hookSpecificOutput"]["additionalContext"]
+    assert "below the folder of another home" in told_  # as the door says it: the home is this project's own,
+    assert "another project" not in told_  # found on the way up, and no other project's
     assert str(top) in out["systemMessage"] and "/crossings join" in out["systemMessage"]
     assert told(paper, "PreToolUse", talk(tmp_path)) is None and not store._archived(shared)
     assert through("status", "--cwd", str(paper)) == (1, door.BELOW.format(top) + "\n")
@@ -78,7 +80,7 @@ def test_a_session_below_another_home_keeps_nothing_until_the_person_answers(tmp
     lines = store.switched().read_text(encoding="utf-8").splitlines()
     assert sum(json.loads(line).get("joined") == str(paper) for line in lines) == 1
     started = told(paper)  # a session that starts there now is welcomed as in any home, and told nothing of below
-    assert started is None or "below another" not in started
+    assert started is None or "below the folder" not in started
     assert store.consented() == projects  # the line that joins names no project: it switches nothing on
 
 
