@@ -477,7 +477,9 @@ def test_a_line_of_the_log_of_pulls_or_of_the_models_that_is_no_line_is_passed_o
 
 def test_at_scale_an_archive_reads_only_what_was_added(tmp_path):
     """A few hundred thousand short made-up lines, a tenth of them messages. Left out where
-    CROSSING_SCALE is 0; the bounds are generous, for a computer that is busy with other work."""
+    CROSSING_SCALE is 0. The later passes are held to a part of the first and not to seconds: a
+    computer that is slow, busy or traced is slow for all three, and seconds say more of it than
+    of the code. The first pass is held to no time; what it took is printed beside the test."""
     if os.environ.get("CROSSING_SCALE") == "0":
         return
     project = tmp_path / "project"
@@ -513,7 +515,7 @@ def test_at_scale_an_archive_reads_only_what_was_added(tmp_path):
     assert store.archive(path, crossings) == 0
     nothing = time.perf_counter() - start
     assert parsed[0] == 10
-    assert first < 60 and added < 5 and nothing < 1, (first, added, nothing)
+    assert added < first / 20 and nothing < first / 20, (first, added, nothing)
 
 
 if __name__ == "__main__":
