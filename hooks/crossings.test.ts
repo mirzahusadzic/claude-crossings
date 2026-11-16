@@ -434,7 +434,9 @@ test('his own command shows the store through the same script', async ($, on) =>
   expect(await say($, 'FRAME')).toBe('what the door said')
   expect(asked(seen)).toEqual(['frame', ...tail])
   await say($, 'find  Tern "at mooring" moor*')
-  expect(asked(seen)).toEqual(['find', 'Tern', '"at', 'mooring"', 'moor*', ...tail])
+  expect(asked(seen)).toEqual(['find', ...tail, '--', 'Tern', '"at', 'mooring"', 'moor*']) // the words last, after the door's --
+  await say($, 'find --verbose -x')
+  expect(asked(seen)).toEqual(['find', ...tail, '--', '--verbose', '-x']) // a word that begins with a dash is a word
   expect(await say($, 'find')).toBe('find needs words: /crossings find <words>')
   await say($, 'labels')
   expect(asked(seen)).toEqual(['labels', ...tail])
@@ -447,7 +449,9 @@ test('his own command shows the store through the same script', async ($, on) =>
   await say($, 'labels door')
   expect(asked(seen)).toEqual(['labels', '--kind', 'next', ...tail])
   await say($, 'labels next R3 w12')
-  expect(asked(seen)).toEqual(['labels', '--kind', 'next', 'R3', 'w12', ...tail])
+  expect(asked(seen)).toEqual(['labels', '--kind', 'next', ...tail, '--', 'R3', 'w12'])
+  await say($, 'labels -R3')
+  expect(asked(seen)).toEqual(['labels', ...tail, '--', '-R3'])
   out = ''
   expect(await say($, 'look')).toBe('Nothing came back.')
 })

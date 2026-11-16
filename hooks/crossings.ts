@@ -70,11 +70,17 @@ const entrypoint = async ($: any): Promise<Record<string, string>> => {
     return {}
   }
 }
+// The options of a command line put before its `--`, where it has one: what follows the `--` are the
+// person's own words, whatever they begin with, and the door takes them as words.
+const before = (argv: string[], options: string[]): string[] => {
+  const split = argv.includes('--') ? argv.indexOf('--') : argv.length
+  return [...argv.slice(0, split), ...options, ...argv.slice(split)]
+}
 // The door's process, as the module starts it, and what it gave back; a throw where it could not be started.
 const started = async ($: any, argv: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> => {
   const cwd = await root($)
   return await $.process.run(
-    ['python3', '-I', `${$.plugin.root}/crossing/door.py`, ...argv, '--by-module', '--cwd', cwd],
+    ['python3', '-I', `${$.plugin.root}/crossing/door.py`, ...before(argv, ['--by-module', '--cwd', cwd])],
     { timeoutMs: 60000, env: { ...(await entrypoint($)), CLAUDE_PLUGIN_ROOT: $.plugin.root } },
   )
 }
@@ -199,7 +205,8 @@ const registerCommand = (on: Parameters<Register>[0]) => {
   on('command.run', { command: 'crossings' }, async ($, e) => {
     const [first = '', ...rest] = e.args.trim().split(/\s+/)
     const said = first.toLowerCase()
-    const shown = async (argv: string[]) => ({ text: (await door($, [...argv, '--session', await $.session.id()])).text || 'Nothing came back.' })
+    const shown = async (argv: string[]) =>
+      ({ text: (await door($, before(argv, ['--session', await $.session.id()]))).text || 'Nothing came back.' })
     if (said === 'status') {
       const read = await words($)
       if (read === null) return { text: 'Crossings was never switched on for this project.' }
@@ -208,18 +215,20 @@ const registerCommand = (on: Parameters<Register>[0]) => {
       return { text: `${isOff ? 'Crossings is off for this project.' : 'Crossings is on for this project.'} ${out.text}` }
     }
     if (said === 'look' || said === 'frame') return shown([said])
-    if (said === 'find') return rest.length ? shown(['find', ...rest]) : { text: 'find needs words: /crossings find <words>' }
+    // The person's words and keys go last, after a `--`, so that one that begins with a dash is a word.
+    if (said === 'find') return rest.length ? shown(['find', '--', ...rest]) : { text: 'find needs words: /crossings find <words>' }
     if (said === 'labels') {
       const argv = ['labels']
+      const keys: string[] = []
       for (const one of rest) {
         const low = one.toLowerCase()
         if (low === 'relation' || low === 'standing') argv.push('--kind', 'relation')
         else if (low === 'work') argv.push('--kind', 'work')
         else if (low === 'door' || low === 'next') argv.push('--kind', 'next')
         else if (/^\d{4}-\d\d-\d\d$/.test(one)) argv.push('--day', one)
-        else argv.push(one)
+        else keys.push(one)
       }
-      return shown(argv)
+      return shown(keys.length ? [...argv, '--', ...keys] : argv)
     }
     // Only a bare /crossings turns the switch over. A word it does not know changes nothing:
     // a slip of the hand must not switch Crossings off.
