@@ -619,6 +619,48 @@ def test_layer_writes_back_a_line_of_the_archive_that_is_no_text_as_it_was(tmp_p
     assert [one.get("model") for one in said if one["voice"] == "session"] == ["a-model", "a-model"], said
 
 
+# --- the measure of coverage ----------------------------------------------------------------------------
+
+
+def test_the_measure_of_coverage_fails_where_a_suite_fails(tmp_path):
+    """scripts/coverage.sh runs every suite under coverage, and shows each one's lines but its `ok` ones. A
+    suite that fails is named, and the measure fails with it, whatever the report says. It runs here in a
+    folder of its own, with stand-ins for its venv's Python and for uv, so that nothing is installed or
+    measured: two suites, one that passes and one that fails after a line of its own."""
+    (tmp_path / "scripts").mkdir()
+    shutil.copy(ROOT / "scripts" / "coverage.sh", tmp_path / "scripts" / "coverage.sh")
+    shutil.copy(ROOT / ".coveragerc", tmp_path / ".coveragerc")
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_one.py").write_text("print('ok test_passes')\n", encoding="utf-8")
+    (tmp_path / "tests" / "test_two.py").write_text(
+        "print('ok test_passes_first')\nprint('a line of its own')\nraise SystemExit(1)\n", encoding="utf-8"
+    )
+    (tmp_path / "site").mkdir()
+    (tmp_path / "bin").mkdir()
+    (tmp_path / "bin" / "uv").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    bin_ = tmp_path / "tests" / ".work" / "coverage-venv" / "bin"
+    bin_.mkdir(parents=True)
+    # `-c` asks where its packages lie; `-m coverage run <suite>` runs the suite; erase, combine and report pass.
+    (bin_ / "python").write_text(
+        "#!/bin/sh\n"
+        f'case "$1" in -c) echo "{tmp_path / "site"}" ;; '
+        f'-m) case "$3" in run) exec "{sys.executable}" "$4" ;; esac ;; esac\n',
+        encoding="utf-8",
+    )
+    for stand_in in (tmp_path / "bin" / "uv", bin_ / "python"):
+        stand_in.chmod(0o755)
+    measured = subprocess.run(
+        ["sh", str(tmp_path / "scripts" / "coverage.sh")],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env={**os.environ, "PATH": f"{tmp_path / 'bin'}{os.pathsep}{os.environ['PATH']}"},
+    )
+    assert measured.returncode != 0, measured
+    assert "a line of its own" in measured.stdout and "ok test_" not in measured.stdout, measured
+    assert "tests/test_two.py" in measured.stderr and "tests/test_one.py" not in measured.stderr, measured
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

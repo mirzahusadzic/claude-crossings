@@ -16,8 +16,19 @@ cd "$root"
 export COVERAGE_ROOT="$root" COVERAGE_PROCESS_START="$root/.coveragerc"
 export PATH="$venv/bin:$PATH" # hooks/run.sh starts `python3`: this venv's, so its lines are counted too
 "$python" -m coverage erase
+# Each suite's lines but its `ok` ones. A suite that fails is named after the report, and the measure
+# fails with it: a suite cut short walks less, and the floor alone would not always say so.
+failed=""
+said="$root/tests/.work/coverage/suite.out"
 for suite in tests/test_*.py; do
-  "$python" -m coverage run "$suite" | grep -v '^ok ' || true
+  "$python" -m coverage run "$suite" > "$said" 2>&1 || failed="$failed $suite"
+  grep -v '^ok ' "$said" || true
 done
 "$python" -m coverage combine -q
-"$python" -m coverage report
+status=0
+"$python" -m coverage report || status=$?
+if [ -n "$failed" ]; then
+  echo "These suites failed:$failed" >&2
+  status=1
+fi
+exit $status
