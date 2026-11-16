@@ -109,10 +109,11 @@ claude plugin test .          # the hooks module's tests
 sh scripts/coverage.sh        # branch coverage of crossing/; the floor is 100
 claude plugin validate .
 python3 scripts/figure.py     # draws the figure above again, in both themes
+python3 scripts/told.py > docs/told.md   # everything a session is told, as one page
 ```
 
 [AGENTS.md](AGENTS.md) is the guide for working on the code.
 
 ---
 
-[The store](docs/store.md) · [The door](docs/door.md) · [Privacy](docs/privacy.md) · [Cuts](docs/cuts.md) · [Layers](docs/layers.md) · [Settings](docs/settings.md) · [Repository guide](AGENTS.md) · [Apache-2.0](LICENSE) · [Notices](NOTICE)
+[The store](docs/store.md) · [The door](docs/door.md) · [Privacy](docs/privacy.md) · [Cuts](docs/cuts.md) · [Layers](docs/layers.md) · [Settings](docs/settings.md) · [What a session is told](docs/told.md) · [Repository guide](AGENTS.md) · [Apache-2.0](LICENSE) · [Notices](NOTICE)
