@@ -67,7 +67,7 @@ Wherever the door shows a label, a model or a message's words, one function, `cl
 | `/crossings join` | in a folder below another home's folder, shares that home from this folder ([The store](store.md)) |
 | `/crossings here` | in a folder below another home's folder, gives this folder a home of its own; elsewhere, as `on` |
 | `/crossings` | turns the switch over |
-| `/crossings status` | whether Crossings is on, and what the store holds |
+| `/crossings status` | whether Crossings is on, and what the store holds; in a folder below another home's folder, the door's sentence that says so, with `join` and `here` |
 | `/crossings look`, `frame` | the room, and the frame as it would be made now |
 | `/crossings find <words>` | as the tool |
 | `/crossings labels [words]` | as the tool; `relation` or `standing`, `work`, `door` or `next`, a day as `YYYY-MM-DD`, or keys |

@@ -38,6 +38,7 @@ type World = {
   readOnly?: boolean // no file can be written
   words?: () => string // what the door answers for the home's words, where a test wants another answer
   believed?: () => string // where the door says the home is, where a test changes it as it goes; '' for none
+  below?: string // the door's sentence where no home is believed and the folder lies below another home's
 }
 
 const verb = (argv: string[]) => argv[3] // after python3 -I <door.py>
@@ -54,7 +55,7 @@ const forModule = (argv: string[], home: string, files: Files, given: World): Ra
     return where ? answer(`${where}\n`) : answer('', 1) // where there is none, the door says nothing
   }
   if (v !== 'words' && v !== 'page' && v !== 'trace') return null
-  if (!home) return answer(`${NOT_ON}\n`, 1)
+  if (!home) return answer(`${given.below ?? NOT_ON}\n`, 1)
   if (v === 'words') {
     const low = (name: string) => read(name).toLowerCase()
     return answer(given.words ? given.words() : `${JSON.stringify({ switch: low('switch'), mode: low('mode'), carry: low('carry') })}\n`)
@@ -425,6 +426,18 @@ test('status of a project where Crossings was never switched on says so and look
   expect(await say($, 'STATUS')).toBe('Crossings was never switched on for this project.')
   expect(verbs(seen)).toEqual(['home', 'words']) // where the home is, as the session started, and its words
   expect(seen.files).toEqual({})
+})
+
+test('status in a folder below another home is the door\'s own sentence, with the two words that answer it', async ($, on) => {
+  // Found in a real session: the person asked for the status in such a folder and was told that Crossings was
+  // never switched on for the project, which is switched on, and was told nothing of join or here.
+  const below =
+    'This folder lies below /project, whose home Crossings keeps, and nothing of that home is kept or read from here ' +
+    'until you answer once for this folder: /crossings join shares it, /crossings here gives this folder a home of its own.'
+  const seen = world(on, { home: '', below })
+  await start($)
+  expect(await say($, 'status')).toBe(below)
+  expect(verbs(seen)).toEqual(['home', 'words']) // and the door is asked no more than before
 })
 
 // --- his own handle ---------------------------------------------------------------------------

@@ -95,16 +95,22 @@ const door = async ($: any, argv: string[]): Promise<{ ok: boolean; text: string
 
 // The home's plain files of one word (switch, mode, carry), as the door reads them; null where
 // the project has no home the person switched on, or the door gave no such answer.
-const words = async ($: any): Promise<Record<string, string> | null> => {
+const words = async ($: any): Promise<Record<string, string> | null> => (await wordsOr($)).read
+// The same, and with it the sentence the door refused with, where it named no home: the person's status
+// says it where it is the sentence of a folder below another home's (WAITS).
+const wordsOr = async ($: any): Promise<{ read: Record<string, string> | null; why: string }> => {
   const found = await door($, ['words'])
-  if (!found.ok) return null
+  if (!found.ok) return { read: null, why: found.text }
   try {
     const read = JSON.parse(found.text)
-    return read !== null && typeof read === 'object' ? read : null
+    return { read: read !== null && typeof read === 'object' ? read : null, why: '' }
   } catch {
-    return null
+    return { read: null, why: '' }
   }
 }
+// How the door's sentence begins in a folder below the folder of a home, which the person has not yet
+// answered for: it names the two words that answer it (join, here).
+const WAITS = /^This folder lies below /
 
 // What the plain files of the project's home ask for.
 const asked = async ($: any): Promise<{ mode: Mode; carry: Carry }> => {
@@ -208,8 +214,10 @@ const registerCommand = (on: Parameters<Register>[0]) => {
     const shown = async (argv: string[]) =>
       ({ text: (await door($, before(argv, ['--session', await $.session.id()]))).text || 'Nothing came back.' })
     if (said === 'status') {
-      const read = await words($)
-      if (read === null) return { text: 'Crossings was never switched on for this project.' }
+      const { read, why } = await wordsOr($)
+      // No home is believed from here. In a folder below another home's the door says so, with the two words
+      // that answer it, and that sentence is the status; anywhere else Crossings was never switched on.
+      if (read === null) return { text: WAITS.test(why) ? why : 'Crossings was never switched on for this project.' }
       const isOff = read.switch === 'off' // no switch written: on
       const out = await door($, ['status', '--session', await $.session.id()])
       return { text: `${isOff ? 'Crossings is off for this project.' : 'Crossings is on for this project.'} ${out.text}` }
