@@ -39,7 +39,7 @@ The door to what you and the person said in this project, kept word for word und
   - `kind`: About the two of you, or about the work (default).
   - `whose`: Whose the labelled thing is (default: the session's).
   - `home`: This project's store (default), or the one on this computer.
-- **leave**: Leave a line of your own for the session that wakes after the next cut: a few sentences on where things stand and what is open, resting on ids like a label. Only the newest is carried, at the top of the frame. A label holds what the person tells and asks, and where the work stands; it is never a record of how they seem, of what works on them or of how to move them.
+- **leave**: Leave a line for the session after the next cut: a few sentences on where things stand, what is open and what the work is for. It rests on ids like a label, among them the message where the person said what for. Only the newest is carried. A label holds what the person tells and asks, and where the work stands; it is never a record of how they seem, of what works on them or of how to move them.
   - `sentence`: The line, in your own words.
   - `anchors`: The ids of the messages it rests on.
   - `home`: This project's store (default), or the one on this computer.

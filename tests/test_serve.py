@@ -383,6 +383,21 @@ def test_the_archive_is_brought_up_to_the_moment_before_the_door_is_used(tmp_pat
         assert "88888888" not in said("find", words="switched")[0]
 
 
+def test_a_line_left_at_the_door_is_to_say_what_the_work_is_for(tmp_path):
+    """Guard: a line at the door that says where things stand and what is open, and no more, hands the session
+    that wakes a next step and no reason for it; across several cuts that makes a session that carries work on
+    with no word of what it is for. The tool says to leave that too, and to rest the line on the message where
+    the person said it, since a frame carries the person's words that its line at the door rests on. The tool
+    stays as small as it was held to be."""
+    leave = next(each for each in serve.TOOLS if each["name"] == "leave")["description"]
+    assert "where things stand, what is open and what the work is for" in leave
+    assert "among them the message where the person said what for" in leave and len(leave) < 400
+    crossings, _ = home(tmp_path)
+    store.mark(crossings, "next", "session", "The hull is painted grey because the old paint peels.", [D])
+    carried = frame.compose(crossings)
+    assert f"- `{D}`: We paint the hull grey in spring" in carried  # their words, beside the line that rests on them
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

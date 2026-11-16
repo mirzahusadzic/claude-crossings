@@ -152,9 +152,9 @@ TOOLS = [
     ),
     tool(
         "leave",
-        "Leave a line of your own for the session that wakes after the next cut: a few sentences on where "
-        "things stand and what is open, resting on ids like a label. Only the newest is carried, at the top of "
-        "the frame. " + store.FOR,
+        "Leave a line for the session after the next cut: a few sentences on where things stand, what is open "
+        "and what the work is for. It rests on ids like a label, among them the message where the person said "
+        "what for. Only the newest is carried. " + store.FOR,
         ("sentence", "anchors"),
         sentence={"type": "string", "description": "The line, in your own words."},
         anchors={**IDS, "description": "The ids of the messages it rests on."},
