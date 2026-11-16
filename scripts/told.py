@@ -40,14 +40,36 @@ from crossing import door, frame, hook, serve, store  # noqa: E402
 DAY = "2026-11-12"  # the day of the made-up labels, so that the page is the same on every run
 
 
-def module_note() -> str:
-    """The hooks module's own note for a hand-over page carried in a frame's place: its string, as
-    hooks/crossings.ts writes it, its pieces joined."""
+def module_said(name: str) -> str:
+    """One sentence of the hooks module's own, by the name of its constant: its string, as hooks/crossings.ts
+    writes it on the lines after the name, its pieces joined."""
     source = (ROOT / "hooks" / "crossings.ts").read_text(encoding="utf-8")
-    held = re.search(r"^const NOTE =\n(.*?)\n\n", source, flags=re.S | re.M)
+    held = re.search(rf"^const {name} =\n((?:  .*\n)+)", source, flags=re.M)
     if held is None:
-        raise SystemExit("hooks/crossings.ts holds no NOTE: the page cannot say what the module tells a session")
+        raise SystemExit(f"hooks/crossings.ts holds no {name}: the page cannot say what the module tells a session")
     return "".join(a or b for a, b in re.findall(r"'((?:[^'\\]|\\.)*)'|\"((?:[^\"\\]|\\.)*)\"", held.group(1)))
+
+
+def module_note() -> str:
+    """The hooks module's own note for a hand-over page carried in a frame's place."""
+    return module_said("NOTE")
+
+
+# What the hooks module answers a session's call with as it refuses it: the archive's own files, the person's
+# own verbs, and the files of a home that the door alone writes.
+MODULE_REFUSES = ("REFUSED", "PERSONS", "WRITTEN")
+
+
+def shared() -> str:
+    """What the door answers `thread` for an id two messages share, as its source writes it, with an ellipsis
+    where it names an id or a number."""
+    tree = ast.parse((ROOT / "crossing" / "door.py").read_text(encoding="utf-8"))
+    for each in ast.walk(tree):
+        if isinstance(each, ast.JoinedStr):
+            said = "".join(part.value if isinstance(part, ast.Constant) else "…" for part in each.values)
+            if "messages are named" in said:
+                return said.strip()
+    raise SystemExit("crossing/door.py no longer says what thread answers for an id two messages share")
 
 
 def tools() -> str:
@@ -204,6 +226,9 @@ def page() -> str:
         "## What a mark, or a line left at the door, can be refused with\n\n"
         "Each follows `not marked: `; an ellipsis stands where the sentence names a key, an id or a model.\n\n"
         + fenced("\n".join(refusals())),
+        "## What the hooks module says as it refuses a session's call\n\n"
+        + "\n\n".join(fenced(module_said(name)) for name in MODULE_REFUSES),
+        "## What `thread` answers for an id two messages share\n\n" + fenced(shared()),
         "## What the door says in place of an answer\n\n"
         + "\n\n".join(
             fenced(text)

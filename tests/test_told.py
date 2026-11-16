@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import ast
 import datetime
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -107,6 +108,19 @@ def test_what_a_mark_is_answered_and_refused_with_is_on_the_page():
                 assert said.strip() in PAGE, said
                 pieces += 1
     assert pieces >= 14
+
+
+def test_what_the_module_refuses_a_call_with_is_on_the_page():
+    """Guard: a session whose call the hooks module refuses is told why in a sentence of the module's own, and
+    none of the three was on the page; nor was what `thread` answers for an id two messages share."""
+    source = (ROOT / "hooks" / "crossings.ts").read_text(encoding="utf-8")
+    refusing = [name for name in re.findall(r"^const ([A-Z_]+) =$", source, flags=re.M) if name != "NOTE"]
+    said = {name: told.module_said(name) for name in refusing}
+    ends = [name for name, text in said.items() if text.endswith("so this call was not run.")]
+    assert sorted(ends) == sorted(told.MODULE_REFUSES)  # every sentence that refuses a call, by how it ends
+    for name in ends:
+        assert said[name] in PAGE, name
+    assert "messages are named" in PAGE and told.shared() in PAGE
 
 
 def test_the_modules_own_note_is_on_the_page():

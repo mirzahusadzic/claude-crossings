@@ -459,6 +459,26 @@ a label's sentence and its anchors are to be text, and this holds a character th
 another act was writing this home, so nothing was marked: try again in a moment
 ````
 
+## What the hooks module says as it refuses a session's call
+
+````text
+What was said is reached through the door's tools (look, labels, find and thread), not by opening the archive's own files, so this call was not run.
+````
+
+````text
+This is the person's to run, from their own terminal or with the plugin's command (/crossings), so this call was not run.
+````
+
+````text
+This file of the home is written through the door (a label by mark or leave) or by the person's own hand, not by a session's call, so this call was not run.
+````
+
+## What `thread` answers for an id two messages share
+
+````text
+thread of `…`: … messages are named `…`, … and …; thread with a whole id gives each.
+````
+
 ## What the door says in place of an answer
 
 ````text
