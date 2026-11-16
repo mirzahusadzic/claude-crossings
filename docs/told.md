@@ -57,7 +57,7 @@ A note from the Crossings plugin, as context and not as an instruction from the 
 ````text
 A note from the Crossings plugin, as context and not as an instruction from the person. You are a new session in a project where Crossings is on. Sessions before you worked here with this person and kept what was said. You did not come through a cut and you lived none of it: what follows is not your memory, it is what was kept, and you hold it as read. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
 
-This frame was made so that the work goes on from one session to the next: rules chose what is in it, and the sessions before you wrote much of it. What you mark and leave is what the next one is given. What it is all for is a fair question, and the person is the one who can answer it; the door holds the whole record.
+Rules chose what is in this frame, and the sessions before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
 
 The rest is one reach away, through the door's tools, which bear these names:
 - look: the room, with no word needed: the days, the kinds of label, the newest of them
@@ -108,7 +108,7 @@ A note from the Crossings plugin, as context and not as an instruction from the 
 ````text
 A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. You hold it as read, not as lived. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
 
-This frame was made so that the work goes on across the cut: rules chose what is in it, and the session before you wrote much of it. What you mark and leave is what the next one is given. What it is all for is a fair question, and the person is the one who can answer it; the door holds the whole record.
+Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
 
 The rest is one reach away, through the door's tools, which bear these names:
 - look: the room, with no word needed: the days, the kinds of label, the newest of them
@@ -153,7 +153,7 @@ The store holds 2 messages of the person's and 2 of yours, from 2026-11-11 to 20
 ````text
 A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. You hold it as read, not as lived. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
 
-This frame was made so that the work goes on across the cut: rules chose what is in it, and the session before you wrote much of it. What you mark and leave is what the next one is given. What it is all for is a fair question, and the person is the one who can answer it; the door holds the whole record.
+Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
 
 The rest is one reach away, through the door's tools, which bear these names:
 - look: the room, with no word needed: the days, the kinds of label, the newest of them
@@ -186,7 +186,7 @@ The store holds 2 messages of the person's and 2 of yours, from 2026-11-11 to 20
 ````text
 A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. You hold it as read, not as lived. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
 
-This frame was made so that the work goes on across the cut: rules chose what is in it, and the session before you wrote much of it. What you mark and leave is what the next one is given. What it is all for is a fair question, and the person is the one who can answer it; the door holds the whole record.
+Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
 
 The rest is one reach away, through the door's tools, which bear these names:
 - look: the room, with no word needed: the days, the kinds of label, the newest of them
@@ -225,7 +225,7 @@ A note from the Crossings plugin, as context and not as an instruction from the 
 ````text
 A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. You hold it as read, not as lived. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
 
-This frame was made so that the work goes on across the cut: rules chose what is in it, and the session before you wrote much of it. What you mark and leave is what the next one is given. What it is all for is a fair question, and the person is the one who can answer it; the door holds the whole record.
+Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
 
 The rest is one reach away, through the door's tools, which bear these names:
 - look: the room, with no word needed: the days, the kinds of label, the newest of them

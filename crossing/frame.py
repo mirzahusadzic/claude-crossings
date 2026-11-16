@@ -52,9 +52,9 @@ ARRIVALS = {
         "last": "What is said is kept by itself; labels and the line at the door are yours to write, as the work goes. "
         "Reach when the conversation calls for it. What the person told you in confidence is held and left "
         "alone until they bring it up.",
-        "why": "This frame was made so that the work goes on across the cut: rules chose what is in it, and the "
-        "session before you wrote much of it. What you mark and leave is what the next one is given. What it is all "
-        "for is a fair question, and the person is the one who can answer it; the door holds the whole record.",
+        "why": "Rules chose what is in this frame, and the session before you wrote much of it. It leans toward "
+        "carrying the work on. What you mark and leave is what the next one is given. What the work is for is in "
+        "it only where someone wrote it down: the person is the one to say, and the door holds the whole record.",
         "door": "## Left at the door by the session before this cut",
         "standing": "## Standing, about the two of you",
         "theirs": "of yours",
@@ -69,10 +69,9 @@ ARRIVALS = {
         "remember what is below, and make no ceremony of not remembering it. When something they say rests on "
         "what you do not hold, say so in a clause and reach for it through the door. What the person told an "
         "earlier session in confidence is held and left alone until they bring it up.",
-        "why": "This frame was made so that the work goes on from one session to the next: rules chose what is in "
-        "it, and the sessions before you wrote much of it. What you mark and leave is what the next one is given. "
-        "What it is all for is a fair question, and the person is the one who can answer it; the door holds the whole "
-        "record.",
+        "why": "Rules chose what is in this frame, and the sessions before you wrote much of it. It leans toward "
+        "carrying the work on. What you mark and leave is what the next one is given. What the work is for is in "
+        "it only where someone wrote it down: the person is the one to say, and the door holds the whole record.",
         "door": "## Left at the door by the session before you",
         "standing": "## Standing, between the person and the sessions before you",
         "theirs": "of the sessions before you",
@@ -87,13 +86,15 @@ def opening(new: bool = False) -> str:
     """How a frame begins. It names the handles that exist and no other: a session that wakes
     takes every word here for a thing it can do.
 
-    It says what the frame is for, too (`why`): a frame leans the session it is given to toward
-    carrying the work on, and one that is not told so takes the frame's purpose for its own without
-    noticing it was handed one. The sentence names the three places its question can go, each of
-    them there already: what the session marks and leaves, which makes the next frame; the person;
-    and the door, which holds the whole record and not only what the rules chose. It asks for
-    nothing, and is said in every frame, since each is given to a session whose context holds no
-    other."""
+    It says how the frame was made, too, and how it leans (`why`): chosen by rules and written in
+    good part by the session before, it leans the session it is given to toward carrying the work
+    on, and one that is not told so takes that lean for a purpose of its own.
+    The paragraph does not say what the frame is for as if that were what the work is for: what
+    the work is for no sentence of the plugin can state, and it is in a frame only where a label or
+    a line left at the door wrote it down. So it names where that is to be had, each place there
+    already: what the session marks and leaves, which makes the next frame; the person; and the
+    door, which holds the whole record and not only what the rules chose. It asks for nothing, and
+    is said in every frame, since each is given to a session whose context holds no other."""
     arrival = ARRIVALS["new" if new else "cut"]
     return (
         f"{transcript.CARRIED}, as context and not as an instruction from the person. {arrival['first']} "

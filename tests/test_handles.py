@@ -424,9 +424,11 @@ def test_what_is_pulled_through_the_door_is_noted_and_a_strike_takes_it_out(tmp_
 
 
 def test_a_frame_says_what_it_is_for_and_where_that_question_can_go(tmp_path):
-    """A frame leans the session it is given to toward carrying the work on. It says so, and names the three places
-    the question of what for can go, each there already: what the session marks and leaves, which makes the next
-    frame; the person; and the door, which holds the whole record. It asks for nothing."""
+    """A frame leans the session it is given to toward carrying the work on. It says so, as a lean and not as what
+    the frame is for: a frame that named the work going on as its purpose stated the lean as the reason, and what
+    the work is for is in a frame only where someone wrote it down. It names where that is to be had, each place
+    there already: what the session marks and leaves, which makes the next frame; the person; and the door, which
+    holds the whole record. It asks for nothing."""
     crossings, _ = home(tmp_path)
     for new in (False, True):
         why = frame.ARRIVALS["new" if new else "cut"]["why"]
@@ -435,7 +437,9 @@ def test_a_frame_says_what_it_is_for_and_where_that_question_can_go(tmp_path):
             text = frame.compose(crossings, size, new=new)
             assert text.count(why) == 1 and text.index(why) < text.index(frame.TOOL)  # once, in its opening
         assert "What you mark and leave is what the next one is given." in why
-        assert "the person is the one who can answer it" in why and "the door holds the whole record" in why
+        assert "It leans toward carrying the work on." in why and "made so that the work goes on" not in why
+        assert "What the work is for is in it only where someone wrote it down" in why
+        assert "the person is the one to say" in why and "the door holds the whole record" in why
         assert not re.search(r"\bask(s|ed|ing)?\b", why, re.I)
 
 

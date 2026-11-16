@@ -608,9 +608,9 @@ CUT_FRAME = (
     " work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests "
     "on: messages, or the lines stacked beneath it.\n"
     "\n"
-    "This frame was made so that the work goes on across the cut: rules chose what is in it, and the session "
-    "before you wrote much of it. What you mark and leave is what the next one is given. What it is all for is a "
-    "fair question, and the person is the one who can answer it; the door holds the whole record.\n"
+    "Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the "
+    "work on. What you mark and leave is what the next one is given. What the work is for is in it only where "
+    "someone wrote it down: the person is the one to say, and the door holds the whole record.\n"
     "\n"
     "The rest is one reach away, through the door's tools, which bear these names:\n"
     "- look: the room, with no word needed: the days, the kinds of label, the newest of them\n"
@@ -648,8 +648,9 @@ CUT_FRAME = (
 # changed once since, by the one letter of the plugin's name in its opening (Crossings), and in no
 # other byte: with the older opening put back, the frame gives (8837, "d4639255..."). It changed again
 # as its opening came to say what the frame is for, a paragraph that takes its room from the labels:
-# before it, (8838, "10fb6341...").
-FULL_CUT_FRAME = (8928, "38b9e9562fb92cf56bcacfc13f08f82675caba9d22b21ee17bb5bed34f325c4f")
+# before it, (8838, "10fb6341..."). And once more as that paragraph came to say how the frame leans
+# and not what it is for, in the same room less one character: before it, (8928, "38b9e956...").
+FULL_CUT_FRAME = (8927, "ac46fea23730405f9e5d409d7f5544b6ed66951dd1597065b776f2ea52e8e57f")
 DOOR_LINE = "Find out whether the grey paint has been bought."
 
 
@@ -750,9 +751,9 @@ def test_a_new_session_is_given_the_frame_in_words_true_for_it(tmp_path):
         "messages, or the lines stacked beneath it."
     )
     assert why == (
-        "This frame was made so that the work goes on from one session to the next: rules chose what is in it, and the "
-        "sessions before you wrote much of it. What you mark and leave is what the next one is given. What it is all for "
-        "is a fair question, and the person is the one who can answer it; the door holds the whole record."
+        "Rules chose what is in this frame, and the sessions before you wrote much of it. It leans toward carrying the "
+        "work on. What you mark and leave is what the next one is given. What the work is for is in it only where "
+        "someone wrote it down: the person is the one to say, and the door holds the whole record."
     )
     assert tools == frame.opening().split("\n\n")[2]  # the door's tools, as a cut is given them
     assert last == (
