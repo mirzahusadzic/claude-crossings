@@ -101,6 +101,7 @@ def block(cwd: Path, session: str | None = None) -> str:
 
 
 def main() -> int:
+    record.private()  # every folder and file it makes is its owner's alone, its log's among them
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     session = sys.argv[sys.argv.index("--session") + 1] if "--session" in sys.argv else None
     if session in args:

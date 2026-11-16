@@ -8,6 +8,9 @@ Run with pytest, or without it:  python3 tests/test_flows.py
 from __future__ import annotations
 
 import json
+import os
+import stat
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -241,6 +244,42 @@ def test_a_sidecar_that_is_a_link_is_passed_over_in_one_line_and_the_others_are_
     shown = show.block(crossings.parent)
     assert "1 cut on record in this project" in shown and "session abcdef01, cut 1" in shown
     assert show.ODD.format("fedcba98-cut-1.json") in shown
+
+
+def wide(script: str, *argv: str, **env: str) -> subprocess.CompletedProcess:
+    """One of the plugin's scripts as the person starts it from a shell whose files are made readable to every
+    account (a mask of 022, as many a shell has it)."""
+    return subprocess.run(
+        [sys.executable, "-I", str(ROOT / "crossing" / script), *argv],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env={**os.environ, **env},
+        preexec_fn=lambda: os.umask(0o022),
+    )
+
+
+def test_the_cuts_on_record_and_the_reader_make_their_folder_for_its_owner_alone(tmp_path):
+    """Every folder the plugin makes is its owner's alone, the data folder of its logs too, whichever of its scripts
+    makes it first and whatever the shell it was started from would let others read."""
+    crossings, path = home(tmp_path)
+    (crossings / "abcdef01-cut-1.json").write_text("not json", encoding="utf-8")  # passed over, and logged
+    data = tmp_path / "shown"
+    assert wide("show.py", str(crossings.parent), CLAUDE_PLUGIN_DATA=str(data)).returncode == 0
+    assert stat.S_IMODE(data.stat().st_mode) == 0o700 and stat.S_IMODE((data / "errors.log").stat().st_mode) == 0o600
+    (crossings / "struck.txt").symlink_to(tmp_path / "nowhere")  # a link in the home: refused, and logged
+    data = tmp_path / "read"
+    read = wide(
+        "read.py",
+        str(path),
+        "aaaaaaaa",
+        "--cwd",
+        str(crossings.parent),
+        "--by-hook",
+        CLAUDE_PLUGIN_DATA=str(data),
+        CLAUDE_PLUGIN_ROOT=str(ROOT),
+    )
+    assert read.returncode == 1 and stat.S_IMODE(data.stat().st_mode) == 0o700, read.stderr
 
 
 if __name__ == "__main__":

@@ -82,8 +82,9 @@ def main(argv: list[str] | None = None) -> int:
     folder in CLAUDE_PLUGIN_ROOT)."""
     from argparse import Namespace
 
-    from crossing import door
+    from crossing import door, record
 
+    record.private()  # every folder and file it makes is its owner's alone, its log's among them
     given = list(sys.argv[1:] if argv is None else argv)
     flags = {each for each in given if each in ("--by-hook", "--by-module")}
     given = [each for each in given if each not in flags]
@@ -105,8 +106,6 @@ def main(argv: list[str] | None = None) -> int:
     # A short run of digits is a line of this file; anything longer is the start of an id.
     lines = {int(a) for a in wanted if a.isdigit() and len(a) <= 6}
     ids = {a for a in wanted if not (a.isdigit() and len(a) <= 6)}
-    from crossing import record
-
     try:
         found = said(path, lines, ids, kept_out(path, cwd.resolve()))
     except record.Linked as err:  # a link in the home: nothing of it is read
