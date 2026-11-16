@@ -32,7 +32,7 @@ No answer names a file or a folder: the server asks the door as `--bare`. A refu
 | a setting names a place inside the project, or no absolute path | that the setting was not followed |
 | a file of the home is a link | "A file of this project's home is a link, so nothing was written." |
 | `mark` or `leave` while the project is switched off | "not marked: Crossings is switched off for this project" |
-| `mark` with an anchor the archive does not hold, a sentence over 4,000 characters, a stack that breaks a rule, or a home another act holds for five seconds | "not marked:" and the reason |
+| `mark` with an anchor the archive does not hold, a sentence over 4,000 characters, a sentence or an anchor that holds a character that is no text, a stack that breaks a rule, or a home another act holds for five seconds | "not marked:" and the reason |
 | this computer's `python3` has no FTS5 in its `sqlite3` | that the store cannot be searched, and that what is said is still kept in plain files |
 | a fault inside the door | "The door could not answer:" and the kind of fault; the server goes on |
 

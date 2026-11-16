@@ -113,7 +113,7 @@ A label is one row of a page in `labels/`, named by the day it was marked:
 | whose | `his` (the person's), `session` or `both` |
 | anchors | what it rests on, each in backticks: message ids, a pasted text's `<id>+<n>`, or, for a stack, the keys of the lines beneath it |
 
-A mark is refused where it has no sentence or no anchor, where its sentence is longer than 4,000 characters (how many sentences it holds is not looked at), where an anchor is one the archive does not hold, or where an anchor is an id two messages share; that refusal names both whole ids. A line left at the door rests on messages alone, and one left through `leave` is always the session's.
+A mark is refused where it has no sentence or no anchor, where its sentence is longer than 4,000 characters (how many sentences it holds is not looked at), where an anchor is one the archive does not hold, where an anchor is an id two messages share (that refusal names both whole ids), or where its sentence or an anchor holds a character that is no text (a lone surrogate), which no page can hold; a model's name of that kind is taken as no model known. A line left at the door rests on messages alone, and one left through `leave` is always the session's.
 
 A label can also come into the pages by no mark through the door (a pull, a branch switch, a hand), and it crosses cuts as any other. What the door wrote is known from receipts kept outside every project, beside the person's record (`switched.receipts`): every label the home has met, by its key and its sentence's digest, and every line of `models.txt`. `labelled.txt` and `models-met.txt` inside the home are written too, and are no proof alone, since a pull can bring a line of either with the label it names.
 

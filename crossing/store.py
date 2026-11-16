@@ -1369,6 +1369,15 @@ def digest(sentence: str) -> str:
     return hashlib.sha256(sentence.encode("utf-8")).hexdigest()[:6]
 
 
+def _is_text(value: str) -> bool:
+    """Whether a string can be written into a plain file as UTF-8: it holds no lone surrogate."""
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
+
+
 def plain(text: str) -> str:
     """A label's sentence as its row holds it: on one line, with no bar that would end its cell."""
     return re.sub(r"\s+", " ", text.replace("|", "/")).strip()
@@ -3194,6 +3203,12 @@ def mark(
     its own and those of no known model it may stand over. Where `facing` is not known, nothing
     of this is asked."""
     text = plain(text)
+    # A character that is no text (a lone surrogate, as a shell's bytes or a call's escapes can give one)
+    # cannot be written into a page: refused before anything is written, as every refusal is. A model's
+    # name of that kind is no name, and the label is kept as one whose model is not known.
+    if not _is_text(text) or not all(_is_text(a) for a in anchors):
+        return {"written": False, "why": UNTEXT}
+    model = model if _is_text(model) else ""
     given = list(dict.fromkeys(a.strip().strip("`") for a in anchors if a.strip()))
     lines = list(dict.fromkeys(a.upper() for a in given if KEY.fullmatch(a.upper())))
     anchors = [a for a in given if not KEY.fullmatch(a.upper())]
@@ -3296,6 +3311,7 @@ def _unmarked(
     ), beneath
 
 
+UNTEXT = "a label's sentence and its anchors are to be text, and this holds a character that is none"
 LONGEST = 4000  # characters of a label's sentence, at most: a frame has room for the line left at the door
 BUSY = "another act was writing this home, so nothing was {}: try again in a moment"
 

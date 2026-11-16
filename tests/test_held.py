@@ -74,6 +74,17 @@ def test_a_mark_over_labels_decides_from_the_pages_as_they_stand(tmp_path):
     assert stack not in store.struck(crossings)
 
 
+def test_a_mark_whose_sentence_holds_no_text_writes_nothing(tmp_path):
+    crossings, _ = home(tmp_path)
+    pages = sorted((crossings / "labels").glob("*.md"))
+    for sentence, anchors in (("The hull is \udcff grey.", [D]), ("The hull is grey.", [D, "\udcff"])):
+        out = store.mark(crossings, "work", "session", sentence, anchors)
+        assert not out["written"] and "is none" in out["why"]
+    assert sorted((crossings / "labels").glob("*.md")) == pages  # no page left holding its heading alone
+    out = store.mark(crossings, "work", "session", "The hull is grey.", [D], model="made-\udcffmodel")
+    assert out["written"] and store.listed(crossings, ids=(out["id"],))["labels"][0]["model"] == ""
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):
