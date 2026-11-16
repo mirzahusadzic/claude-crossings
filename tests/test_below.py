@@ -74,6 +74,9 @@ def test_a_session_below_another_home_keeps_nothing_until_the_person_answers(tmp
     told(paper, "PreToolUse", talk(tmp_path))
     assert store._archived(shared)  # what is said there is kept in the home it shares from now on
     assert through("switch", "join", "--cwd", str(paper)) == (0, door.SWITCHED["joined"] + "\n")  # once is enough
+    store.join(paper, shared)  # and a second join at the same moment, past the first one's check, writes nothing
+    lines = store.switched().read_text(encoding="utf-8").splitlines()
+    assert sum(json.loads(line).get("joined") == str(paper) for line in lines) == 1
     started = told(paper)  # a session that starts there now is welcomed as in any home, and told nothing of below
     assert started is None or "below another" not in started
     assert store.consented() == projects  # the line that joins names no project: it switches nothing on

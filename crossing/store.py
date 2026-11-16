@@ -261,7 +261,8 @@ def joined(cwd: Path, folder: Path) -> bool:
 
 
 def join(cwd: Path, folder: Path) -> None:
-    """Keep in the person's record that they shared this home from the folder `cwd`."""
+    """Keep in the person's record that they shared this home from the folder `cwd`, once: a second join
+    asked at the same moment, which found the folder not joined before the first wrote, writes nothing."""
     with _recording():
         if not joined(cwd, folder):
             line = {"home": spelled(folder), "joined": spelled(cwd)}
