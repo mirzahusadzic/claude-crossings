@@ -52,8 +52,15 @@ HARNESS_NAMES = frozenset(
 # it rests on the harness's wording.
 PLUGIN_SENT = re.compile(r"The [^\n]+? plugin sent a message:")
 PLUGIN_SURFACED = "This is how Claude Code surfaces a prompt a plugin submits between turns"
-# What the person pasted into a message. The harness wraps it in a pair of tags that carry one id.
-PASTE = re.compile(r'<pasted_content(?:\s+id="[^"]*")?\s*>(.*?)</pasted_content(?:\s+id="[^"]*")?\s*>', re.S)
+# What the person pasted into a message. The harness wraps it in a pair of tags that carry one id, and a
+# paste runs on to the closing tag of its own id: a pasted text that holds the tags itself (a pasted
+# session's log, a program's source) is one paste whole. Where no closing tag of its id follows, or the
+# opening tag carries none, a paste ends at the first closing tag, as it always did.
+PASTE = re.compile(
+    r'<pasted_content\s+id="(?P<id>[^"]*)"\s*>(?P<own>.*?)</pasted_content\s+id="(?P=id)"\s*>'
+    r'|<pasted_content(?:\s+id="[^"]*")?\s*>(?P<first>.*?)</pasted_content(?:\s+id="[^"]*")?\s*>',
+    re.S,
+)
 
 
 def harness(text: str) -> bool:
@@ -110,7 +117,7 @@ def unpasted(text: str) -> tuple[str, list[str]]:
     pastes: list[str] = []
 
     def noted(found: re.Match) -> str:
-        pastes.append(found.group(1).strip())
+        pastes.append((found.group("own") if found.group("id") is not None else found.group("first")).strip())
         return f"[pasted: {len(pastes[-1])} characters]"
 
     return PASTE.sub(noted, text or ""), pastes

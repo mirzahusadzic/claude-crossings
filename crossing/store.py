@@ -90,7 +90,8 @@ BENEATH = re.compile(r"\b([RW]\d+)@([0-9a-f]{6})\b")
 STATES = ("carried", "cooled", "misaligned", "unresolved")
 # A pasted text's id, as an anchor is written: its message's id and a number, between backticks.
 PASTED_ID = re.compile(r"`([0-9a-f]{8}\+\d+)`")
-MADE = 5  # the make of the database: one of another make is built again before it is read (5: anchors by label)
+MADE = 6  # the make of the database: one of another make is built again before it is read (5: anchors by label;
+# 6: a paste ends at the closing tag of its own id)
 # Which model wrote a label is kept beside the pages, not in them, so that every page reads as it did.
 MODELS = "models.txt"
 SIGNED = re.compile(r"^([RWN]\d+)@([0-9a-f]{6})\s+(\S+)$")

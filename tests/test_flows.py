@@ -81,6 +81,27 @@ def test_a_tool_result_nested_deep_is_measured_by_its_length_as_any_other(tmp_pa
     assert count.count(path, "The person said the hull is grey, and so it is.", pending=True)["traced"]
 
 
+# --- a paste, and a prompt sent while a turn ran ------------------------------------------------------
+
+
+# A pasted text that holds the tags itself, as a pasted session's log or a program's source holds them.
+HOLDS_TAGS = 'A log: <pasted_content id="9">inner</pasted_content> and the rest of the log, which goes on.'
+
+
+def test_a_paste_ends_only_at_the_closing_tag_of_its_own_id(tmp_path):
+    """The harness wraps a paste in a pair of tags that carry one id. A closing tag of another id, or of none,
+    inside the pasted text is the text's own, and the paste runs on to the closing tag of its id: none of it is
+    taken for the person's words."""
+    sent = f'Please look at this. <pasted_content id="1">{HOLDS_TAGS}</pasted_content id="1">'
+    said = {"type": "user", "uuid": "f6f6f6f6-0000", "message": {"content": sent}}
+    assert transcript.person(said) == ["Please look at this."]
+    typed, pastes = transcript.unpasted(sent)
+    assert typed == f"Please look at this. [pasted: {len(HOLDS_TAGS)} characters]" and pastes == [HOLDS_TAGS]
+    # and a pair whose closing tag carries no id, or whose opening tag carries none, ends as it always did
+    assert transcript.unpasted('Two: <pasted_content id="2">a text</pasted_content> and so on.')[1] == ["a text"]
+    assert transcript.unpasted("Three: <pasted_content>b text</pasted_content> and on.")[1] == ["b text"]
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

@@ -96,7 +96,7 @@ From a transcript the archive takes the person's text, typed at the prompt or se
 
 A fork or a resume repeats earlier messages under the same ids: a message the archive holds already is not written twice, and one it holds twice is read once. Two messages whose whole ids differ but whose first eight characters are the same are both kept. The id is noted in `collided.txt` and said once by `status`, `thread` on it names both whole ids, and a strike by it strikes neither.
 
-What the person pasted stays in the archive's line as it was sent. The index keeps each pasted text as a row of its own, `<id>+1`, `<id>+2`, in the voice `pasted`, and the message keeps a note of its size in its place, `[pasted: N characters]`. A paste is not counted as the person's words and the frame does not quote it; a label may rest on it by its id, and it is struck with the message it came in.
+What the person pasted stays in the archive's line as it was sent. The harness wraps a paste in a pair of tags that carry one id, and a paste runs on to the closing tag of its own id, so a pasted text that holds the tags itself (a session's log, a program's source) is one paste whole. The index keeps each pasted text as a row of its own, `<id>+1`, `<id>+2`, in the voice `pasted`, and the message keeps a note of its size in its place, `[pasted: N characters]`. A paste is not counted as the person's words and the frame does not quote it; a label may rest on it by its id, and it is struck with the message it came in.
 
 ---
 
