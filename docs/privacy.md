@@ -23,7 +23,7 @@ Nothing is archived from a session no person sits in: one the harness does not n
 
 A subagent's cut writes nothing at all. A transcript the person hands to `door.py` by its path, from their own terminal, is taken as it is.
 
-Outside every home, the plugin's data folder (`CLAUDE_PLUGIN_DATA`, else `~/.claude/crossing`) holds two logs, each its owner's alone: `errors.log`, a line a failure or a refusal; and `calls.log`, two lines a hook call with sizes and times and never a word (`CROSSING_DEBUG=0` turns it off). `~/.claude/crossing/live/` holds an empty file for each session the plugin is loaded in. Inside a home, `reached.jsonl` notes each pull through `thread`, `mark` and `leave`: when, which verb, which ids, and no words.
+Outside every home, the plugin's data folder (`CLAUDE_PLUGIN_DATA`, else `~/.claude/crossing`) holds two logs, each its owner's alone: `errors.log`, a line a failure or a refusal; and `calls.log`, two lines a hook call with sizes and times and never a word (`CROSSING_DEBUG=0` turns it off; one that cannot be written holds no hook up). `~/.claude/crossing/live/` holds an empty file for each session the plugin is loaded in. Inside a home, `reached.jsonl` notes each pull through `thread`, `mark` and `leave`: when, which verb, which ids, and no words.
 
 ---
 

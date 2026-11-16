@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
+from test_edges import ran  # noqa: E402
 from test_store import A, D, home, row, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
 
 from crossing import count, frame, store, transcript  # noqa: E402
@@ -170,6 +171,42 @@ def test_the_frame_stays_within_what_a_hook_may_carry_whatever_length_a_key_has(
         crossings, "| N1 | The mooring is next. | session | `{D}` |".replace("{D}", D), f"| W2 | Done. | both | `{D}` |"
     )
     assert "Marked after this line: W2." in frame.compose(crossings)
+
+
+# --- the hooks' logs and sidecars ---------------------------------------------------------------------
+
+
+def door_call(crossings: Path, path: Path) -> str:
+    """The event of a call of the door's own tool in a session a person sits in, as the harness hands it to a hook."""
+    return json.dumps(
+        {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "mcp__plugin_crossings_door__look",
+            "tool_input": {},
+            "transcript_path": str(path),
+            "session_id": "session-0001",
+            "cwd": str(crossings.parent),
+        }
+    )
+
+
+def test_a_log_of_calls_that_cannot_be_written_stops_no_hook(tmp_path):
+    """The log of calls is a help to the plugin's own reading, and CROSSING_DEBUG turns it off: one that cannot be
+    written holds nothing up, and what was said is kept all the same."""
+    crossings, path = home(tmp_path)
+    appended(path, json.dumps(row("user", "c9c9c9c9", 9, "The slip is free on Thursday.")))
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "calls.log").write_text("", encoding="utf-8")
+    (data / "calls.log").chmod(0o400)
+    try:
+        hooked = ran(
+            "hook.py", stdin=door_call(crossings, path), CLAUDE_PLUGIN_DATA=str(data), CLAUDE_CODE_ENTRYPOINT="cli"
+        )
+    finally:
+        (data / "calls.log").chmod(0o600)
+    assert hooked.returncode == 0 and "The slip is free on Thursday." in "".join(pages(crossings))
+    assert not (data / "errors.log").exists() or "calls.log" not in (data / "errors.log").read_text(encoding="utf-8")
 
 
 if __name__ == "__main__":

@@ -36,6 +36,7 @@ messages does not bring them into the archive later either.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -633,7 +634,8 @@ def note(event: dict, **more) -> None:
     """One line a hook call, when CROSSING_DEBUG is not "0": which hook, when, and how large the
     transcript was at that moment and when it last changed, as the file system says. Sizes and
     names only, never text. The transcript itself is not opened: a log read at every call of
-    every hook would cost more than all the rest."""
+    every hook would cost more than all the rest. A log that cannot be written is a help lost, and
+    holds up nothing the hook is for."""
     if os.environ.get("CROSSING_DEBUG") == "0" or not isinstance(event, dict):
         return
     given = event.get("transcript_path")
@@ -642,6 +644,12 @@ def note(event: dict, **more) -> None:
         size, changed = seen.st_size, round(seen.st_mtime, 3)
     except (OSError, ValueError):  # no transcript yet, or a path that is none
         size = changed = None
+    with contextlib.suppress(OSError):
+        _noted(event, size, changed, more)
+
+
+def _noted(event: dict, size: int | None, changed: float | None, more: dict) -> None:
+    """`note`'s line, written."""
     record.logged(
         data() / "calls.log",
         json.dumps(
