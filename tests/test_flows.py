@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 from test_edges import ran  # noqa: E402
 from test_store import A, D, home, row, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import count, frame, store, transcript  # noqa: E402
+from crossing import count, frame, record, show, store, transcript  # noqa: E402
 
 
 def appended(path: Path, *lines: str) -> None:
@@ -225,6 +225,22 @@ def test_a_sidecar_cut_short_silences_no_note_at_a_sessions_start(tmp_path):
     assert hooked.returncode == 0 and hooked.stdout.strip(), hooked.stderr
     told = json.loads(hooked.stdout)["hookSpecificOutput"]["additionalContext"]
     assert told.startswith(transcript.CARRIED)
+
+
+# --- the cuts on record, and the reader ----------------------------------------------------------------
+
+
+def test_a_sidecar_that_is_a_link_is_passed_over_in_one_line_and_the_others_are_shown(tmp_path):
+    """No file of a home is read through a link: a cut's sidecar that is one is a record that cannot be read, named
+    in one line, and the cuts beside it are shown as ever."""
+    crossings, path = home(tmp_path)
+    record.write(count.count(path, "A summary of the hull and the paint.", pending=True), crossings, "abcdef01", path)
+    elsewhere = tmp_path / "elsewhere.json"
+    elsewhere.write_text("{}", encoding="utf-8")
+    (crossings / "fedcba98-cut-1.json").symlink_to(elsewhere)
+    shown = show.block(crossings.parent)
+    assert "1 cut on record in this project" in shown and "session abcdef01, cut 1" in shown
+    assert show.ODD.format("fedcba98-cut-1.json") in shown
 
 
 if __name__ == "__main__":

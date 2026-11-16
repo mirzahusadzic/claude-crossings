@@ -78,7 +78,10 @@ def block(cwd: Path, session: str | None = None) -> str:
         except ValueError:  # a sidecar that is no text, or no JSON
             record.passed(path)
             counted = None
-        except OSError:  # one that cannot be opened, or is a link
+        except OSError:  # one that cannot be opened
+            counted = None
+        except record.Linked as err:  # one that is a link: nothing is read through it
+            record.refused(err)
             counted = None
         if isinstance(counted, dict) and (session is None or str(counted.get("session_id", "")).startswith(session)):
             try:
