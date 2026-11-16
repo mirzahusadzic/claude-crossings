@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/mirzahusadzic/claude-crossings/actions/workflows/ci.yml/badge.svg)](https://github.com/mirzahusadzic/claude-crossings/actions/workflows/ci.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24221677.svg)](https://doi.org/10.5281/zenodo.24221677)
+[![Paper](https://img.shields.io/badge/paper-10.5281%2Fzenodo.24287882-blue)](https://doi.org/10.5281/zenodo.24287882)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 ![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B%20%C2%B7%20stdlib%20only-3776ab?logo=python&logoColor=white)
@@ -113,6 +114,38 @@ python3 scripts/told.py > docs/told.md   # everything a session is told, as one 
 ```
 
 [AGENTS.md](AGENTS.md) is the guide for working on the code.
+
+---
+
+### Cite
+
+The working paper on Zenodo gives the model behind Crossings and describes the plugin as built at release 0.3.0. The paper is under CC BY 4.0 and the code under Apache-2.0; each DOI below always resolves to the latest version:
+
+```bibtex
+@misc{husadzic2026forwhatpurpose,
+  author    = {Husadzic, Mirza},
+  title     = {For What Purpose? A Model for Human--AI Continuity
+               Through Conversational Convergence},
+  year      = {2026},
+  publisher = {Zenodo},
+  note      = {Working paper},
+  doi       = {10.5281/zenodo.24287882},
+  url       = {https://doi.org/10.5281/zenodo.24287882}
+}
+```
+
+The software:
+
+```bibtex
+@software{husadzic2026crossings,
+  author    = {Husadzic, Mirza},
+  title     = {Crossings},
+  year      = {2026},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.24221677},
+  url       = {https://doi.org/10.5281/zenodo.24221677}
+}
+```
 
 ---
 
