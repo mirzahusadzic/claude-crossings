@@ -86,8 +86,20 @@ def submitted(text: str) -> bool:
     return bool(PLUGIN_SENT.match(text)) and text.rsplit("\n\n", 1)[-1].lstrip().startswith(PLUGIN_SURFACED)
 
 
+# A surrogate standing alone: half of a character the harness cut in two, written as an escape of its own,
+# which the parser takes as it is. It is no text, and no file can be written with it as text: wherever words
+# are taken from a row, it is read as the mark for a character that cannot be told.
+LONE = re.compile("[\ud800-\udfff]")
+
+
+def told(text: str) -> str:
+    """A text as words are taken from a row: a surrogate standing alone read as the mark for a character that
+    cannot be told (LONE). Two that make one character are one character already, as the parser gives them."""
+    return LONE.sub("\ufffd", text)
+
+
 def norm(text: str) -> str:
-    return re.sub(r"\s+", " ", text or "").strip()
+    return re.sub(r"\s+", " ", told(text or "")).strip()
 
 
 def unpasted(text: str) -> tuple[str, list[str]]:
@@ -109,7 +121,7 @@ def rows(path: Path) -> Iterator[tuple[int, dict]]:
         for number, line in enumerate(handle, 1):
             try:
                 row = json.loads(line)
-            except ValueError:
+            except (ValueError, RecursionError):  # no row, or one nested past what the parser follows
                 continue
             if isinstance(row, dict):
                 yield number, row
@@ -129,7 +141,7 @@ def appended(path: Path, start: int = 0) -> Iterator[tuple[int, dict | None]]:
             at += len(line)
             try:
                 row = json.loads(line.decode("utf-8", errors="replace"))
-            except ValueError:
+            except (ValueError, RecursionError):  # as `rows` passes it over
                 row = None
             yield at, row if isinstance(row, dict) else None
 
@@ -152,14 +164,28 @@ def _blocks(row: dict) -> list[dict]:
     return [b for b in content if isinstance(b, dict) and (b.get("type") != "text" or isinstance(b.get("text"), str))]
 
 
+_BETWEEN = object()  # where `_flat` puts a space between two values of one list or object
+
+
 def _flat(value) -> str:
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list):
-        return " ".join(_flat(v) for v in value)
-    if isinstance(value, dict):
-        return " ".join(_flat(v) for v in value.values())
-    return "" if value is None else str(value)
+    """A value's strings and other scalars in their order, a space between the values of each list or object:
+    what a tool's result is measured by. It is walked by hand rather than by recursion, so that a result nested
+    however deep is measured as any other."""
+    out: list[str] = []
+    todo = [value]
+    while todo:
+        item = todo.pop()
+        if item is _BETWEEN:
+            out.append(" ")
+        elif isinstance(item, str):
+            out.append(item)
+        elif isinstance(item, (list, dict)):
+            values = list(item.values()) if isinstance(item, dict) else item
+            for n, each in enumerate(reversed(values)):  # the first is taken first
+                todo += [_BETWEEN, each] if n else [each]
+        elif item is not None:
+            out.append(str(item))
+    return "".join(out)
 
 
 def ident(row: dict) -> str:
@@ -194,7 +220,7 @@ def person(row: dict, whole: bool = False) -> list[str]:
         held = row.get("attachment") if isinstance(row.get("attachment"), dict) else {}
         origin = held.get("origin") if isinstance(held.get("origin"), dict) else {}
         human = origin.get("kind") == "human" or held.get("humanTurn") is True
-        prompt = held.get("prompt") if isinstance(held.get("prompt"), str) else ""
+        prompt = told(held.get("prompt")) if isinstance(held.get("prompt"), str) else ""
         if held.get("type") == "queued_command" and human and norm(prompt) and not submitted(prompt):
             return [prompt.strip() if whole else norm(prompt)]
         return []
@@ -205,7 +231,7 @@ def person(row: dict, whole: bool = False) -> list[str]:
     for block in _blocks(row):
         if block.get("type") != "text":
             continue
-        sent = block.get("text", "")
+        sent = told(block.get("text", ""))
         typed = norm(PASTE.sub(" ", sent))
         if typed.startswith(HARNESS_OPENINGS) or harness(PASTE.sub(" ", sent)) or submitted(sent):
             continue
@@ -231,7 +257,7 @@ def session(row: dict, whole: bool = False) -> list[str]:
     harness wrote in the session's place (`synthetic`) is said by no one."""
     if row.get("type") != "assistant" or sidechain(row) or synthetic(row):
         return []
-    texts = [b.get("text", "") for b in _blocks(row) if b.get("type") == "text"]
+    texts = [told(b.get("text", "")) for b in _blocks(row) if b.get("type") == "text"]
     return [t.strip() if whole else norm(t) for t in texts if norm(t)]
 
 
