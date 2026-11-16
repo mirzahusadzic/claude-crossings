@@ -137,6 +137,8 @@ A label that rests on other labels of its kind is a stack, and they are the line
 | a stack is struck | its lines are carried again as themselves |
 | a line beneath a stack is struck or reworded | the stack is misaligned |
 
+A mark over other labels decides from the pages as they stand: where the index no longer stands for them (a row written by hand since it was made), it is made whole first, so that no stack is struck for a state the pages no longer hold.
+
 Where the model that marks is known, a stack is also kept within its layer ([Layers](layers.md)).
 
 ---

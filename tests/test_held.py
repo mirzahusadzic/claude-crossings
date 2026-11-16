@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
-from test_store import D, home, row, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
+from test_store import D, E, home, row, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
 
 from crossing import store  # noqa: E402
 
@@ -53,6 +53,25 @@ def test_a_signing_waits_for_the_homes_lock(tmp_path):
     assert (key, store.digest("The hull is grey.")) not in store.models(crossings)
     assert store.sign(crossings, key, "The hull is grey.", "made-up-model")
     assert store.listed(crossings, ids=(key,))["labels"][0]["model"] == "made-up-model"
+
+
+def test_a_mark_over_labels_decides_from_the_pages_as_they_stand(tmp_path):
+    crossings, _ = home(tmp_path)
+    one = store.mark(crossings, "work", "session", "The hull is grey.", [D])["id"]
+    two = store.mark(crossings, "work", "session", "The reminder is for March.", [E])["id"]
+    stack = store.mark(crossings, "work", "session", "The hull and its reminder.", [one, two])["id"]
+    page = next((crossings / "labels").glob("*.md"))
+    as_marked = page.read_text(encoding="utf-8")
+    page.write_text(as_marked.replace("The hull is grey.", "The hull is pale grey."), encoding="utf-8")
+    store.build(crossings)  # a line written again by hand: its stack no longer stands for it
+    assert store.listed(crossings, ids=(stack,))["labels"][0]["state"] == "misaligned"
+    page.write_text(as_marked, encoding="utf-8")  # and put back as it was, with no build since
+    out = store.mark(crossings, "work", "session", "A new stack over the hull.", [one], persons=False)
+    assert not out["written"] and stack not in store.struck(crossings)  # the stack stands again, and is not struck
+    assert store.listed(crossings, ids=(stack,))["labels"][0]["state"] == "carried"
+    (crossings / "store.db").unlink()  # and where there is no index, the mark reads the pages as a read does
+    assert not store.mark(crossings, "work", "session", "Another stack over the hull.", [one], persons=False)["written"]
+    assert stack not in store.struck(crossings)
 
 
 if __name__ == "__main__":

@@ -1611,6 +1611,19 @@ def _current(folder: Path, before: dict) -> sqlite3.Connection | None:
     return None
 
 
+def _stands(folder: Path) -> bool:
+    """Whether what a read of the index finds is what the plain files hold now: the index on disk
+    stands for them as they are (see `_current`), or there is none, and a read makes one in memory
+    from them (see `_open`)."""
+    if not within(folder, "store.db").exists():
+        return True
+    db = _current(folder, _sources(folder))
+    if db is None:
+        return False
+    db.close()  # held for no change: what it began is let go
+    return True
+
+
 def _restood(folder: Path, db: sqlite3.Connection, before: dict) -> None:
     """Keep in the index's record how the plain files that this act changed stand now."""
     db.executemany(
@@ -3198,6 +3211,11 @@ def mark(
     if held is None:
         return {"written": False, "why": BUSY.format("marked")}
     try:
+        # A mark over other labels decides from their states whether a stack is to be struck, and a strike
+        # stays: an index that no longer stands for the pages (a row written by hand since it was made) is
+        # made whole first, so that it decides from what the pages hold.
+        if lines and not _stands(folder):
+            _built(folder)
         why, beneath = _unmarked(folder, letter, lines, anchors, facing, persons)
         if why:
             return {"written": False, "why": why}
