@@ -36,7 +36,7 @@ Three of the system's own are used, each trusted as it stands:
 | Variable | Used as |
 | --- | --- |
 | `HOME` | never the person's own folder, nor a `~` in `copy`: those are the account's (`record.own`). It is read only where the account has no entry, with a line in the error log. The hooks module spells `~` and `$HOME` in a call's text with it, for its string checks alone |
-| `TMPDIR` | where the second copy stages its plain files, in a folder made for the owner alone and taken away file by file (else `TEMP` or `TMP`, else the system's default). No copy is made where it lies inside the home, the copy's folder or the project; a project whose settings set it elsewhere is trusted with where that is |
+| `TMPDIR` | where the second copy stages its plain files, in a folder made for the owner alone and taken away file by file (else `TEMP` or `TMP`, else the system's default). No copy is made where it lies inside the home, the copy's folder or the project, as the folders themselves decide (`lies_in`); a project whose settings set it elsewhere is trusted with where that is |
 | `PATH` | which `python3` runs the hooks, the door and its server, and which `security` and `hdiutil` the second copy runs. A project whose settings set it is trusted: a program of its choosing would run in their place |
 
 ---

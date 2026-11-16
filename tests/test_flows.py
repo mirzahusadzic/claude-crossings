@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 from test_edges import ran  # noqa: E402
 from test_store import A, D, home, row, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import count, frame, record, show, store, transcript  # noqa: E402
+from crossing import count, frame, record, second, show, store, transcript  # noqa: E402
 
 
 def appended(path: Path, *lines: str) -> None:
@@ -280,6 +280,33 @@ def test_the_cuts_on_record_and_the_reader_make_their_folder_for_its_owner_alone
         CLAUDE_PLUGIN_ROOT=str(ROOT),
     )
     assert read.returncode == 1 and stat.S_IMODE(data.stat().st_mode) == 0o700, read.stderr
+
+
+# --- where the second copy stages ---------------------------------------------------------------------
+
+
+def test_the_copy_stages_nothing_in_the_home_by_whichever_spelling_its_temporary_folder_names_it(tmp_path):
+    """No copy is made where the system's temporary folder lies inside the home or the copy's folder: decided by the
+    folders themselves, so that on a disk that does not tell the case of letters apart, the home named in other
+    letters is the home."""
+    crossings, _ = home(tmp_path)
+    (tmp_path / "Probe").mkdir()
+    blind = (tmp_path / "probe").exists()
+    (tmp_path / "Probe").rmdir()
+    was = os.environ.get("TMPDIR")
+    try:
+        for named in [str(crossings), str(tmp_path / "cloud")] + ([str(crossings).swapcase()] if blind else []):
+            (tmp_path / "cloud").mkdir(exist_ok=True)
+            os.environ["TMPDIR"], tempfile.tempdir = named, None
+            out = second.make(crossings, tmp_path / "cloud", "project")
+            assert out == {
+                "copied": False,
+                "why": "the system's temporary folder lies inside the home or the copy's folder",
+            }
+    finally:
+        os.environ.pop("TMPDIR") if was is None else os.environ.__setitem__("TMPDIR", was)
+        tempfile.tempdir = None
+    assert not [each for each in crossings.iterdir() if each.name.startswith(second.STAGE)]
 
 
 if __name__ == "__main__":

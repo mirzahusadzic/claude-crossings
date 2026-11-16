@@ -263,7 +263,9 @@ def _make(folder: Path, dest: Path, name: str, top: Path | None) -> dict:
         if empty:
             return {"copied": False, "why": NOTHING}
     where = staging()
-    if any(where == place or place in where.parents for place in (folder.resolve(), dest.resolve())):
+    # decided by the folders themselves, as for the project: neither the case of a letter nor a link makes the home
+    # or the copy's folder read as another place
+    if any(record.lies_in(where, place) for place in (folder, dest)):
         return {"copied": False, "why": "the system's temporary folder lies inside the home or the copy's folder"}
     if top is not None and record.lies_in(where, top):
         return {"copied": False, "why": "the system's temporary folder lies inside the project"}
