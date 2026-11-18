@@ -61,7 +61,7 @@ The plugin's own bookkeeping, which the hooks and the door write alone:
 | `there.txt`, `calling.txt` | the model each session runs, and the model behind a call of `mark` ([Layers](layers.md)) |
 | `welcomed.txt`, `told.txt` | the sessions welcomed, and those told the switch was turned |
 | `passed-over.txt`, `ignore-told.txt`, `copy-told.txt`, `damaged-told.txt` | that a sentence meant once was said |
-| `reached.jsonl` | what was pulled through the door: when, which verb, which ids |
+| `reached.jsonl` | what was pulled through the door: when, which verb, which ids; read again where the record weighs what no label rests on ([The door](door.md)) |
 | `said/runs.key` | the home's key for the digests of a summary's runs, made at the first cut that needs it |
 | `archive.lock` | held by one act at a time (see below) |
 | `copy.lock` | held by one second copy at a time, from its first file read to its image's place |
@@ -110,10 +110,10 @@ A label is one row of a page in `labels/`, named by the day it was marked:
 
 | Cell | Holds |
 | --- | --- |
-| key | its kind by its letter, and a number: `R` a standing line about the person and the session, `W` about the work, `N` a line left at the door. A mark takes the next number after every key of its letter in the pages and among the struck, under the home's lock; a struck key is never given again |
+| key | its kind by its letter, and a number: `R` a standing line about the person and the session, `W` about the work, `N` a line left at the door, `X` something the session declined, `S` a silencing, which puts a refusal to rest (see Refusals). A mark takes the next number after every key of its letter in the pages and among the struck, under the home's lock; a struck key is never given again |
 | sentence | meant as one sentence, on one line; a `|` in it is written `/`. A mark bounds its length alone, at 4,000 characters, and does not count its sentences; a row written by hand is read as it stands |
-| whose | `his` (the person's), `session` or `both` |
-| anchors | what it rests on, each in backticks: message ids, a pasted text's `<id>+<n>`, or, for a stack, the keys of the lines beneath it |
+| whose | `his` (the person's), `session` or `both`; a refusal is always written as the session's |
+| anchors | what it rests on, each in backticks: message ids, a pasted text's `<id>+<n>`, for a stack the keys of the lines beneath it, and for a judgment of a refusal or a silencing the key of the first refusal of its family |
 
 A mark is refused where it has no sentence or no anchor, where its sentence is longer than 4,000 characters (how many sentences it holds is not looked at), where an anchor is one the archive does not hold, where an anchor is an id two messages share (that refusal names both whole ids), or where its sentence or an anchor holds a character that is no text (a lone surrogate), which no page can hold; a model's name of that kind is taken as no model known. A line left at the door rests on messages alone, and one left through `leave` is always the session's.
 
@@ -145,6 +145,31 @@ Where the model that marks is known, a stack is also kept within its layer ([Lay
 
 ---
 
+### Refusals
+
+What a session declined is part of where the work stands: what was asked, and why it was not done. A session marks it as a label of the kind `refused`, which rests on the message that asked, its sentence the session's reason. Without it, a session that wakes after a cut finds the ask in the record and no account of the answer.
+
+A later session may judge a refusal again: another label of the kind `refused` that rests on the refusal's key, and on the message where its own reason was said. A label of the kind `silenced` puts a refusal to rest: it rests on the key of one refusal and on the message where the reason was said, and its sentence says why. A refusal, every judgment of it and every silencing of it are one family, named by the key of its first refusal, whichever of them a later mark names and whether or not that first label is still there. A row of the family names the first refusal as a stack names a line, `X3@1a2b3c`, and a family is no stack: none of a stack's rules is asked of it, and it never gets deeper.
+
+Of a family, the newest label that is sound, in the order of writing, is the one that stands. The others are cooled beneath it. Where the one that stands is a silencing, the family is silenced: it crosses no more, and stays in the pages with its whole run. A later label of the kind `refused` on the same family makes it stand again.
+
+A refusal is the session's own, and is written as `session` whatever a mark asks. A silencing keeps whose it is given, since the person may be the one who put the refusal to rest.
+
+| Event | Crossings |
+| --- | --- |
+| a judgment or a silencing names no message | refuses it: each rests on the message where its reason was said |
+| a silencing names no refusal | refuses it: it rests on the key of the refusal it puts to rest |
+| a judgment or a silencing names a label of another kind | refuses it |
+| either names refusals of two families | refuses it: a judgment judges one alone, and a silencing puts one alone to rest |
+| the first refusal of a family is struck | the family is one all the same, named by that key as its rows name it, and the newest sound label of it still stands |
+| a row of a family, written by hand, names what no family is | it is misaligned, and carried as itself |
+
+`labels` on any key of a family gives the whole run: the first refusal, then each judgment and silencing in the order of writing, each by its kind. `look` and `status` count the families that stand apart from those that are silenced. What a frame carries of them is in [The door](door.md).
+
+Label pages written before these kinds were known read as they did. An index made then is of another make, and is made again from the plain files before it is read.
+
+---
+
 ### The four states
 
 Every build finds each label in one of four states, from the pages and the archive alone:
@@ -157,6 +182,8 @@ Every build finds each label in one of four states, from the pages and the archi
 | unresolved | rests on a message the archive does not hold, or on nothing |
 
 A label's own trouble is said before its place: one misaligned or unresolved is called so though it stands beneath a sound stack. What stands beneath a stack that is not sound is carried. `status` and `look` count the states.
+
+A refusal's family is read by the same four: the label that stands in it is carried, the others are cooled beneath that one, and a row of the family that names what no family is is misaligned (see Refusals).
 
 ---
 

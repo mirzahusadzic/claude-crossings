@@ -25,9 +25,9 @@ When a session grows long, the harness compacts it, and a summary takes the conv
 <p align="center"><em>Crossings cut across: what is said goes down word for word, and a small frame comes up across each cut.</em></p>
 
 - **What was said, kept.** Every message of yours and of the session's, under its id, from each session you sit in. Reasoning and tool traffic are never kept.
-- **The door.** Seven tools the session calls: `look`, `labels`, `find`, `thread`, `mark`, `leave`, `status`.
-- **Labels.** One sentence about a stretch of the record, resting on the ids of its messages. The session writes them as the work goes.
-- **The frame.** About 9,000 characters across a cut: the standing lines, where the work stands, and a few of your own words.
+- **The door.** Eight tools the session calls: `look`, `labels`, `find`, `thread`, `mark`, `leave`, `status`, `crossing`.
+- **Labels.** One sentence about a stretch of the record, resting on the ids of its messages. The session writes them as the work goes, and what it declined is one of them, kept with its reason.
+- **The frame.** About 9,000 characters across a cut: the standing lines, where the work stands, and your own sentences, each with what the session told of it beneath.
 - **A gentle wake.** A short note to the session that comes through a cut. It asks for no inventory and no report.
 - **The count.** How much of each voice the summary kept word for word, counted by script.
 - **Your own hand.** A switch for each project, a way to speak off the record, and a strike.

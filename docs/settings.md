@@ -51,7 +51,7 @@ Each is a plain file of the home with one line. A word is read without case or t
 | `mode` | how a cut is answered: `native`, `beside` or `own` ([Cuts](cuts.md)) | `native`; a home `/crossings on` makes, or finds empty, starts with `beside` | a word not known reads as `native` |
 | `carry` | how the frame is carried: `message` or `note` | `message`; a home made or found empty starts with `note` | a word not known reads as `message` |
 | `copy` | the folder for the second copy. A leading `~`, alone or before a `/`, is the person's own folder, and what follows stays below it (`~//tmp` is `~/tmp`, and a `..` climbs no higher) | no copy | a place inside the project makes no copy |
-| `frame-size` | the frame's size in characters | 9,000 | held between 2,300 and 9,500; a file that holds no whole number leaves 9,000 |
+| `frame-size` | the frame's size in characters | 9,000 | held between 2,400 and 9,500; a file that holds no whole number leaves 9,000 |
 | `retelling-length` | how long a summary must be, in characters, for the retelling line | 20,000 | a file that holds no whole number leaves the default |
 | `retelling-share` | how much of it, in percent, must repeat the summary before; `%` may follow | 60 | the same |
 | `project` | the path of the project a home outside it belongs to, written by `/crossings on` | | a home named by the slug alone, without a digest, is used only where this names exactly the project's path |
