@@ -1,13 +1,18 @@
 """Five guards: the home on this computer is offered only where Crossings is switched on; a setting
 that names a place inside the project is not followed; a home that came with a repository is
 not switched on with no word said; a session no person sits in is not archived; and what the
-plugin makes is its owner's alone. No model, no network.
+plugin makes is its owner's alone. And three of the door's server: a client that asks for a
+version of the protocol it does not know is answered in one of its own; its instructions say the
+archive keeps itself only where the plugin started it; and nothing it tells a session names a path
+of this machine or a script. No model, no network.
 
 Run with pytest, or without it:  python3 tests/test_guards.py
 """
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import stat
@@ -20,11 +25,13 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
 from test_edges import as_the_module, ran, set_to, through  # noqa: E402
+from test_refused import BRANCH, built, served  # noqa: E402
+from test_sample_join import b, standing_in  # noqa: E402
 from test_serve import said  # noqa: E402
 from test_shipped import cloned, inside, lines, logged  # noqa: E402
 from test_store import ROWS, A, B, D, E, home, own_folder, row, started_by, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import door, hook, record, store  # noqa: E402
+from crossing import door, frame, hook, record, serve, store  # noqa: E402
 
 ON = "Crossings is on for this project.\n"
 NOT_ON = "Crossings is not switched on for this project."
@@ -540,6 +547,145 @@ def test_on_windows_no_mode_is_set_or_narrowed(tmp_path):
         record.WINDOWS = was
     assert oct(stat.S_IMODE(folder.stat().st_mode)) == "0o755"
     assert door.ASTRAY.count(".") == 1 and "/" not in door.ASTRAY  # and the sentence of C2 names no file
+
+
+# --- the door's server: the protocol, its instructions, and no path in what it tells a session ---------------------
+
+# The places of this machine the plugin reads and writes by its settings, each inside a test's own folder.
+PLACES = {
+    "HOME": "home",
+    "CLAUDE_PLUGIN_DATA": "data",
+    "CROSSING_HOMES": "data/homes",
+    "CROSSING_OURS": "data/ours",
+    "CROSSING_SWITCHED": "data/switched",
+    "CROSSING_LIVE": "data/live",
+}
+
+
+@contextlib.contextmanager
+def environment(**values: str | None):
+    """Variables of the environment set, or with None taken out, each put back as it was however the test ends."""
+    was = {name: os.environ.get(name) for name in values}
+    try:
+        for name, value in values.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+        yield
+    finally:
+        for name, value in was.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+
+
+def placed(tmp_path: Path):
+    """HOME and every place the plugin keeps by its settings inside the test's own folder, and no home named outright."""
+    machine = tmp_path.resolve() / "machine"
+    (machine / "home").mkdir(parents=True)
+    (machine / "data").mkdir()
+    return environment(**{name: str(machine / where) for name, where in PLACES.items()}, CROSSING_HOME=None)
+
+
+def searchable(folder: Path, said_ids: tuple):
+    """The store reads the home's pages through an index made by hand (tests/test_refused.py's `built`), with the
+    two tables of words a build makes beside it, so that `find` has words to look in; a new one at each read."""
+
+    def made(*args, **kwargs):
+        db = built(folder, said_ids)
+        db.executescript(
+            f"create virtual table said_fts using fts5(text, tokenize='{store.TOKENS}');\n"
+            f"create virtual table label_fts using fts5(text, tokenize='{store.TOKENS}');\n"
+            "insert into said_fts(rowid, text) select seq, text from said;\n"
+            "insert into label_fts(rowid, text) select n, text from label;\n"
+        )
+        return db
+
+    return standing_in(store, "_open", made)
+
+
+def piped(*requests: dict) -> list[dict]:
+    """What the server answers, a line each, to these requests sent to it one a line."""
+    given = io.StringIO("".join(json.dumps(each) + "\n" for each in requests))
+    out = io.StringIO()
+    with standing_in(sys, "stdin", given), contextlib.redirect_stdout(out):
+        assert serve.main() == 0
+    return [json.loads(line) for line in out.getvalue().splitlines()]
+
+
+def test_a_client_that_asks_for_a_version_the_server_does_not_know_is_answered_in_its_own_and_it_goes_on(tmp_path):
+    with placed(tmp_path):
+        answers = piped(
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "1999-01-01"}},
+            {"jsonrpc": "2.0", "id": 2, "method": "ping"},
+            {"jsonrpc": "2.0", "id": 3, "method": "initialize", "params": {"protocolVersion": serve.VERSIONS[-1]}},
+            {"jsonrpc": "2.0", "id": 4, "method": "initialize", "params": {}},
+            {"jsonrpc": "2.0", "id": 5, "method": "tools/list"},
+        )
+    assert "1999-01-01" not in serve.VERSIONS
+    assert [each["id"] for each in answers] == [1, 2, 3, 4, 5] and not [each for each in answers if "error" in each]
+    # the newest it knows for a version it does not know, or none asked for; and one it knows in that one
+    versions = [each["result"].get("protocolVersion") for each in answers]
+    assert versions == [serve.VERSIONS[0], None, serve.VERSIONS[-1], serve.VERSIONS[0], None]
+    assert answers[1]["result"] == {} and answers[4]["result"]["tools"] == serve.TOOLS
+
+
+def test_the_servers_instructions_say_the_archive_keeps_itself_only_where_the_plugin_started_it(tmp_path):
+    initialize = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
+    told = {}
+    with placed(tmp_path):
+        for root in (None, "", str(ROOT)):  # not set, set to nothing, and the plugin's own folder
+            with environment(CLAUDE_PLUGIN_ROOT=root):
+                told[root] = serve.instructions(), serve.handle(initialize)["result"]["instructions"]
+    assert all(alone == started for alone, started in told.values())  # the same text, whichever way it is asked
+    bare, empty, kept = told[None][0], told[""][0], told[str(ROOT)][0]
+    assert serve.BARE in bare and serve.KEPT not in bare and empty == bare
+    assert serve.KEPT in kept and serve.BARE not in kept
+    assert bare.replace(serve.BARE, serve.KEPT) == kept  # and the two differ in that alone
+
+
+# Every tool of the server, asked as a session would ask it, its refusals among them.
+ASKED = (
+    ("look", {}),
+    ("status", {}),
+    ("status", {"home": "ours"}),
+    ("labels", {}),
+    ("find", {"words": "tove"}),
+    ("find", {}),
+    ("thread", {"id": b(1)}),
+    ("thread", {"id": "c0000009"}),
+    ("mark", {"sentence": "The wabe is mapped.", "anchors": [b(1)]}),
+    ("mark", {"kind": "refused", "sentence": BRANCH, "anchors": [b(2)]}),
+    ("mark", {"sentence": "Over nothing held.", "anchors": ["c0000009"]}),
+    ("leave", {"sentence": "Find out whether the tove is gyred.", "anchors": [b(1)]}),
+    ("labels", {"ids": ["X1"]}),
+    ("labels", {"kind": "refused"}),
+    ("crossing", {}),
+)
+
+
+def test_nothing_the_server_tells_a_session_names_a_path_of_this_machine_or_a_script(tmp_path):
+    folder, project = tmp_path.resolve() / "home", tmp_path.resolve() / "project"
+    folder.mkdir()
+    told = {}
+    with placed(tmp_path), searchable(folder, (b(1), b(2), "c0000003@s1@m-test")), served(folder, project):
+        for name, given in ASKED:
+            told[f"{name} {json.dumps(given)}"], _ = serve.call(name, given)
+        for root in (None, str(ROOT)):
+            with environment(CLAUDE_PLUGIN_ROOT=root):
+                told[f"instructions {root}"] = serve.instructions()
+        told["tools"] = json.dumps(serve.TOOLS)
+        unknown = serve.handle({"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "strike"}})
+        told["an unknown tool"] = unknown["error"]["message"]
+        told["a cut's frame"] = frame.compose(folder, 9000, session="s1")
+        told["a new session's frame"] = frame.compose(folder, 9000, new=True)
+    assert set(serve.NAMES) <= {key.split()[0] for key in told}  # every tool was asked
+    assert [key for key, text in told.items() if text.startswith("The door could not answer")] == []
+    assert told["mark " + json.dumps(ASKED[8][1])] == "marked W1" and "`b0000001`: tove" in told["a cut's frame"]
+    places = (str(tmp_path), str(tmp_path.resolve()), str(folder), str(project), "/Users/", ".py", ".jsonl")
+    assert {key: [each for each in places if each in text] for key, text in told.items()} == dict.fromkeys(told, [])
 
 
 if __name__ == "__main__":

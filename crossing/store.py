@@ -73,28 +73,39 @@ from crossing.record import Linked, within  # noqa: E402,F401  (every file of a 
 
 HIS, OWN, PASTED = "his", "session", "pasted"
 # A label's key says its kind: R a standing line about the two of them, W about the work, N a
-# line the session left at the door for the one who wakes after the next cut.
-KINDS = {"R": "relation", "W": "work", "N": "next"}
+# line the session left at the door for the one who wakes after the next cut, X something the
+# session declined, resting on the message that asked for it, its sentence the session's reason,
+# and S a silencing, which puts a refusal to rest, resting on its key and on the message where the
+# reason was said, its sentence the comment.
+KINDS = {"R": "relation", "W": "work", "N": "next", "X": "refused", "S": "silenced"}
 LETTER = {kind: letter for letter, kind in KINDS.items()}
-ROW = re.compile(r"^\|\s*([RWN]\d+)\s*\|\s*(.+?)\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*$")
-KEY = re.compile(r"[RWN]\d+")
+FAMILY = ("refused", "silenced")  # the kinds of a refusal's run: the refusal, each judgment of it, each silencing
+ROW = re.compile(r"^\|\s*([RWNXS]\d+)\s*\|\s*(.+?)\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*$")
+KEY = re.compile(r"[RWNXS]\d+")
 # A label may rest on other labels of its kind, which makes it a stack and them the lines beneath
 # it. A stack's row names each line by its key and six characters of the digest of the line's
 # sentence as it stood when the stack was marked: `R13@1a2b3c`. Six, because a message's id has
-# eight, so that neither is ever read as the other.
-BENEATH = re.compile(r"\b([RW]\d+)@([0-9a-f]{6})\b")
+# eight, so that neither is ever read as the other. A refusal names the refusal it judges again
+# in the same form, and so does a silencing, and neither is a stack (see `_stood`): only their rows
+# are read for such a key. In every other row it is no line, and is passed over as it always was
+# (STACKED).
+BENEATH = re.compile(r"\b([RWXS]\d+)@([0-9a-f]{6})\b")
+STACKED = re.compile(r"\b([RW]\d+)@([0-9a-f]{6})\b")
 # What a build finds each label to be. Carried: it stands by itself, or is the top of a stack.
 # Cooled: it stands beneath a stack that is sound, which is carried in its place. Misaligned: a
 # stack with a line beneath it gone, or changed since the stack was marked, so that it no longer
 # stands for its lines. Unresolved: it rests on a message the archive does not hold, or on nothing.
+# Of a refusal, the judgments and the silencings of it (its family), the newest sound one is carried
+# and the others are cooled beneath it: where that one is a silencing, the family is silenced.
 STATES = ("carried", "cooled", "misaligned", "unresolved")
 # A pasted text's id, as an anchor is written: its message's id and a number, between backticks.
 PASTED_ID = re.compile(r"`([0-9a-f]{8}\+\d+)`")
-MADE = 6  # the make of the database: one of another make is built again before it is read (5: anchors by label;
-# 6: a paste ends at the closing tag of its own id)
+MADE = 8  # the make of the database: one of another make is built again before it is read (5: anchors by label;
+# 6: a paste ends at the closing tag of its own id; 7: a label of the kind refused, which an older make never read;
+# 8: a label of the kind silenced)
 # Which model wrote a label is kept beside the pages, not in them, so that every page reads as it did.
 MODELS = "models.txt"
-SIGNED = re.compile(r"^([RWN]\d+)@([0-9a-f]{6})\s+(\S+)$")
+SIGNED = re.compile(r"^([RWNXS]\d+)@([0-9a-f]{6})\s+(\S+)$")
 LINE_TO_ID = re.compile(r"^\|\s*(\d{3,})\s*\|\s*`([0-9a-f]{8})`\s*\|")
 # Word stems, so that "paint" finds "painted".
 TOKENS = "porter unicode61 remove_diacritics 2"
@@ -1837,7 +1848,8 @@ def labels(folder: Path) -> list[dict]:
                 continue
             key, text, whose, cell = m.groups()
             beneath: dict[str, str] = {}
-            for line_key, was in BENEATH.findall(cell):
+            lined = BENEATH if key[0] in "XS" else STACKED  # a refusal's key is a line of a refusal's run alone
+            for line_key, was in lined.findall(cell):
                 beneath.setdefault(line_key, was)  # a line named twice is beneath once
             # The lines beneath are taken out first. What is left of the cell names messages, and a
             # digest of digits alone is then no line's number in an early page's table.
@@ -1845,7 +1857,7 @@ def labels(folder: Path) -> list[dict]:
             # would rest on the message; and where that id has no letter in it, it would not be read
             # at all, so that a label marked on such a paste would rest on nothing.
             # what lies between pasted texts' ids, and those ids, in turn
-            parts = PASTED_ID.split(BENEATH.sub(" ", cell))
+            parts = PASTED_ID.split(lined.sub(" ", cell))
             cell = " ".join(parts[::2])
             ids = [each for n, part in enumerate(parts) for each in ([part] if n % 2 else named(part))]
             # an early page named its anchors by line and gave a table from line to id
@@ -1922,7 +1934,13 @@ def _stood(kept: list[dict], held: set[str]) -> tuple[dict[str, str], dict[str, 
     A stack that is misaligned or unresolved is not sound, and what stands beneath it is
     carried: a stack that is not carried itself must not keep its lines from being carried.
     A label's own trouble is said before its place: one that is misaligned or unresolved is
-    called so though it stands beneath a sound stack."""
+    called so though it stands beneath a sound stack.
+
+    A refusal, the refusals that judge it again and the silencings of it are a family (see
+    `families`), and no stack: of a family the newest that is sound, in the order of writing, is
+    carried, the others are cooled beneath it, and no rule of a stack's depth applies. A family is
+    one whether or not its first refusal is still there. One of the run whose row names what no
+    family is (see `_kin`) is misaligned."""
     by_key = {label["id"]: label for label in kept}
 
     def under(stack: dict, key: str) -> bool:
@@ -1931,19 +1949,78 @@ def _stood(kept: list[dict], held: set[str]) -> tuple[dict[str, str], dict[str, 
 
     parent: dict[str, str] = {}
     for stack in kept:
+        if stack["kind"] in FAMILY:
+            continue  # a judgment or a silencing is no stack: see below
         for key, _ in stack["beneath"]:
             if under(stack, key):
                 parent.setdefault(key, stack["id"])
+    first, astray = _kin(kept)
     wrong: dict[str, str] = {}
     for label in kept:
-        if not all(under(label, key) and digest(by_key[key]["text"]) == was for key, was in label["beneath"]):
+        # A judgment's sentence is the wording that stands now, not an account of the one it judges: a refusal
+        # reworded since, or struck, is judged all the same. It judges one refusal alone.
+        if label["kind"] in FAMILY:
+            askew = label["id"] in astray
+        else:
+            askew = not all(under(label, k) and digest(by_key[k]["text"]) == was for k, was in label["beneath"])
+        if askew:
             wrong[label["id"]] = "misaligned"
         elif not (label["anchors"] or label["beneath"]) or not held.issuperset(label["anchors"]):
             wrong[label["id"]] = "unresolved"
+    # Of each family, the newest that is sound stands; the others are cooled beneath it.
+    for members in _members(first).values():
+        sound = [key for key in members if key not in wrong]
+        for key in sound[:-1]:
+            parent[key] = sound[-1]
     state = {
         key: wrong.get(key) or ("cooled" if key in parent and parent[key] not in wrong else "carried") for key in by_key
     }
     return parent, state
+
+
+def _kin(found: list[dict]) -> tuple[dict[str, str], set[str]]:
+    """Each refusal's family (see `families`), and the keys of those of the run whose rows name what no family is,
+    which a build finds misaligned: a key not written before theirs, other than that of a refusal no longer there
+    (one numbered below a refusal written by then); a key of another kind; refusals of two families; or, for a
+    silencing, no refusal at all. `found` are in the order of writing."""
+    there = {label["id"] for label in found if label["kind"] in FAMILY}
+    first: dict[str, str] = {}
+    astray: set[str] = set()
+    highest = 0  # the highest number of a refusal written so far: a refusal gone has a lower one, as keys are given
+    for label in found:
+        if label["kind"] not in FAMILY:
+            continue
+        highest = max(highest, int(label["id"][1:])) if label["kind"] == "refused" else highest
+        named = list(dict.fromkeys(k if isinstance(k, str) else k[0] for k in label["beneath"]))
+        gone = [k for k in named if k[:1] == "X" and k not in there and int(k[1:]) < highest]
+        known = [k for k in named if k in first or k in gone]  # one written before it, or a refusal gone
+        roots = {first.get(k, k) for k in known}
+        first[label["id"]] = next(iter(roots)) if len(roots) == 1 else label["id"]
+        if (
+            known != named
+            or len(roots) > 1
+            or first[label["id"]][:1] != "X"
+            or (label["kind"] == "silenced" and not named)
+        ):
+            astray.add(label["id"])
+    return first, astray
+
+
+def families(found: list[dict]) -> dict[str, str]:
+    """Each refusal's family, by the key its rows name as the first refusal, whether that label is still there or
+    not: a refusal that names no refusal written before it is the first of its own, and a judgment or a silencing,
+    which names one, is of that one's family, however many lie between them. One that names refusals of two
+    families is of its own. `found` are labels as `labels` gives them or as the index holds them, in the order of
+    writing: their lines beneath are keys, or keys with the digest a row gives."""
+    return _kin(found)[0]
+
+
+def _members(first: dict[str, str]) -> dict[str, list[str]]:
+    """The keys of each family (see `families`), by the key of its first refusal, in the order of writing."""
+    found: dict[str, list[str]] = {}
+    for key in first:
+        found.setdefault(first[key], []).append(key)
+    return found
 
 
 def build(folder: Path) -> dict:
@@ -2643,7 +2720,7 @@ def _met(folder: Path) -> set[str] | None:
         return None
 
 
-SIGNED_KEY = re.compile(r"[RWN]\d+@[0-9a-f]{6}")
+SIGNED_KEY = re.compile(r"[RWNXS]\d+@[0-9a-f]{6}")
 
 
 def _known(folder: Path, entries: list[str]) -> list[str]:
@@ -3207,7 +3284,8 @@ def look(folder: Path, newest: int = 8) -> dict:
     asked a question of does not recite what was told in confidence. A stack over standing
     lines is as quiet as they are: how many stand beneath how many stacks is said, and what
     is misaligned or unresolved is named by its key. Of the work, the newest are those that
-    are not cooled: a stack stands there for its lines."""
+    are not cooled: a stack stands there for its lines. What the session declined is counted by
+    its families, those that stand apart from those that are silenced (see `refusals`)."""
     db = _open(folder)
     one = lambda sql: db.execute(sql).fetchone()[0]  # noqa: E731
     out = {
@@ -3220,6 +3298,7 @@ def look(folder: Path, newest: int = 8) -> dict:
         ],
         "standing": [r[0] for r in db.execute("select id from label where kind = 'relation' order by n")],
         "work": [r[0] for r in db.execute("select id from label where kind = 'work' order by n")],
+        "refusals": _refusals(db),
         "labels": one("select count(*) from label"),  # every label, the lines left at the door too, as `status` counts
         "newest": [
             dict(r)
@@ -3263,6 +3342,26 @@ def look(folder: Path, newest: int = 8) -> dict:
     return out
 
 
+def _refusals(db: sqlite3.Connection) -> dict[str, list[str]]:
+    """The families of refusals by the label that stands in each: those that stand (a refusal or a judgment of
+    it), and those that are silenced (a silencing), each in the order of writing."""
+    return {
+        name: [
+            r[0] for r in db.execute("select id from label where kind = ? and state = 'carried' order by n", (kind,))
+        ]
+        for name, kind in (("standing", "refused"), ("silenced", "silenced"))
+    }
+
+
+def refusals(folder: Path) -> dict[str, list[str]]:
+    """What `status` says of the refusals, as `look` gives them: see `_refusals`."""
+    db = _open(folder)
+    try:
+        return _refusals(db)
+    finally:
+        db.close()
+
+
 def listed(folder: Path, kind: str | None = None, day: str | None = None, ids: tuple = (), limit: int = 40) -> dict:
     """The labels themselves, newest first: those named by id; or those of a kind, or of a day.
 
@@ -3274,8 +3373,9 @@ def listed(folder: Path, kind: str | None = None, day: str | None = None, ids: t
     Each label comes with its state, the stack it stands beneath (`parent`), the keys of
     the lines its own row names (`beneath`) and the model that wrote it, or nothing (`model`).
     A stack named by id is given with every line beneath it, right under it and one `depth`
-    further in; a line named beside its stack is given once, there. By kind or by day each
-    label is a row of its own."""
+    further in; a line named beside its stack is given once, there. A refusal named by id is
+    given with its family (see `families`). By kind or by day each label is a row of its own; the
+    kind refused holds the silencings of refusals too."""
     db = _open(folder)
     rows = [
         dict(r)
@@ -3300,22 +3400,26 @@ def listed(folder: Path, kind: str | None = None, day: str | None = None, ids: t
                     found += [{**line, "depth": depth}] + under(line, depth + 1)
             return found
 
-        beneath = {r["id"]: under(r, 1) for r in rows if r["id"] in wanted}
+        # A refusal named by its key, or a silencing, is given with its family, once: the first refusal, then each
+        # judgment and silencing of it in the order of writing, one `depth` further in, each with its kind (`run`).
+        first = families(rows[::-1])
+        family, judged, given = _members(first), {first[key] for key in wanted if key in first}, set()
+        beneath = {r["id"]: under(r, 1) for r in rows if r["id"] in wanted and r["id"] not in first}
         below = {line["id"] for lines in beneath.values() for line in lines}
-        shown, quiet = (
-            [
-                each
-                for r in rows
-                if r["id"] in beneath and r["id"] not in below
-                for each in [{**r, "depth": 0}, *beneath[r["id"]]]
-            ],
-            [],
-        )
+        shown, quiet = [], []
+        for r in rows:
+            if r["id"] in beneath and r["id"] not in below:
+                shown += [{**r, "depth": 0}, *beneath[r["id"]]]
+            elif first.get(r["id"]) in judged and first[r["id"]] not in given:
+                given.add(first[r["id"]])
+                shown += [
+                    {**by_key[key], "depth": int(key != first[r["id"]]), "run": True} for key in family[first[r["id"]]]
+                ]
     else:
         shown = [
             r
             for r in rows
-            if (r["kind"] == kind if kind else r["kind"] != "relation")
+            if (r["kind"] in (FAMILY if kind == "refused" else (kind,)) if kind else r["kind"] != "relation")
             and (not day or r["day"] == day or (r["beneath"] and r["page"] == f"{day}.md"))
         ]
         quiet = [] if kind else [r["id"] for r in rows if r["kind"] == "relation"][::-1]
@@ -3328,6 +3432,12 @@ def listed(folder: Path, kind: str | None = None, day: str | None = None, ids: t
 
 
 # --- writing ---------------------------------------------------------------------------------------
+
+
+def settled(kind: str, whose: str) -> str:
+    """Whose a label of this kind is written as: a refusal (a first one or a judgment of it) is by its nature the
+    session's own (OWN), whatever is given; a label of any other kind, a silencing too, is as given."""
+    return OWN if kind == "refused" else whose
 
 
 def mark(
@@ -3350,6 +3460,15 @@ def mark(
     no deeper; a line left at the door is neither a stack nor beneath one. Each is refused in
     a sentence, and nothing is written.
 
+    A refusal (kind `refused`) rests on the message that asked. One that also names an earlier
+    refusal's key is a judgment of it: its row names the first refusal of that one's family,
+    whichever of the family was named, and none of the rules of a stack is asked of it; one
+    that names refusals of two families is refused. A silencing (kind `silenced`) is a member of
+    the family it names in the same way, and names exactly one; where it is the newest sound
+    member, the family is silenced and crosses no more. A judgment or a silencing that names no
+    message is refused: each rests on the message where its reason was said. A refusal is
+    written as the session's, whatever `whose` is given (see `settled`); a silencing keeps it.
+
     A line beneath a misaligned stack is free to be stacked again. Such a stack no longer
     stands for its lines and is to be written again: the stack marked over any of them takes
     its place, and the old one is struck in the same act, as `strike` would strike it.
@@ -3370,6 +3489,7 @@ def mark(
     its own and those of no known model it may stand over. Where `facing` is not known, nothing
     of this is asked."""
     text = plain(text)
+    whose = settled(kind, whose)
     # A character that is no text (a lone surrogate, as a shell's bytes or a call's escapes can give one)
     # cannot be written into a page: refused before anything is written, as every refusal is. A model's
     # name of that kind is no name, and the label is kept as one whose model is not known.
@@ -3401,7 +3521,8 @@ def mark(
         why, beneath = _unmarked(folder, letter, lines, anchors, facing, persons)
         if why:
             return {"written": False, "why": why}
-        return _marked(folder, letter, whose, text, lines, anchors, beneath, day, model)
+        # the lines as the row names them: those asked for, or, for a refusal judged again, its first refusal
+        return _marked(folder, letter, whose, text, list(beneath), anchors, beneath, day, model)
     finally:
         _unlocked(folder, held)
 
@@ -3410,7 +3531,8 @@ def _unmarked(
     folder: Path, letter: str, lines: list[str], anchors: list[str], facing: str, persons: bool
 ) -> tuple[str, dict]:
     """Why `mark` refuses, or nothing; and each label named as a line beneath, as the store holds
-    it. The caller holds the home's lock, where there is a home."""
+    it, or, for a refusal judged again, the first refusal of its family. The caller holds the
+    home's lock, where there is a home."""
     db = _open(folder)
     missing = [a for a in anchors if db.execute("select 1 from said where id = ?", (a,)).fetchone() is None]
     # An id two messages share is no one message, as `thread` says: a label resting on it would rest on either.
@@ -3435,6 +3557,34 @@ def _unmarked(
         for key in lines
         if db.execute("select 1 from beneath b join beneath c on c.stack = b.line where b.stack = ?", (key,)).fetchone()
     ]
+    # A refusal judged again: each refusal named, by the first refusal of its family (see `families`). The judgment
+    # rests on that first one, so that a family never gets deeper; it stands over nothing and takes no place, so
+    # no rule of a stack's (its depth, its layer, whose it is) is asked of it.
+    refused = letter in ("X", "S")  # a refusal or a silencing: a member of a refusal's family
+    first = (
+        families(
+            [
+                {"id": r[0], "kind": r[1], "beneath": _beneath(db, r[0])}
+                for r in db.execute("select id, kind from label where kind in ('refused', 'silenced') order by n")
+            ]
+        )
+        if refused
+        else {}
+    )
+    # A first refusal no longer there is named as its family's rows name it, by the mark they give its sentence.
+    judged = {
+        first[key]: {
+            "kind": "refused",
+            "was": next(
+                (digest(r[0]) for r in db.execute("select text from label where id = ?", (first[key],))),
+                None,
+            )
+            or db.execute("select digest from beneath where line = ? limit 1", (first[key],)).fetchone()[0],
+            "parent": None,
+        }
+        for key in lines
+        if key in first
+    }
 
     # Whose layer each line it would stand over is in, and each stack above them: by the parents a
     # build made, so that what is read is what the frame and the lists read.
@@ -3443,13 +3593,15 @@ def _unmarked(
         return {"id": key, "whose": found["whose"], "model": found["model"], "beneath": _beneath(db, key)}
 
     over: list[dict] = []
-    todo = [key for key in lines if beneath[key] is not None] if facing else []
+    todo = [key for key in lines if beneath[key] is not None] if facing and not refused else []
     while todo:  # the lines, and every line beneath them: stacks go two deep, and a line stands beneath one
         over.append(layer(todo.pop(0)))
         todo += [r[0] for r in db.execute("select id from label where parent = ? order by n", (over[-1]["id"],))]
     above = [
         layer(key)
-        for key in dict.fromkeys(beneath[k]["parent"] for k in lines if facing and beneath[k] and beneath[k]["parent"])
+        for key in dict.fromkeys(
+            beneath[k]["parent"] for k in lines if facing and not refused and beneath[k] and beneath[k]["parent"]
+        )
     ]
     db.close()
     if missing:
@@ -3461,7 +3613,13 @@ def _unmarked(
             f"{'two' if len(whole) == 2 else len(whole)} messages are named `{a}`, {', '.join(named_[:-1])} and "
             f"{named_[-1]}, so a label cannot rest on that id"
         ), beneath
-    why = _unstackable(KINDS[letter], beneath, deep) or _scoped(over, above, facing)
+    # Every move on a refusal rests on a message: where the reason for it was said.
+    if refused and lines and not anchors:
+        move = "A judgment" if letter == "X" else "A silencing"
+        return f"{move} of a refusal rests on the message where its reason was said: name that message too.", beneath
+    why = _unstackable(KINDS[letter], beneath, deep, first) or _scoped(over, above, facing)
+    if refused:
+        return why, judged
     theirs = (
         []
         if persons
@@ -3511,7 +3669,8 @@ def _marked(
             "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n",
             encoding="utf-8",
         )
-    cell = [f"`{line}@{digest(beneath[line]['text'])}`" for line in lines] + [f"`{a}`" for a in anchors]
+    cell = [f"`{line}@{beneath[line]['was'] if letter in 'XS' else digest(beneath[line]['text'])}`" for line in lines]
+    cell += [f"`{a}`" for a in anchors]
     record.add(
         page, f"| {key} | {text} | {whose} | {', '.join(cell)} |\n"
     )  # a last row with no line feed is ended first
@@ -3537,22 +3696,42 @@ def _marked(
     }
 
 
-def _unstackable(kind: str, beneath: dict, deep: list[str]) -> str:
+def _unstackable(kind: str, beneath: dict, deep: list[str], first: dict | None = None) -> str:
     """The sentence that refuses a stack, or none: `beneath` is each label named as a line, by
     its key, as the store holds it (nothing where it holds none) with the state of the stack
     above it (`above`), and `deep` those of them that stand over stacks already.
 
     A line beneath a misaligned stack is not refused: the new stack takes that stack's place.
     A stack that is unresolved has lost a message and none of its lines, so it is still the
-    stack above them."""
+    stack above them.
+
+    A refusal that names refusals judges them again, and a silencing puts them to rest; neither is
+    a stack: each is refused only where it names a label of another kind, refusals of two
+    families (`first`, see `families`) or a key of no refusal's family, and a silencing also where
+    it names no refusal."""
     gone = [key for key, line in beneath.items() if line is None]
     if gone:
         return "no such label: " + ", ".join(gone)
     if beneath and kind == "next":
         return "a line left at the door rests on messages alone, never on labels"
-    other = [key for key, line in beneath.items() if line["kind"] != kind]
+    if kind == "silenced" and not beneath:
+        return "a silencing rests on the key of the refusal it puts to rest: name that key too"
+    run = kind in FAMILY
+    other = [key for key, line in beneath.items() if line["kind"] not in (FAMILY if run else (kind,))]
+    if other and run:
+        move = "a refusal" if kind == "refused" else "a silencing"
+        return f"{move} rests on messages and on refusals alone, and this names a label of another kind: " + ", ".join(
+            other
+        )
     if other:
         return "a stack holds labels of its own kind alone, and of another kind here: " + ", ".join(other)
+    if run:
+        named = list(dict.fromkeys(first[key] for key in beneath))
+        if len(named) > 1:
+            puts = "a judgment judges one alone" if kind == "refused" else "a silencing puts one alone to rest"
+            return f"{named[0]} and {named[1]} are two refusals, and {puts}"
+        stray = [key for key in named if key[:1] != "X"]  # a family is a refusal's: one of no refusal names none
+        return f"{stray[0]} is of no refusal, so nothing rests on it as on one" if stray else ""
     for key, line in beneath.items():
         if line["parent"] and line["above"] != "misaligned":
             return f"{key} already stands beneath {line['parent']}, and a line stands beneath one stack alone"
@@ -3597,8 +3776,9 @@ def reached(folder: Path, verb: str, ids: list[str]) -> None:
 def strike(folder: Path, token: str, why: str = "") -> dict:
     """Remove a message, a label or a whole session (`session:<id>`) for good: from the archive,
     from its label page, from the hand-over's words, from the log of what was pulled, from the
-    notes of what looked like a key, and from the database; a whole session also from the small
-    files that name sessions (welcomed, told, there) and from the markers of its transcripts. The
+    notes of what looked like a key, and from the database; a whole
+    session also from the small files that name sessions (welcomed, told, there) and from the
+    markers of its transcripts. The
     token stays in struck.txt so that a transcript which still holds the message cannot bring it
     back; a whole session's strike also keeps there the whole id of every message it took, so that
     a transcript of any other name that repeats them (a fork, a resume) brings none of them back.

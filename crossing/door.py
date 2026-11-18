@@ -2,11 +2,12 @@
 """The door to the store.
 
   door.py look
-  door.py labels [id ...] [--kind relation|work|next] [--day YYYY-MM-DD]
+  door.py labels [id ...] [--kind relation|work|next|refused] [--day YYYY-MM-DD]
   door.py find <words> [--voice his|session] [--limit N]       word*  "a phrase"
   door.py thread <id> [--around N]
-  door.py mark --kind relation|work|next --whose his|session|both --anchors id,id <sentence>
-                                           an id is a message's, or a label's key: the label then stands over that one
+  door.py mark --kind relation|work|next|refused|silenced --whose his|session|both --anchors id,id <sentence>
+                                           an id is a message's, or a label's key: the label then stands over that one,
+                                           or, for a refusal, judges that one again, and for a silencing puts it to rest
   door.py frame [--size N]
   door.py status
   door.py build
@@ -84,7 +85,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from crossing import frame, layer, record, second, store  # noqa: E402
+from crossing import frame, layer, record, sample, second, store  # noqa: E402
 
 VOICE = {"his": "the person", "session": "the session", "pasted": "pasted by the person"}
 SHORT = 240  # characters of a label's sentence in a list; by its id it is given whole
@@ -294,10 +295,11 @@ def show_find(out: dict, named: bool = False) -> str:
 
 
 def row_of(label: dict, whole: bool = True, named: bool = False) -> str:
-    """One label as a line: whose it is, its day, its state where that is not simply carried,
-    the model that wrote it where that is known (given whole; or, in a home where more than one
-    model is known, wherever the label is not the person's), its sentence, and in brackets what
-    it rests on, the lines stacked beneath it first."""
+    """One label as a line: its kind where it is a silencing or one of a refusal's run (`run`),
+    whose it is, its day, its state where that is not simply carried, the model that wrote it
+    where that is known (given whole; or, in a home where more than one model is known, wherever
+    the label is not the person's), its sentence, and in brackets what it rests on, the lines
+    stacked beneath it first."""
     text = store.clean(
         label["text"] if whole or len(label["text"]) <= SHORT else label["text"][:SHORT].rstrip() + " […]"
     )
@@ -305,11 +307,20 @@ def row_of(label: dict, whole: bool = True, named: bool = False) -> str:
     state = label.get("state", "carried")
     state = "" if state == "carried" else f", cooled beneath {label['parent']}" if state == "cooled" else f", {state}"
     written = f", written by {store.clean(label['model'])}" if whole and label.get("model") else by(label, named)
+    kind = f"{label['kind']}, " if label.get("run") or label.get("kind") == "silenced" else ""
     return (
         f"{'  ' * label.get('depth', 0)}- {label['id']} "
-        f"({store.clean(label['whose'])}{day}{state}{written}): {text} "
+        f"({kind}{store.clean(label['whose'])}{day}{state}{written}): {text} "
         f"[{store.rests(label)}]"
     )
+
+
+def standing_apart(refusals: dict) -> str:
+    """The families of refusals as `look` and `status` count them: those that stand, by the key that stands in
+    each, and apart from them those that are silenced (see store.refusals)."""
+    standing, silenced = refusals["standing"], refusals["silenced"]
+    said = f"{many(len(standing), 'refusal')} standing" + (f" ({store.some(standing)})" if standing else "")
+    return said + (f", {len(silenced)} silenced ({store.some(silenced)})" if silenced else "")
 
 
 def show_look(out: dict, bare: bool = False, named: bool = False) -> str:
@@ -349,6 +360,7 @@ def show_look(out: dict, bare: bool = False, named: bool = False) -> str:
     lines += [
         "",
         f"Labels: {span(out['standing'])} standing, about the two of you; {span(out['work'])} about the work"
+        + (f"; {standing_apart(out['refusals'])}" if any(out.get("refusals", {}).values()) else "")
         + (
             f"; {cooled} of the standing lines stand{'s' if cooled == 1 else ''} beneath {stacks} "
             f"stack{'s' if stacks != 1 else ''}."
@@ -483,7 +495,7 @@ def main(argv: list[str] | None = None, served: bool = False) -> int:
     parser.add_argument("--voice", choices=["his", "session"])
     parser.add_argument("--limit", type=int, default=8)
     parser.add_argument("--around", type=int, default=2)
-    parser.add_argument("--kind", choices=["relation", "work", "next"])
+    parser.add_argument("--kind", choices=["relation", "work", "next", "refused", "silenced"])
     parser.add_argument("--day")
     parser.add_argument("--touch", action="store_true")
     parser.add_argument("--bare", action="store_true")
@@ -664,6 +676,8 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         if args.verb in ("mark", "frame") and source is not None and project is not None
         else ""
     )
+    # The session a frame is for, as the archive names one: by its transcript, else by the id it was asked by.
+    session = source.stem[:8] if source is not None else (args.session or "")[:8]
     # In a home where more than one model is known, the lists say which made each line of the session's.
     named = args.verb in ("look", "labels", "find", "thread") and len(store.known(folder)) > 1
     if args.verb == "look":
@@ -703,7 +717,9 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         if not out["written"]:
             print(f"not marked: {out['why']}")
             return 1
-        if not served and (out_kind(args) == "relation" or args.whose in ("his", "both")):
+        if not served and (
+            out_kind(args) == "relation" or store.settled(out_kind(args), args.whose) in ("his", "both")
+        ):
             store.shell_marked(folder, out["id"])  # no hook shows it to the person: their status will
         print(
             f"marked {out['id']}"
@@ -711,10 +727,32 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             + ("" if args.bare else f" in {out['page']}")
             + (f". {OVERTAKEN}" if (args.kind or "work") == "work" and store.overtaken(folder, out["id"]) else "")
         )
+        if served and args.kind == "next":
+            # A line left at the door through the server, while the session still holds what was said: the person's
+            # messages the record weighs and no label rests on, for the session that spoke last, as `frame` finds it.
+            last = spoke_last(folder)
+            db = store._open(folder)
+            try:
+                weighs = sample.unmarked(folder, db, last, set(store.flagged(folder)))
+            finally:
+                db.close()
+            if weighs:
+                print("\n" + weighs)
     elif args.verb == "frame":
-        print(frame.compose(folder, frame.bounded(args.size) if args.size else None, model=facing), end="")
+        size = frame.bounded(args.size) if args.size else None
+        held = store.status(folder) if served else {}
+        if served and not any(held[each] for each in ("his", "session", "pasted", "labels", "struck")):
+            # the door's server's `crossing`, in a room that holds nothing: no frame is made of it, and it is said as
+            # `look` says it
+            print(show_look(store.look(folder), bare=True), end="")
+        else:
+            if served:  # the server is told no session: the frame is the one of the session that spoke last here
+                session = spoke_last(folder)
+                facing = facing or (layer.current(project, session) if session and project is not None else "")
+            print(frame.compose(folder, size, model=facing, session=session), end="")
     elif args.verb in ("status", "build"):
         held = store.status(folder)
+        apart = store.refusals(folder)
         # What is said once is said only where it can be noted as told: a home switched off is read, and nothing
         # is written to it, so those sentences wait until it is on (see store.once).
         quiet = args.bare or not on
@@ -725,6 +763,12 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
                     **held["states"]
                 )
                 if held["states"]["cooled"] or held["states"]["misaligned"] or held["states"]["unresolved"]
+                else ""
+            )
+            + (
+                f" Of the refusals, {len(apart['standing'])} stand{'s' if len(apart['standing']) == 1 else ''} and "
+                f"{len(apart['silenced'])} {'is' if len(apart['silenced']) == 1 else 'are'} silenced."
+                if any(apart.values())
                 else ""
             )
             + (
@@ -826,6 +870,18 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         )
         return 0 if out["copied"] else 1
     return 0
+
+
+def spoke_last(folder: Path) -> str:
+    """The session of the newest message the home's index holds, or nothing where it holds none. The door's server
+    is told no session; the hook before each of its calls brings the archive up to date, so that in the ordinary
+    case the session that spoke last is the one calling."""
+    db = store._open(folder)
+    try:
+        row = db.execute("select session from said where session != '' order by seq desc limit 1").fetchone()
+    finally:
+        db.close()
+    return row[0] if row else ""
 
 
 def holding(folder: Path, held: dict, bare: bool) -> str:

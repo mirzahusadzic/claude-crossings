@@ -22,7 +22,9 @@ archive up to date is a hook's work (crossing/hook.py, before each call of these
 harness without hooks has the labels and the lines left at the door, and no archive. Nor is it
 told which model calls: the hook before a call of `mark` hands that over in the home, by the
 call's digest, and the server takes it (crossing/layer.py). Where none was handed over, the
-model is not known, and nothing is layered.
+model is not known, and nothing is layered. So `crossing` gives the frame of the project's
+home as the door's `frame` makes it for the session that spoke last there, which in the
+ordinary case is the one calling, with that session's model as its hooks and its words tell it.
 
 The protocol is spoken by hand, one JSON object a line. Standard library only. No model is
 called.
@@ -49,8 +51,13 @@ KEPT = (
     "What is said is kept by itself, up to the moment you call: you never save it. Labels are not made by "
     "themselves: `mark` them as the work goes, and `leave` a line for the session that wakes after the next "
     "cut, since a cut can come unannounced. Lines can be stacked into fewer: `mark` a label that rests on "
-    "them, and the frame then carries the one. The person is shown a line you leave, and a label about the "
-    "two of you or one that speaks for them, as you write it. "
+    "them, and the frame then carries the one. Something you declined can be marked too, as a label of the kind "
+    "refused that rests on what was asked: it crosses with the ask and your reason. The session after you may "
+    "judge it again, with another refused label that rests on its key. Either rests also on the message where its "
+    "reason was said. A label of the kind silenced, resting on a refusal's key and on such a message, puts the "
+    "refusal to rest: it crosses no more and stays in the record. The person is shown a line you leave, "
+    "and a label about the two of you or one that speaks for "
+    "them, as you write it. "
 )
 BARE = (
     "Nothing is archived here by itself: this harness has no hook that feeds the store, so it holds what was "
@@ -66,7 +73,8 @@ def instructions() -> str:
         "that rest on it. "
         + (KEPT if os.environ.get("CLAUDE_PLUGIN_ROOT") else BARE)
         + "After a cut, reach here for what your context no longer holds: `look` shows the room and needs no word; "
-        "`labels`, `find` and `thread` go on from there. Reach when the conversation calls for it, never to show "
+        "`labels`, `find` and `thread` go on from there; `crossing`: the frame the next session would be given if "
+        "the cut came now. Reach when the conversation calls for it, never to show "
         "that something is held. What the person told you in confidence is left alone until they bring it up; "
         "where you cannot tell whether something was said in confidence, treat it as if it was."
     )
@@ -85,7 +93,7 @@ def tool(name: str, description: str, required: tuple = (), **properties) -> dic
         "name": name,
         "description": description,
         "inputSchema": {"type": "object", "properties": {**properties, "home": HOME}, "required": list(required)},
-        # seven small handles, to be in front of a session and not searched for
+        # eight small handles, to be in front of a session and not searched for
         "_meta": {"anthropic/alwaysLoad": True},
     }
 
@@ -103,9 +111,9 @@ TOOLS = [
         ids={**IDS, "description": "Label ids to give whole, as R3 or W12."},
         kind={
             "type": "string",
-            "enum": ["relation", "work", "next"],
-            "description": "Only that kind: relation (standing, about the two of you), work, or next "
-            "(lines left at the door).",
+            "enum": ["relation", "work", "next", "refused"],
+            "description": "Only that kind: relation (standing, about the two of you), work, next "
+            "(lines left at the door), or refused.",
         },
         day={"type": "string", "description": "Only those of one day, as 2026-11-11."},
     ),
@@ -141,8 +149,9 @@ TOOLS = [
         anchors={**IDS, "description": "The ids it rests on: messages, or labels of its kind."},
         kind={
             "type": "string",
-            "enum": ["relation", "work"],
-            "description": "About the two of you, or about the work (default).",
+            "enum": ["relation", "work", "refused", "silenced"],
+            "description": "relation (the two of you), work (default), refused (rests on what was asked; its sentence "
+            "is your reason) or silenced (rests on a refusal that stands no longer; its sentence says why).",
         },
         whose={
             "type": "string",
@@ -160,6 +169,10 @@ TOOLS = [
         anchors={**IDS, "description": "The ids of the messages it rests on."},
     ),
     tool("status", "What the store holds, in one line."),
+    tool(
+        "crossing",
+        "The frame the next session would get if the cut came now. Read-only.",
+    ),
 ]
 NAMES = [t["name"] for t in TOOLS]
 
@@ -175,7 +188,7 @@ def asked(name: str, given: dict) -> list[str] | str:
     said = given.get("sentence") if isinstance(given.get("sentence"), str) else ""
     if name == "labels":
         argv = ["labels"]
-        if given.get("kind") in ("relation", "work", "next"):
+        if given.get("kind") in ("relation", "work", "next", "refused"):
             argv += ["--kind", given["kind"]]
         if isinstance(given.get("day"), str) and given["day"].strip():
             argv += [f"--day={given['day'].strip()}"]
@@ -201,7 +214,13 @@ def asked(name: str, given: dict) -> list[str] | str:
         if not said.strip() or not strings(given.get("anchors")):
             return f"{name} needs a sentence and at least one anchor."
         # A line left at the door is the session's own, whatever else is said of it.
-        kind = "next" if name == "leave" else "relation" if given.get("kind") == "relation" else "work"
+        kind = (
+            "next"
+            if name == "leave"
+            else given["kind"]
+            if given.get("kind") in ("relation", "refused", "silenced")
+            else "work"
+        )
         whose = "session" if name == "leave" or given.get("whose") not in ("his", "both") else given["whose"]
         return [
             "mark",
@@ -214,6 +233,8 @@ def asked(name: str, given: dict) -> list[str] | str:
             "--",
             said,
         ]
+    if name == "crossing":
+        return ["frame"]  # the frame for this home, as the door makes it: see `call`
     return [name]  # look, status
 
 
@@ -258,7 +279,9 @@ def call(name: str, given: dict) -> tuple[str, bool]:
     out = io.StringIO()
     with contextlib.redirect_stdout(out):
         code = door.main(argv, served=True)
-    return out.getvalue().strip() or "Nothing came back.", code != 0 and name not in ("mark", "leave")
+    # The frame is given as the door makes it, to the last character; every other answer as its words.
+    said = out.getvalue() if name == "crossing" else out.getvalue().strip()
+    return said or "Nothing came back.", code != 0 and name not in ("mark", "leave")
 
 
 def handle(request: dict) -> dict | None:

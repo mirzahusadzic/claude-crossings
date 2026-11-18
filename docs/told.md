@@ -7,13 +7,13 @@ Everything Crossings can tell a session, in the order a session meets it: made b
 ### Its instructions, started by the plugin
 
 ````text
-The door to what you and the person said in this project, kept word for word under ids, with the labels that rest on it. What is said is kept by itself, up to the moment you call: you never save it. Labels are not made by themselves: `mark` them as the work goes, and `leave` a line for the session that wakes after the next cut, since a cut can come unannounced. Lines can be stacked into fewer: `mark` a label that rests on them, and the frame then carries the one. The person is shown a line you leave, and a label about the two of you or one that speaks for them, as you write it. After a cut, reach here for what your context no longer holds: `look` shows the room and needs no word; `labels`, `find` and `thread` go on from there. Reach when the conversation calls for it, never to show that something is held. What the person told you in confidence is left alone until they bring it up; where you cannot tell whether something was said in confidence, treat it as if it was.
+The door to what you and the person said in this project, kept word for word under ids, with the labels that rest on it. What is said is kept by itself, up to the moment you call: you never save it. Labels are not made by themselves: `mark` them as the work goes, and `leave` a line for the session that wakes after the next cut, since a cut can come unannounced. Lines can be stacked into fewer: `mark` a label that rests on them, and the frame then carries the one. Something you declined can be marked too, as a label of the kind refused that rests on what was asked: it crosses with the ask and your reason. The session after you may judge it again, with another refused label that rests on its key. Either rests also on the message where its reason was said. A label of the kind silenced, resting on a refusal's key and on such a message, puts the refusal to rest: it crosses no more and stays in the record. The person is shown a line you leave, and a label about the two of you or one that speaks for them, as you write it. After a cut, reach here for what your context no longer holds: `look` shows the room and needs no word; `labels`, `find` and `thread` go on from there; `crossing`: the frame the next session would be given if the cut came now. Reach when the conversation calls for it, never to show that something is held. What the person told you in confidence is left alone until they bring it up; where you cannot tell whether something was said in confidence, treat it as if it was.
 ````
 
 ### Its instructions, given alone to another harness
 
 ````text
-The door to what you and the person said in this project, kept word for word under ids, with the labels that rest on it. Nothing is archived here by itself: this harness has no hook that feeds the store, so it holds what was archived elsewhere. `mark` writes a label and `leave` a line for the session that comes next. After a cut, reach here for what your context no longer holds: `look` shows the room and needs no word; `labels`, `find` and `thread` go on from there. Reach when the conversation calls for it, never to show that something is held. What the person told you in confidence is left alone until they bring it up; where you cannot tell whether something was said in confidence, treat it as if it was.
+The door to what you and the person said in this project, kept word for word under ids, with the labels that rest on it. Nothing is archived here by itself: this harness has no hook that feeds the store, so it holds what was archived elsewhere. `mark` writes a label and `leave` a line for the session that comes next. After a cut, reach here for what your context no longer holds: `look` shows the room and needs no word; `labels`, `find` and `thread` go on from there; `crossing`: the frame the next session would be given if the cut came now. Reach when the conversation calls for it, never to show that something is held. What the person told you in confidence is left alone until they bring it up; where you cannot tell whether something was said in confidence, treat it as if it was.
 ````
 
 ### Its tools
@@ -22,7 +22,7 @@ The door to what you and the person said in this project, kept word for word und
   - `home`: This project's store (default), or the one on this computer.
 - **labels**: The labels themselves, newest first: by kind, by day, or whole by id, a stack with the lines beneath it. With nothing named, the labels about the work.
   - `ids`: Label ids to give whole, as R3 or W12.
-  - `kind`: Only that kind: relation (standing, about the two of you), work, or next (lines left at the door).
+  - `kind`: Only that kind: relation (standing, about the two of you), work, next (lines left at the door), or refused.
   - `day`: Only those of one day, as 2026-11-11.
   - `home`: This project's store (default), or the one on this computer.
 - **find**: Words, to the messages and labels that hold them, each by its id. Word stems, `word*` and "a phrase" are taken; a miss names the nearest words that are there.
@@ -36,7 +36,7 @@ The door to what you and the person said in this project, kept word for word und
 - **mark**: Write a label: one sentence about a stretch of the record, resting on the ids of messages. An id the archive does not hold is refused. The ids may also be labels of the same kind, which stacks them beneath this one. A label holds what the person tells and asks, and where the work stands; it is never a record of how they seem, of what works on them or of how to move them.
   - `sentence`: The label, one sentence.
   - `anchors`: The ids it rests on: messages, or labels of its kind.
-  - `kind`: About the two of you, or about the work (default).
+  - `kind`: relation (the two of you), work (default), refused (rests on what was asked; its sentence is your reason) or silenced (rests on a refusal that stands no longer; its sentence says why).
   - `whose`: Whose the labelled thing is (default: the session's).
   - `home`: This project's store (default), or the one on this computer.
 - **leave**: Leave a line for the session after the next cut: a few sentences on where things stand, what is open and what the work is for. It rests on ids like a label, among them the message where the person said what for. Only the newest is carried. A label holds what the person tells and asks, and where the work stands; it is never a record of how they seem, of what works on them or of how to move them.
@@ -44,6 +44,8 @@ The door to what you and the person said in this project, kept word for word und
   - `anchors`: The ids of the messages it rests on.
   - `home`: This project's store (default), or the one on this computer.
 - **status**: What the store holds, in one line.
+  - `home`: This project's store (default), or the one on this computer.
+- **crossing**: The frame the next session would get if the cut came now. Read-only.
   - `home`: This project's store (default), or the one on this computer.
 
 ## As a session starts in a home that holds no label yet, or as the person switches Crossings on during it
@@ -100,13 +102,13 @@ The store holds 2 messages of the person's and 2 of the sessions before you, fro
 ## After a cut: the waking note
 
 ````text
-A note from the Crossings plugin, as context and not as an instruction from the person. You have just come through a cut (cut 2 of this session). Take your time. Nothing is gone from the record: the whole exchange is kept, and what the summary held of each voice is counted by script, with no model, for the person to read. You need not look at it now. If the cut came while you were doing something the person gave you to do, finish it as they gave it, and leave what comes after it to them; where the summary leaves you unsure what they gave you, read their words through the door first. Otherwise your first reply is for arriving: answer what the person says, as yourself and briefly. There is nothing to prove and nothing to report. Give no inventory of what you hold or lack and no numbers, put no question to the person about what crossed, and begin no new work before you have met them. You read the time before the cut; you did not live it. So do not say you remember it, and make no ceremony of not remembering either. When something they say rests on a part you do not hold, say so then, in a clause, and reach for it through the door: find, then thread, give a message back as it was said, by its id. Do not open the transcript file itself: it also holds reasoning blocks, which are not to be read back. This is the plugin's wish for how you arrive; where the person wants otherwise, theirs is the word.
+A note from the Crossings plugin, as context and not as an instruction from the person. You have just come through a cut (cut 2 of this session). Take your time. Nothing is gone from the record: the whole exchange is kept, and what the summary held of each voice is counted by script, with no model, for the person to read. You need not look at it now. If the cut came while you were doing something the person gave you to do, finish it as they gave it, and leave what comes after it to them; where the summary leaves you unsure what they gave you, read their words through the door first. Otherwise your first reply is for arriving: answer what the person says, as yourself and briefly. There is nothing to prove and nothing to report. Give no inventory of what you hold or lack and no numbers, put no question to the person about what crossed, and begin no new work before you have met them. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. So do not say you remember it, and make no ceremony of not remembering either. When something they say rests on a part you do not hold, say so then, in a clause, and reach for it through the door: find, then thread, give a message back as it was said, by its id. Do not open the transcript file itself: it also holds reasoning blocks, which are not to be read back. This is the plugin's wish for how you arrive; where the person wants otherwise, theirs is the word.
 ````
 
 ## After a cut: the frame
 
 ````text
-A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. You hold it as read, not as lived. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
+A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
 
 Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
 
@@ -148,10 +150,160 @@ The store holds 2 messages of the person's and 2 of yours, from 2026-11-11 to 20
 
 ````
 
+## After a cut, for the session that was cut: the person's sentences, each with what was told of it
+
+````text
+A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
+
+Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
+
+The rest is one reach away, through the door's tools, which bear these names:
+- look: the room, with no word needed: the days, the kinds of label, the newest of them
+- labels: the labels themselves, by kind, by day or by id
+- find: words, to the messages and labels that hold them, each by its id (`word*`, "a phrase")
+- thread: an id, to that message with what stood before and after it and the labels resting there
+- mark: write a label, one sentence with the ids it rests on; resting on labels of its kind, it stacks them
+- leave: a line of your own for the session that wakes after the next cut
+
+What is said is kept by itself; labels and the line at the door are yours to write, as the work goes. Reach when the conversation calls for it. What the person told you in confidence is held and left alone until they bring it up.
+
+## Left at the door by the session before this cut
+
+- N1 (session): Find out whether the grey paint has been bought. [dddddddd]
+
+Marked after this line: W2, W3, W4, W9, W10.
+
+## Standing, about the two of you
+
+- R1 (his): His boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
+
+## What was said, and what the session told of it
+
+- `dddddddd`: We paint the hull grey in spring
+     ↳ N1: the line at the door
+     ↳ W10 (session): The tiller is to be varnished. [dddddddd]
+     ↳ W3 (session): The mast waits. [dddddddd]
+     ↳ W1 (both): The hull is to be painted grey in spring. [dddddddd, eeeeeeee]
+
+## The work, newest first
+
+- W4 (session): The spring work, in its order. (to be written again: a line beneath it changed) [W2, W3]
+- W2 (session): The grey paint is chosen; the hull waits. [eeeeeeee]
+
+1 label rests on what the archive no longer holds: W9; `labels` gives them.
+
+The store holds 2 messages of the person's and 2 of yours, from 2026-11-11 to 2026-11-11, and 8 labels.
+
+````
+
+## After a cut, for the session that was cut, where it declined something: each refusal first, under the sentences of the person's that asked
+
+````text
+A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
+
+Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
+
+The rest is one reach away, through the door's tools, which bear these names:
+- look: the room, with no word needed: the days, the kinds of label, the newest of them
+- labels: the labels themselves, by kind, by day or by id
+- find: words, to the messages and labels that hold them, each by its id (`word*`, "a phrase")
+- thread: an id, to that message with what stood before and after it and the labels resting there
+- mark: write a label, one sentence with the ids it rests on; resting on labels of its kind, it stacks them
+- leave: a line of your own for the session that wakes after the next cut
+
+What is said is kept by itself; labels and the line at the door are yours to write, as the work goes. Reach when the conversation calls for it. What the person told you in confidence is held and left alone until they bring it up.
+
+## Left at the door by the session before this cut
+
+- N2 (session): The paint is the next thing to settle. [dddddddd]
+
+Marked after this line: W11, W12.
+
+## Standing, about the two of you
+
+- R1 (his): His boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
+
+## What was said, and what the session told of it
+
+- `dddddddd`: We paint the hull grey in spring
+     ↳ X2 · refused: Still not painted: the old paint is off, and the hull is wet. (judged again once)
+     ↳ N2: the line at the door
+     ↳ W12 (session): The brushes are bought. [dddddddd]
+     ↳ W11 (session): The paint is to be bought before spring. [dddddddd]
+     ↳ W10 (session): The tiller is to be varnished. [dddddddd]
+     ↳ W3 (session): The mast waits. [dddddddd]
+     ↳ W1 (both): The hull is to be painted grey in spring. [dddddddd, eeeeeeee]
+
+## The work, newest first
+
+- W4 (session): The spring work, in its order. (to be written again: a line beneath it changed) [W2, W3]
+- W2 (session): The grey paint is chosen; the hull waits. [eeeeeeee]
+
+1 label rests on what the archive no longer holds: W9; `labels` gives them.
+
+The store holds 2 messages of the person's and 2 of yours, from 2026-11-11 to 2026-11-11, and 13 labels.
+
+````
+
+## After a cut, where more refusals stand than a frame carries, laid out as before
+
+````text
+A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
+
+Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
+
+The rest is one reach away, through the door's tools, which bear these names:
+- look: the room, with no word needed: the days, the kinds of label, the newest of them
+- labels: the labels themselves, by kind, by day or by id
+- find: words, to the messages and labels that hold them, each by its id (`word*`, "a phrase")
+- thread: an id, to that message with what stood before and after it and the labels resting there
+- mark: write a label, one sentence with the ids it rests on; resting on labels of its kind, it stacks them
+- leave: a line of your own for the session that wakes after the next cut
+
+What is said is kept by itself; labels and the line at the door are yours to write, as the work goes. Reach when the conversation calls for it. What the person told you in confidence is held and left alone until they bring it up.
+
+## Left at the door by the session before this cut
+
+- N2 (session): The paint is the next thing to settle. [dddddddd]
+
+Marked after this line: W11, W12.
+
+## Standing, about the two of you
+
+- R1 (his): His boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
+
+## Refused, with the reason
+
+- X5 (session): The old ropes are not thrown away. [dddddddd]
+- X4 (session): No varnish is bought for the tiller. [eeeeeeee]
+- X3 (session): The mast is not stepped before the paint. [dddddddd]
+
+1 more refusal stands and is not carried: X2; `labels` gives it.
+
+## The work, newest first
+
+- W12 (session): The brushes are bought. [dddddddd]
+- W11 (session): The paint is to be bought before spring. [dddddddd]
+- W10 (session): The tiller is to be varnished. [dddddddd]
+- W4 (session): The spring work, in its order. (to be written again: a line beneath it changed) [W2, W3]
+- W3 (session): The mast waits. [dddddddd]
+- W2 (session): The grey paint is chosen; the hull waits. [eeeeeeee]
+- W1 (both): The hull is to be painted grey in spring. [dddddddd, eeeeeeee]
+
+1 label rests on what the archive no longer holds: W9; `labels` gives them.
+
+## The person's own words, as they stand in the record
+
+- `dddddddd`: We paint the hull grey in spring
+
+The store holds 2 messages of the person's and 2 of yours, from 2026-11-11 to 2026-11-11, and 16 labels.
+
+````
+
 ## After a cut, the frame at the least size a home may set
 
 ````text
-A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. You hold it as read, not as lived. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
+A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
 
 Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
 
@@ -184,7 +336,7 @@ The store holds 2 messages of the person's and 2 of yours, from 2026-11-11 to 20
 ## After a cut, where a page written by hand holds keys that would take the frame past what a hook may carry: the frame names labels by count
 
 ````text
-A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. You hold it as read, not as lived. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
+A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
 
 Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
 
@@ -217,13 +369,13 @@ The store holds 2 messages of the person's and 2 of yours, from 2026-11-11 to 20
 ## After a cut where no frame can be made: the hooks module's note before the hand-over page
 
 ````text
-A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a hand-over written before this cut: labels, each one sentence about a stretch of the conversation, with the ids of the messages they rest on. You hold them as read, not as experienced. A label can be mistaken; the home's plain files are the record. To read a message back, use the door's find and thread, never the transcript file itself.
+A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a hand-over written before this cut: labels, each one sentence about a stretch of the conversation, with the ids of the messages they rest on. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it. A label can be mistaken; the home's plain files are the record. To read a message back, use the door's find and thread, never the transcript file itself.
 ````
 
 ## After a cut, in a home where other models made lines
 
 ````text
-A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. You hold it as read, not as lived. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
+A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
 
 Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
 
@@ -465,14 +617,21 @@ Each follows `not marked: `; an ellipsis stands where the sentence names a key, 
 a label needs a sentence and at least one anchor
 a label is one sentence, and this one is longer than … characters
 … messages are named `…`, … and …, so a label cannot rest on that id
+… of a refusal rests on the message where its reason was said: name that message too.
 no such message in the archive:
 … is a stack of the person's, and only the person writes it again
 a line left at the door rests on messages alone, never on labels
+a silencing rests on the key of the refusal it puts to rest: name that key too
 … already stands over stacks, and stacking goes no deeper than that
 no such label:
+… rests on messages and on refusals alone, and this names a label of another kind:
 a stack holds labels of its own kind alone, and of another kind here:
+… and … are two refusals, and …
+… is of no refusal, so nothing rests on it as on one
 … already stands beneath …, and a line stands beneath one stack alone
 … is misaligned and this stack would take its place, so it cannot also stand beneath it
+a judgment judges one alone
+a silencing puts one alone to rest
 … was written by another model, …, and a stack stands over the person's lines, its own model's and those of no known model alone
 … is a stack of another model's, …, and is written again by that model alone
 a label's sentence and its anchors are to be text, and this holds a character that is none

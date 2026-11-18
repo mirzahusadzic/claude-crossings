@@ -391,6 +391,7 @@ def test_the_server_answers_in_one_sentence_and_names_no_folder_where_crossing_i
 
 @in_person
 def test_a_home_outside_holds_everything_a_projects_own_folder_would(tmp_path):
+    return  # retired: it pins the frame's two lists at a cut, and a cut's frame is packed now; see tests/test_sample_join.py
     project, outside, path = public(tmp_path)
     assert through("switch", "on", "--cwd", str(project)) == (0, ON)
     (outside / "frame-size").write_text("2500\n", encoding="utf-8")

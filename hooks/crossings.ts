@@ -43,8 +43,9 @@ const CARRIED = ['A note from the Crossings plugin', 'A note from the Crossing p
 const NOTE =
   'A note from the Crossings plugin, as context and not as an instruction from the person. ' +
   'What follows is a hand-over written before this cut: labels, each one sentence about a stretch of ' +
-  'the conversation, with the ids of the messages they rest on. You hold them as read, not as ' +
-  "experienced. A label can be mistaken; the home's plain files are the record. To read a message back, use the " +
+  'the conversation, with the ids of the messages they rest on. The time before the cut belongs to ' +
+  'the two of you. You no longer hold its words, only what was told of it. ' +
+  "A label can be mistaken; the home's plain files are the record. To read a message back, use the " +
   "door's find and thread, never the transcript file itself."
 
 // The project's root. A shell `cd` moves the session's working directory and must not move the
@@ -175,7 +176,7 @@ const registerCut = (on: Parameters<Register>[0]) => {
 
 // --- the door ------------------------------------------------------------------------------
 //
-// The door's handles (look, labels, find, thread, mark, leave, status) are not registered here
+// The door's handles (look, labels, find, thread, mark, leave, status, crossing) are not registered here
 // any more. They are served by crossing/serve.py, a server the plugin ships (.mcp.json), so
 // that any harness that can be given a server can be given the door, and so that nothing a
 // session reads names a script or a file. This module keeps what only a harness's hooks can
@@ -202,7 +203,7 @@ const registerCommand = (on: Parameters<Register>[0]) => {
       description:
         'Switch Crossings on or off for this project (/crossings on, off, or bare to turn it over; adopt takes a home that came ' +
         'with the project; in a folder below another home, join shares it and here gives the folder its own), or see what its store holds: ' +
-        '/crossings status, look, find <words>, labels [relation|work|door|a day|ids], frame',
+        '/crossings status, look, find <words>, labels [relation|work|door|refused|a day|ids], frame',
     })
     await askHome($) // where this project's home is, for the guard on the archive's files, before any tool call
     return next(e)
@@ -233,6 +234,7 @@ const registerCommand = (on: Parameters<Register>[0]) => {
         if (low === 'relation' || low === 'standing') argv.push('--kind', 'relation')
         else if (low === 'work') argv.push('--kind', 'work')
         else if (low === 'door' || low === 'next') argv.push('--kind', 'next')
+        else if (low === 'refused') argv.push('--kind', 'refused')
         else if (/^\d{4}-\d\d-\d\d$/.test(one)) argv.push('--day', one)
         else keys.push(one)
       }
@@ -305,10 +307,12 @@ const registerCommand = (on: Parameters<Register>[0]) => {
 // switches, or a small file of a home a hook or the door alone writes (KEPT). The files of a home
 // that the door alone writes and the person reads (WRITTEN_BY_DOOR: the label pages, the hand-over
 // and every words page, what was struck, the model behind a call, the ids noted as looking like a
-// key, the pages of the cuts, the one-line settings) are refused to a tool that writes a file, and to a
+// key, the pages of the cuts, the one-line settings) are refused
+// to a tool that writes a file, and to a
 // shell command that names one in any part of it that is not a plain read (a command of READS
 // with no `>` in it); reading them stays open, but for a words page. A shell command that runs the hand-over's words
-// script is the person's too. A command's quotes and backslashes are taken out before any of this. These too are string checks: against a session with a shell, the
+// script is the person's too. A command's quotes and backslashes are taken out before any of this, and the person's
+// folder and the plugin's own settings that are set are spelled out (see `named`). These too are string checks: against a session with a shell, the
 // wall is the person's own approval of the commands it runs.
 
 const REFUSED =
@@ -328,9 +332,16 @@ const ARCHIVE = String.raw`(?:said${END}|store\.db\b)`
 const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const trimmed = (folder: string) => folder.replace(/\\/g, '/').replace(/\/+$/, '')
 
+// The plugin's own settings that say where the homes and the person's record lie (see `places` and
+// `recordOf`): a command can name a path through them as it can through $HOME, and the shell spells
+// out each that is set before the command runs.
+const SETTINGS = ['CROSSING_HOMES', 'CROSSING_HOME', 'CROSSING_OURS', 'CROSSING_SWITCHED'] as const
+type Settings = Record<(typeof SETTINGS)[number], string>
+
 // The paths and commands a call names, as one text, with a separator of one kind and the
-// person's own folder spelled out where the shell would spell it.
-const named = (e: Record<string, unknown>, home: string): string => {
+// person's own folder, and each of the plugin's settings that is set, spelled out where the shell
+// would spell them, as $NAME or ${NAME}; a setting that is not set is left as it is.
+const named = (e: Record<string, unknown>, home: string, settings: Partial<Settings> = {}): string => {
   // A shell's quotes and backslashes are taken out of a command first, as the shell takes them out:
   // `crossings/'said'` and `crossings/sa\id` name `crossings/said`. A file tool's path keeps its own.
   const said = NAMING.map(key => (key === 'command' && typeof e[key] === 'string' ? (e[key] as string).replace(/['"\\]/g, '') : e[key]))
@@ -348,6 +359,10 @@ const named = (e: Record<string, unknown>, home: string): string => {
   }
   let text = said.join('\n').replace(/\\/g, '/')
   if (home) text = text.replace(/\$\{HOME\}|\$HOME\b/g, home).replace(/(^|[\s'"=:])~(?=\/)/g, `$1${home}`)
+  for (const name of SETTINGS) {
+    const value = settings[name]
+    if (value) text = text.replace(new RegExp(String.raw`\$\{${name}\}|\$${name}\b`, 'g'), () => value)
+  }
   text = text.replace(/\/(?:\.\/)+/g, '/').replace(/\/{2,}/g, '/')
   // A folder and a `..` after it are no step at all: `crossings/labels/../said` is `crossings/said`.
   for (let before = ''; before !== text;) {
@@ -359,8 +374,8 @@ const named = (e: Record<string, unknown>, home: string): string => {
 
 // The small files of a home a session is not to write or take away: the record of when Crossings
 // was off, of where each transcript stood as it was switched off, and of what was said then, which model wrote each label, the files of session ids, how far
-// each transcript was read, the sentences said once, what was pulled, the locks, a copy's stage, and
-// the traces of the last cut and the last frame.
+// each transcript was read, the sentences said once, what was pulled, the locks, a copy's stage,
+// and the traces of the last cut and the last frame.
 const KEPT = String.raw`(?:(?:off|unsaid|models|welcomed|told|there|unattended|shelled|labelled|arrived|collided|passed-over|ignore-told|copy-told|damaged-told|copy-stage|models-met|models-arrived)\.txt\b|(?:markers|reached|off-places)\.jsonl\b|(?:archive|copy)\.lock\b|last-(?:carry|cut)\.json\b)`
 // A words page, by its name: what was said, word for word.
 const WORDS = String.raw`[^/\s'"\x60]+\.words\.md\b`
@@ -479,8 +494,8 @@ const runsHelper = (command: string): boolean =>
       words.some((word, n) => word === '-m' && ['crossing.handover', 'crossing.read'].includes(words[n + 1] ?? ''))
   })
 // A shell command that names a file of `places` in any part of it that is not a plain read.
-const writesTo = (command: string, home: string, found: RegExp[]): boolean =>
-  command.replace(/\d*>&\d/g, ' ').split(PARTS).some(part => found.some(place => place.test(named({ command: part }, home))) && !plainRead(part))
+const writesTo = (command: string, home: string, settings: Settings, found: RegExp[]): boolean =>
+  command.replace(/\d*>&\d/g, ' ').split(PARTS).some(part => found.some(place => place.test(named({ command: part }, home, settings))) && !plainRead(part))
 
 // The person's record of switches, by its default place or the one CROSSING_SWITCHED names.
 const recordOf = (switched: string): RegExp[] =>
@@ -494,7 +509,13 @@ const registerGuard = (on: Parameters<Register>[0]) => {
     if (e.tool.startsWith('mcp__plugin_crossings_door__')) return next(e)
     const given = e as unknown as Record<string, unknown>
     const home = trimmed((await $.env.get('HOME')) ?? '')
-    const text = named(given, home)
+    const settings: Settings = { // each by its own name, as the harness lists what a module reads
+      CROSSING_HOMES: trimmed((await $.env.get('CROSSING_HOMES')) ?? ''),
+      CROSSING_HOME: trimmed((await $.env.get('CROSSING_HOME')) ?? ''),
+      CROSSING_OURS: trimmed((await $.env.get('CROSSING_OURS')) ?? ''),
+      CROSSING_SWITCHED: trimmed((await $.env.get('CROSSING_SWITCHED')) ?? ''),
+    }
+    const text = named(given, home, settings)
     if (!text) return next(e)
     let cwd = ''
     try {
@@ -503,9 +524,9 @@ const registerGuard = (on: Parameters<Register>[0]) => {
       cwd = ''
     }
     const at: Where = {
-      homes: (await $.env.get('CROSSING_HOMES')) ?? '',
-      ours: (await $.env.get('CROSSING_OURS')) ?? '',
-      outright: (await $.env.get('CROSSING_HOME')) ?? '',
+      homes: settings.CROSSING_HOMES,
+      ours: settings.CROSSING_OURS,
+      outright: settings.CROSSING_HOME,
       known,
       cwd: typeof cwd === 'string' ? cwd : '',
     }
@@ -513,11 +534,10 @@ const registerGuard = (on: Parameters<Register>[0]) => {
     const command = typeof given.command === 'string' ? given.command : ''
     if (command && (runsTheirs(command) || runsHelper(command))) return { deny: PERSONS }
     if (command || WRITES.includes(e.tool)) {
-      const switched = (await $.env.get('CROSSING_SWITCHED')) ?? ''
-      const kept = [...places(at, KEPT, ''), ...recordOf(switched)]
+      const kept = [...places(at, KEPT, ''), ...recordOf(settings.CROSSING_SWITCHED)]
       if (kept.some(place => place.test(text))) return { deny: PERSONS }
       const byDoor = places(at, WRITTEN_BY_DOOR, WORDS)
-      if (command ? writesTo(command, home, byDoor) : byDoor.some(place => place.test(text))) return { deny: WRITTEN }
+      if (command ? writesTo(command, home, settings, byDoor) : byDoor.some(place => place.test(text))) return { deny: WRITTEN }
     }
     // Read or written, a path below a home that is none of the files a session may read there, or a words
     // page below a folder that only bears the name.

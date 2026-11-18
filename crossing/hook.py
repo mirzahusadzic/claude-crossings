@@ -91,8 +91,9 @@ def waking(counted: dict) -> str:
         "words through the door first. Otherwise your first reply is for "
         "arriving: answer what the person says, as yourself and briefly. There is nothing to prove and nothing "
         "to report. Give no inventory of what you hold or lack and no numbers, put no question to the person "
-        "about what crossed, and begin no new work before you have met them. You read the time before the cut; you "
-        "did not live it. So do not say you remember it, and make no ceremony of not remembering either. When "
+        "about what crossed, and begin no new work before you have met them. The time before the cut belongs to "
+        "the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. "
+        "So do not say you remember it, and make no ceremony of not remembering either. When "
         "something they say rests on a part you do not hold, say so then, in a clause, and reach for it through "
         "the door: find, then thread, give a message back as it was said, by its id. Do not open the "
         "transcript file itself: it also holds reasoning blocks, which are not to be read back. "
@@ -272,7 +273,7 @@ def signed(event: dict, folder: Path, path: Path) -> None:
     the session that started it would sign another model's line. The key is the one the door's
     answer names, and only a label with the sentence that was sent is signed."""
     given = event.get("tool_input") if isinstance(event.get("tool_input"), dict) else {}
-    found = re.search(r"\bmarked ([RWN]\d+)\b", json.dumps(event.get("tool_response"), ensure_ascii=False))
+    found = re.search(r"\bmarked ([RWNXS]\d+)\b", json.dumps(event.get("tool_response"), ensure_ascii=False))
     if found is None or not isinstance(given.get("sentence"), str) or event.get("agent_id"):
         return
     target = store.ours() if given.get("home") == "ours" else folder
@@ -298,7 +299,7 @@ def shown(event: dict, folder: Path) -> str | None:
     The label is shown as its page holds it, by the key the door's answer names; nothing is
     blocked."""
     given = event.get("tool_input") if isinstance(event.get("tool_input"), dict) else {}
-    found = re.search(r"\bmarked ([RWN]\d+)\b", json.dumps(event.get("tool_response"), ensure_ascii=False))
+    found = re.search(r"\bmarked ([RWNXS]\d+)\b", json.dumps(event.get("tool_response"), ensure_ascii=False))
     if found is None:
         return None
     key = found.group(1)
@@ -560,11 +561,14 @@ def carried(event: dict) -> str | None:
     store.refresh(folder)  # added to, or made whole where a page or a label changed by any other way
     # The model the session runs now, as the harness says it as the session starts, or as its hooks
     # were told it before: the frame is then that model's (see frame.compose). Not known, it is as it was.
+    # The frame is asked for by session, as the archive names it: the shape it says of what was said is of
+    # that session's stretch alone.
     model = layer.named(event.get("model")) or layer.current(folder, named(event, path))
-    text = frame.compose(folder, min(frame.size_of(folder), frame.MOST), new=new, model=model)
+    size = min(frame.size_of(folder), frame.MOST)
+    text = frame.compose(folder, size, new=new, model=model, session=named(event, path))
     if not text:  # a new session, and nothing in the store to carry to it
         return None
-    labels = len(re.findall(r"^- [RW]\d+ \(", text, flags=re.M))
+    labels = frame.carried(text)
     trace = store.within(folder, "last-carry.json")
     try:
         trace.write_text(

@@ -73,7 +73,7 @@ def test_every_sentence_of_the_frame_is_on_the_page():
             assert said in PAGE, said
     for runs in literals(ROOT / "crossing" / "frame.py"):
         for run in runs:
-            if len(run.split()) >= 4 and not run.lower().startswith("select "):  # a sentence, not a query
+            if len(run.split()) >= 4 and not run.lower().startswith(("select ", "^")):  # not a query or a pattern
                 assert run in PAGE, run
 
 

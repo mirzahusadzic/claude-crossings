@@ -466,12 +466,25 @@ test('his own command shows the store through the same script', async ($, on) =>
   expect(asked(seen)).toEqual(['labels', '--kind', 'work', ...tail])
   await say($, 'labels door')
   expect(asked(seen)).toEqual(['labels', '--kind', 'next', ...tail])
+  await say($, 'labels Refused X2')
+  expect(asked(seen)).toEqual(['labels', '--kind', 'refused', ...tail, '--', 'X2'])
   await say($, 'labels next R3 w12')
   expect(asked(seen)).toEqual(['labels', '--kind', 'next', ...tail, '--', 'R3', 'w12'])
   await say($, 'labels -R3')
   expect(asked(seen)).toEqual(['labels', ...tail, '--', '-R3'])
   out = ''
   expect(await say($, 'look')).toBe('Nothing came back.')
+})
+
+test('the command takes no word for a sampler: sample is a word it does not know, and the door is not asked', async ($, on) => {
+  const seen = world(on, { script: () => ({ exitCode: 0, stdout: 'the door said\n', stderr: '' }) })
+  await start($)
+  for (const words of ['sample', 'sample on', 'Sample show', 'sample why a0000001']) {
+    const first = words.split(' ')[0]
+    expect(await say($, words)).toBe(`/crossings takes: on, off, adopt, join, here, status, look, find <words>, labels, frame. "${first}" is none of these; nothing was changed.`)
+  }
+  expect(verbs(seen)).toEqual(['home']) // only where the home is, as the session started
+  expect(seen.files).toEqual({})
 })
 
 // --- the archive's own files ----------------------------------------------------------------
@@ -581,6 +594,14 @@ test("a shell command that runs the door with what is the person's alone is refu
   expect(reached.length).toBe(3)
 })
 
+test("a shell command that runs the door's find with the word sample is the session's own, and runs", async ($, on) => {
+  const reached = await tools($, on)
+  for (const command of ['python3 crossing/door.py find sample --cwd /project', 'python3 -I door.py find "a sample of the hull"']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(undefined)
+  }
+  expect(reached).toEqual(['Bash', 'Bash'])
+})
+
 test("a shell command or a write that names the person's record or a home's kept small files is refused", async ($, on) => {
   const reached = await tools($, on, { ...PLACES, CROSSING_SWITCHED: '/elsewhere/record/switched' })
   for (const command of ['rm crossings/off.txt', ': > /elsewhere/homes/made-up-tern-1a2b3c4d/off.txt',
@@ -647,6 +668,43 @@ test('a shell command that writes those files is refused, and one that reads the
     'echo the mode > notes/mode.txt']
   for (const command of reads) expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(undefined)
   expect(reached.length).toBe(reads.length)
+})
+
+// The plugin's own settings, as a session's environment would give them: the shell spells out each one it names.
+const SETTINGS = { ...PLACES, CROSSING_HOME: '/elsewhere/outright', CROSSING_SWITCHED: '/elsewhere/record/switched' }
+
+test("a shell command that names a home or the person's record through the plugin's own settings is refused as one that spells it out", async ($, on) => {
+  const reached = await tools($, on, SETTINGS)
+  for (const command of ['cat $CROSSING_HOMES/made-up-tern-1a2b3c4d/said/abcdef01.jsonl',
+    'cat "${CROSSING_HOMES}/made-up-tern-1a2b3c4d/said/abcdef01.jsonl"', 'sqlite3 $CROSSING_OURS/store.db .dump',
+    'head -n 3 ${CROSSING_OURS}/said/x.jsonl', 'ls $CROSSING_HOME/said', 'cat "${CROSSING_HOME}/abcdef01.words.md"']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(REFUSED)
+  }
+  for (const command of ['echo changed > $CROSSING_HOME/off.txt', ': > "${CROSSING_HOME}/unsaid.txt"',
+    'rm $CROSSING_OURS/models.txt', 'truncate -s 0 $CROSSING_SWITCHED', 'echo x > "${CROSSING_SWITCHED}"',
+    'echo x > $CROSSING_HOMES/made-up-tern-1a2b3c4d/reached.jsonl']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(PERSONS)
+  }
+  for (const command of ['echo x >> $CROSSING_HOME/labels/2026-11-12.md', 'echo beside > ${CROSSING_OURS}/mode']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(WRITTEN)
+  }
+  expect(reached).toEqual([])
+  // Read, a label page through a setting runs, as it does spelled out; and a name that only begins as a setting's
+  // does is another variable, which the shell would not spell out as that setting
+  const runs = ['cat $CROSSING_HOME/labels/2026-11-12.md', 'ls ${CROSSING_HOMES}/made-up-tern-1a2b3c4d/labels',
+    'cat $CROSSING_HOMES_OLD/made-up-tern-1a2b3c4d/said/abcdef01.jsonl', 'echo x > $CROSSING_SWITCHEDX']
+  for (const command of runs) expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(undefined)
+  expect(reached.length).toBe(runs.length)
+})
+
+test('a setting of the plugin that is not set is left in a command as it is', async ($, on) => {
+  const reached = await tools($, on, { HOME: '/Users/someone' })
+  const runs = ['cat $CROSSING_HOMES/made-up-tern-1a2b3c4d/said/abcdef01.jsonl', 'cat ${CROSSING_HOME}/said/x.jsonl',
+    'echo x > $CROSSING_OURS/off.txt', 'echo x > "$CROSSING_SWITCHED"']
+  for (const command of runs) expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(undefined)
+  expect(reached.length).toBe(runs.length)
+  // and the person's own folder is spelled out beside them, as before
+  expect(refused(await $.tool.call({ tool: 'Bash', command: 'cat ${HOME}/.claude/crossing/ours/said/x.jsonl' }))).toBe(REFUSED)
 })
 
 test("a shell command that runs the module's own verbs, or names a model for the door, is refused", async ($, on) => {

@@ -209,6 +209,16 @@ def by_count() -> str:
     return frame._composed(crossings, frame.LEAST, False, "", by_count=True)
 
 
+def cut_session(crossings: Path) -> str:
+    """The made-up home's one session, as the archive names it: a cut's frame is asked for by session, and it is
+    that frame that is laid out with each sentence of the person's packed with what was told of it."""
+    db = store._open(crossings)
+    try:
+        return db.execute("select session from said where session != '' order by seq limit 1").fetchone()[0]
+    finally:
+        db.close()
+
+
 def page() -> str:
     """The page: every sentence Crossings can tell a session, in the order a session meets them."""
     # A project switched on, with a hand-over page and a made-up transcript archived; then a line left at the
@@ -246,6 +256,8 @@ def page() -> str:
         + fenced(frame.compose(crossings, new=True)),
         "## After a cut: the waking note\n\n" + fenced(hook.waking({"cut": 2})),
         "## After a cut: the frame\n\n" + fenced(frame.compose(crossings)),
+        "## After a cut, for the session that was cut: the person's sentences, each with what was told of it\n\n"
+        + fenced(frame.compose(crossings, session=cut_session(crossings))),
         "## After a cut, the frame at the least size a home may set\n\n"
         + fenced(frame.compose(crossings, frame.LEAST)),
         "## After a cut, where a page written by hand holds keys that would take the frame past what a hook may "
@@ -288,6 +300,28 @@ def page() -> str:
                 door.UNSEATED,
             )
         ),
+    ]
+    # Then what the session declined, marked once every other part is made, so that each of those is as it was: a
+    # refusal judged again once, packed for the session that was cut; then three more, laid out as before, where
+    # the family the frame does not carry is named in a sentence.
+    hull = store.mark(
+        crossings, "refused", "session", "The hull is not painted: the old paint comes off first.", [E], day=DAY
+    )
+    again = "Still not painted: the old paint is off, and the hull is wet."
+    store.mark(crossings, "refused", "session", again, [hull["id"], D], day=DAY)
+    packed = frame.compose(crossings, session=cut_session(crossings))
+    for sentence, at in (
+        ("The mast is not stepped before the paint.", D),
+        ("No varnish is bought for the tiller.", E),
+        ("The old ropes are not thrown away.", D),
+    ):
+        store.mark(crossings, "refused", "session", sentence, [at], day=DAY)
+    at = next(n for n, part in enumerate(parts) if part.startswith("## After a cut, for the session that was cut")) + 1
+    parts[at:at] = [
+        "## After a cut, for the session that was cut, where it declined something: each refusal first, under the "
+        "sentences of the person's that asked\n\n" + fenced(packed),
+        "## After a cut, where more refusals stand than a frame carries, laid out as before\n\n"
+        + fenced(frame.compose(crossings)),
     ]
     return "\n\n".join(parts) + "\n"
 

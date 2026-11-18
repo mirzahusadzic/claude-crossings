@@ -240,7 +240,11 @@ def test_a_label_marked_through_the_server_is_signed_by_the_hook_after_the_call(
         (crossings / "store.db").unlink()  # and the index is made again from the plain files alike
         assert store.listed(crossings, ids=("W2",))["labels"][0]["model"] == SOUTH
         # A line left at the door is signed the same way, and so is a label in the home that is ours.
-        assert said("leave", sentence="Look at the fenders first.", anchors=["20000002"]) == ("marked N1", False)
+        left_at_door = said("leave", sentence="Look at the fenders first.", anchors=["20000002"])
+        assert (left_at_door[0].split("\n")[0], left_at_door[1]) == (
+            "marked N1",
+            False,
+        )  # what the record weighs unmarked may follow
         assert hook.run(
             {
                 **done,
@@ -403,7 +407,7 @@ def test_a_database_of_the_make_before_models_is_built_again(tmp_path):
     store.build(crossings)
     db = sqlite3.connect(crossings / "store.db")
     assert (
-        db.execute("pragma user_version").fetchone()[0] == store.MADE == 6
+        db.execute("pragma user_version").fetchone()[0] == store.MADE == 8
     )  # 4 counts the lines of the archive that are no message, 5 finds a label's anchors by an index, and 6 ends a
     # paste at the closing tag of its own id
     db.close()
