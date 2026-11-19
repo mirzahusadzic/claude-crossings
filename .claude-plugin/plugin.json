@@ -1,6 +1,6 @@
 {
   "name": "crossings",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Keeps what was said in a project word for word in plain files, gives a session a door back to it, counts what a context cut kept of each voice, and wakes the session after a cut gently, asking it for no report",
   "author": {
     "name": "Mirza Husadzic"
