@@ -242,7 +242,7 @@ def test_a_release_is_named_by_one_version_wherever_it_is_named():
         r"!\[([^\]]*)\]\(https://img\.shields\.io/badge/status-([^)]*)\)",
         (ROOT / "README.md").read_text(encoding="utf-8"),
     )
-    assert badges == [(f"early alpha {version}", f"early%20alpha%20{version}-e5a50a")], (badges, version)
+    assert badges == [(f"alpha {version}", f"alpha%20{version}-e5a50a")], (badges, version)
 
 
 def test_each_handle_answers_as_the_door_does(tmp_path):

@@ -7,7 +7,7 @@
 ![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B%20%C2%B7%20stdlib%20only-3776ab?logo=python&logoColor=white)
 ![macOS · Linux](https://img.shields.io/badge/platform-macOS%20%C2%B7%20Linux-lightgrey)
-![early alpha 0.5.0](https://img.shields.io/badge/status-early%20alpha%200.5.0-e5a50a)
+![alpha 0.5.0](https://img.shields.io/badge/status-alpha%200.5.0-e5a50a)
 
 A Claude Code plugin for what a context cut keeps.
 
