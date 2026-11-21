@@ -27,6 +27,7 @@ from crossing import count, door, frame, store, transcript  # noqa: E402
 PASTED = "Estimate for the hull: two coats of grey.\n\n| a | table |\n\nReady by the end of March."
 WITH_PASTE = f'Here is what the yard sent back.\n\n<pasted_content id="3d0c">\n{PASTED}\n</pasted_content id="3d0c">'
 ONLY_PASTE = f'<pasted_content id="77aa">{PASTED}</pasted_content id="77aa">'
+DAY = "2026-11-12"  # the day of the made-up labels a pinned frame is made of
 
 
 def through(*argv: str) -> tuple[int, str]:
@@ -450,6 +451,126 @@ def test_the_standing_lines_cross_whole_before_the_work_takes_room(tmp_path):
     )
     few = frame.compose(home(tmp_path / "few")[0])
     assert "did not fit" not in few
+
+
+def work_in(text: str) -> list[str]:
+    """The keys of the work rows a frame laid out as before carries, in its order."""
+    head = "## The work, newest first\n\n"
+    part = text.split(head)[1].split("\n\n")[0] if head in text else ""
+    return re.findall(r"^- (W\d+) \(", part, flags=re.M)
+
+
+def test_a_long_work_label_that_does_not_fit_is_passed_over_and_the_older_ones_cross(tmp_path):
+    """Guard: the frame stopped at the first work label that did not fit, so one of 3,900 characters, the newest,
+    kept the six older short ones out of a frame that had room for them (measured: none of the work carried, in a
+    frame of 5,339 characters of its 9,000). It is passed over now, and the older ones cross, newest first; the
+    sentence of how many more labels the store holds counts the one passed over."""
+    crossings, _ = home(tmp_path)
+    store.mark(crossings, "next", "session", ("The paint waits for a dry week. " * 95).strip(), [D])
+    for n in range(5):
+        store.mark(crossings, "work", "session", f"Short work label {n}.", [E])
+    store.mark(crossings, "work", "session", ("The keel is checked plank by plank. " * 120)[:3900], [E])  # W7
+    text = frame.compose(crossings)
+    assert work_in(text) == ["W6", "W5", "W4", "W3", "W2", "W1"]
+    assert "1 more label in the store: `labels` lists them." in text and len(text) <= frame.SIZE
+    assert "The keel is checked" not in text and "- W7 (" not in text  # passed over whole, not cut to fit
+
+
+def test_the_work_carried_past_a_long_label_keeps_its_order_and_its_share_of_the_frame(tmp_path):
+    """Guard: past a work label that does not fit, the older ones that do are carried in the order of the frame,
+    the newest first, and a long one in the middle takes none of their places; they take no more than the room the
+    work had before, so the frame stays within its size and stops where the room ends, and those it does not carry
+    are counted."""
+    crossings, _ = home(tmp_path)
+    (crossings / "labels").mkdir()
+    door_line = "| N1 | " + ("The paint waits for a dry week. " * 95).strip() + f" | session | `{D}` |\n"
+    long = "| W5 | " + ("The keel is checked plank by plank. " * 120)[:3900].strip() + f" | session | `{E}` |\n"
+    short = [f"| W{n} | Short work label {n}. | session | `{E}` |\n" for n in (2, 3, 4, 6, 7, 8)]
+    (crossings / "labels" / "2026-11-11.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n" + door_line + "".join(short[:3]) + long
+        + "".join(short[3:]),
+        encoding="utf-8",
+    )  # fmt: skip
+    store.build(crossings)
+    text = frame.compose(crossings)
+    assert work_in(text) == ["W8", "W7", "W6", "W4", "W3", "W2", "W1"]  # W5 passed over, the order kept
+    assert "1 more label in the store: `labels` lists them." in text and len(text) <= frame.SIZE
+    # More short ones than the room holds, after a long one: carried newest first while they fit, and no further.
+    many_ = tmp_path / "many"
+    crossings, _ = home(many_)
+    (crossings / "labels").mkdir()
+    rows = [f"| W{n} | A short row about the work, number {n}, said once. | session | `{E}` |\n" for n in range(2, 200)]
+    rows.append("| W200 | " + ("The keel is checked plank by plank. " * 120)[:3900].strip() + f" | session | `{E}` |\n")
+    (crossings / "labels" / "2026-11-11.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n" + door_line + "".join(rows), encoding="utf-8"
+    )
+    store.build(crossings)
+    text = frame.compose(crossings)
+    carried = work_in(text)
+    assert 0 < len(carried) < 198 and carried == [f"W{n}" for n in range(199, 199 - len(carried), -1)]
+    assert len(text) <= frame.SIZE and f"{200 - len(carried)} more labels in the store: `labels` lists them." in text
+
+
+def test_a_frame_whose_work_labels_all_fit_is_as_it_was_and_the_standing_lines_still_stop_at_a_long_one(tmp_path):
+    """Pin: where every work label fits, nothing is passed over, and the frame is the one the frame made before,
+    byte for byte (each digest was taken from the code before work labels were passed over): laid out as before at
+    two sizes, packed for the session that was cut, and given to a new session; and one where the first pass over
+    the work stops at a long label that the room left over then carries. The standing lines still stop at the first
+    that does not fit, as `labels` names those not carried by a range of keys."""
+    import hashlib
+
+    crossings, _ = home(tmp_path)
+    store.mark(crossings, "next", "session", "Find out whether the grey paint has been bought.", [D], day=DAY)
+    store.mark(crossings, "relation", "session", "The person plans the boat's work by the seasons.", [D, E], day=DAY)
+    for n in range(4):
+        store.mark(crossings, "work", "session", f"The hull is looked at, number {n}.", [D if n % 2 else A], day=DAY)
+    store.mark(crossings, "refused", "session", "The mast is not stepped before the paint.", [E], day=DAY)
+    db = store._open(crossings)
+    try:
+        session = db.execute("select session from said where session != '' order by seq limit 1").fetchone()[0]
+    finally:
+        db.close()
+    made = {
+        "usual": frame.compose(crossings),
+        "most": frame.compose(crossings, frame.MOST),
+        "packed": frame.compose(crossings, session=session),
+        "new": frame.compose(crossings, new=True),
+    }
+    for name, text in made.items():  # every work label fits in each
+        assert sorted(set(re.findall(r"\b(W\d+) \(", text))) == ["W1", "W2", "W3", "W4", "W5"], name
+    later = home(tmp_path / "later")[0]  # the first pass stops at a long label, and the room left over carries it
+    store.mark(later, "next", "session", ("The paint waits for a dry week. " * 80).strip(), [D], day=DAY)
+    store.mark(later, "work", "session", "The mooring is paid.", [A], day=DAY)
+    store.mark(later, "work", "session", "The hull is grey.", [D], day=DAY)
+    store.mark(later, "work", "session", ("The keel is checked plank by plank. " * 200)[:3400], [E], day=DAY)
+    made["stopped"] = frame.compose(later)
+    assert work_in(made["stopped"]) == ["W4", "W3", "W2", "W1"]
+    digests = {name: hashlib.sha256(text.encode("utf-8")).hexdigest()[:16] for name, text in made.items()}
+    assert digests == DIGESTS, digests
+    standing = home(tmp_path / "standing")[0]
+    (standing / "labels").mkdir()
+    lines = [f"| R{n} | A standing line, number {n}. | session | `{A}` |\n" for n in (2, 3)]
+    lines.append("| R4 | " + ("A standing line that runs long. " * 200)[:3990].strip() + f" | session | `{A}` |\n")
+    lines += [f"| R{n} | A standing line, number {n}. | session | `{A}` |\n" for n in (5, 6)]
+    (standing / "labels" / "2026-11-11.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n"
+        f"| N1 | {('The paint waits for a dry week. ' * 95).strip()} | session | `{D}` |\n" + "".join(lines),
+        encoding="utf-8",
+    )
+    store.build(standing)
+    text = frame.compose(standing)
+    assert "3 standing lines did not fit and are not carried: R4 to R6; `labels` gives them." in text
+
+
+# The frames of that pin, by the first 16 characters of their digest, as the frame made them before a work label that
+# does not fit was passed over.
+DIGESTS = {
+    "usual": "16fd1a00a3c8c225",
+    "most": "16fd1a00a3c8c225",
+    "packed": "3c224b39df873784",
+    "new": "b6be6a8bd99af14e",
+    "stopped": "ad18a2628c63bcd6",
+}
 
 
 # --- what was pulled ------------------------------------------------------------------------------

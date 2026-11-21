@@ -817,11 +817,15 @@ def _composed(
     standing = [row for row in tops if row["kind"] == "relation"]
     work = [row for row in tops if row["kind"] == "work"][::-1]  # the newest first
 
-    def fit(candidates: list[dict], until: int) -> list[dict]:
+    def fit(candidates: list[dict], until: int, passing: bool = False) -> list[dict]:
+        """The rows that fit, in their order, up to `until`: to the first that does not, or, `passing`, past each that
+        does not, to every one after it that does."""
         nonlocal used
         kept = []
         for row in candidates:
             if used + len(line(row)) > until:
+                if passing:
+                    continue
                 break
             kept.append(row)
             used += len(line(row)) + 1
@@ -829,7 +833,9 @@ def _composed(
 
     # The standing lines cross whole while they fit at all; the work takes what is left of the
     # room, and is one reach away in any case. A frame that drops the newest standing line
-    # drops the one a waking session has never held.
+    # drops the one a waking session has never held. The standing lines stop at the first that
+    # does not fit, and those after it are named as not carried; the first pass over the work
+    # stops so too, and its rows choose the person's words below.
     kept_standing = fit(standing, int(size * STANDING))
     kept_work = fit(work, int(size * WORK))
 
@@ -863,7 +869,10 @@ def _composed(
         said_ids.append(said["id"])
         used += len(entry) + 1
     chosen = len(kept_work)  # the work rows the words were chosen by; those after them the top-up adds
-    kept_work += fit(work[chosen:], size)  # what room is left goes to older work rows
+    # What room is left goes to older work rows, the newest first: one that does not fit is passed over, and every
+    # older one that does is carried, so that one long label does not keep the older ones out. Where every row fits,
+    # nothing is passed over, and the frame is as it was.
+    kept_work += fit(work[chosen:], size, passing=True)
     # The turns the standing lines carried here set (see `_standing`), the newest line first, each once by its key: no
     # room is reserved for them, and each is tried once the frame is laid (see the end), and kept only where it fits.
     standing_ties: list[dict] = []
