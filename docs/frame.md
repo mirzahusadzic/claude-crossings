@@ -225,7 +225,14 @@ The session's turn right after a refused ask is written by its ids alone, with n
 
 #### The room the turns take
 
-The turns are paid from the line at the door's own allowance, as the tail of that line. For the frame's size, they give way where a line at the door as long would be cut. A refusal never gives way to a turn.
+The turns are paid from the line at the door's own allowance, as the tail of that line. Room for them is reserved before the standing lines are fitted, as much as a line at the door that long would take. A refusal never gives way to a turn.
+
+A turn can still be let go where such a line would have stayed whole:
+
+- **A frame too long once packed.** The turn goes before any sentence the line rests on, as [the order above](#when-a-packed-frame-is-too-long) says.
+- **No room for its sentence.** A turn stands only beneath a quoted sentence. Where the room for the person's words ends before that sentence, the turn is not set.
+
+A frame left with no turn is made again as one with none, so the reserved room goes back to the rest. Near a full frame, a few dozen characters decide whether a turn crosses. Nothing says that one was let go.
 
 #### The sentence after the frame
 

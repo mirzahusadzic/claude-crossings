@@ -30,7 +30,7 @@ No model is called anywhere in it, and nothing leaves the computer by its own do
 - **The door.** Eight tools the session calls: `look`, `labels`, `find`, `thread`, `mark`, `leave`, `status`, `crossing`.
 - **Labels.** A short line about a stretch of the record, resting on the ids of its messages. The session writes them as the work goes.
 - **What it declined.** A session can mark what it declined, with its reason. It crosses every cut whole, before anything else, until a later session or you put it to rest.
-- **The frame.** About 9,000 characters across a cut: the standing lines, what the session declined, where the work stands, and your own sentences. Beneath each sentence stands what the session told of it. Where the session's line at the door rests on both, its own turn stands beside the sentence too.
+- **The frame.** About 9,000 characters across a cut: the standing lines, what the session declined, where the work stands, and your own sentences. Beneath each sentence stands what the session told of it. Where the session's line at the door rests on both, its own turn stands beside the sentence too, while there is room.
 - **A gentle wake.** A short note to the session that comes through a cut. It asks for no inventory and no report.
 - **The count.** How much of each voice the summary kept word for word, counted by script.
 - **Your own hand.** A switch for each project, a way to speak off the record, and a strike.

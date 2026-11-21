@@ -235,8 +235,10 @@ def _made(
     turns the line at the door had room reserved for: reserving room for those it keeps alone, the room the others
     had is given back to what it was taken from, and the frame is laid once more, until it keeps every turn it
     reserves (see `_composed`); a turn let go is not tried again. The turns are the tail of the line at the door, and
-    give way only where a line at the door as long would be cut: so they never take more than such a line would. A
-    turn's line is laid, and its messages read, once for all of these (`memo`)."""
+    room is reserved for them as for a line at the door that long: so they never take more than such a line would.
+    They can go where such a line would stay whole: before any sentence the line rests on where the packed frame is
+    too long, and where the room for the person's words ends before a turn's own sentence. A turn's line is laid,
+    and its messages read, once for all of these (`memo`)."""
     allowed = _allowed(folder, size)
     noted: dict = {} if account is None else account  # what the frame made carries, for the next try
     memo: dict = {}
@@ -1007,10 +1009,10 @@ def _composed(
         # first, the last added first, and then the sentences quoted, the last first. A sentence that goes takes
         # the lines beneath it along: a work row written there is written beneath the last of its sentences that is
         # left, and where none is, it is listed with the work again. The session's turns the line at the door sets
-        # are the tail of that line, and give way where a line at the door as long would be cut: after every
-        # sentence the line does not rest on, and before those it rests on, the last first; a sentence of the line's
-        # that goes takes its turn along. The families are not laid yet: they are fitted first, and room is made for
-        # them below.
+        # are the tail of that line, and give way after every sentence the line does not rest on, and before those
+        # it rests on, the last first: so a turn can go where a line at the door as long would have lost a sentence
+        # of its own instead. A sentence of the line's that goes takes its turn along. The families are not laid
+        # yet: they are fitted first, and room is made for them below.
         door_rests = set(left[0]["anchors"]) if left else set()  # the sentences the line at the door rests on
         while said_ids and len(laid([], refusals=False)) > allowed:
             not_the_lines = [at for at, said_id in enumerate(said_ids) if said_id not in door_rests]
