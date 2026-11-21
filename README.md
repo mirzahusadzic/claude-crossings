@@ -135,7 +135,7 @@ python3 scripts/told.py > docs/told.md
 
 ### Cite
 
-The working paper on Zenodo gives the model behind Crossings and describes the plugin as built at release 0.3.0. The paper is under CC BY 4.0 and the code under Apache-2.0; each DOI below always resolves to the latest version:
+The working paper on Zenodo gives the model behind Crossings and describes the plugin as built at release 0.4.0. The paper is under CC BY 4.0 and the code under Apache-2.0; each DOI below always resolves to the latest version:
 
 ```bibtex
 @misc{husadzic2026forwhatpurpose,

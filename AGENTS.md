@@ -216,6 +216,7 @@ What is easy to get wrong.
 | The ledger, with `note` | Under `beside` with `note` the module asks for the ledger before the hook makes the frame. It cannot see whether one comes. |
 | The types | `tsconfig.json` extends the types the harness lays in `.claude-plugin/types/` when the plugin is loaded. Git ignores that folder on purpose. |
 | One suite at a time | Run one suite at a time on a machine. A test of the second copy counts the stage folders in the system's temporary folder, and fails where another run makes one meanwhile. |
+| The second copy on GitHub's Macs | Its tests run the system's `hdiutil`. On a runner where that tool fails to open an image, no copy is made and they fail, one with "the image did not read back the same". Rerun the cell. |
 | Pages read by tests | `tests/test_seams.py` holds two phrases of the Labels section of `docs/store.md`, on how a mark bounds a sentence's length. It also holds a sentence on `adopt` in `README.md` and `docs/settings.md`. |
 | The scale test | `CROSSING_SCALE=0` leaves out the scale test of `tests/test_reading.py`. It is unset by default, and is for the tests alone. |
 | Coverage on 3.9 | The script picks coverage 7.10.7 on 3.9 and 7.17.2 from 3.11 on, with a venv for each Python. 3.9's compiler steps over a bare `continue` or `break` that a jump lands on, so that line is reported never run on 3.9 alone. Write such a branch as an `if`/`else`, and see that a test makes each half of an `or` true by itself. No `pragma: no cover`, no exclusion. |
