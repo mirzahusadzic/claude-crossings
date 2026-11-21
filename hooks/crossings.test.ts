@@ -240,12 +240,36 @@ for (const [trigger, kind] of [['manual', 'a chosen cut'], ['auto', 'a cut that 
   })
 }
 
-test('where no frame and no page can be carried, the summary the harness makes in their place is asked for the ledger too', async ($, on) => {
+test('where no frame and no page can be carried, the summary the harness makes in their place is asked for no ledger', async ($, on) => {
+  // The ledger rests on the frame that stands beside it. With nothing to carry, the cut is the harness's as it came.
   const seen = world(on, { files: asks('beside', 'message'), script: failing })
   expect((await $.session.compact({ trigger: 'manual', messages: BEFORE, instructions: TYPED })).messages).toEqual([SUMMARY, KEPT])
   answering(seen, 'own', 'message') // the plugin's own mode, with nothing of its own to answer a chosen cut with
   expect((await $.session.compact({ trigger: 'manual', messages: BEFORE })).messages).toEqual([SUMMARY, KEPT])
-  expect(seen.handed).toEqual([`${LEDGER}\n\n${TYPED}`, LEDGER])
+  expect((await $.session.compact({ trigger: 'auto', messages: BEFORE })).messages).toEqual([SUMMARY, KEPT])
+  expect(seen.handed).toEqual([TYPED, undefined, undefined])
+})
+
+test('a session no person sits in is asked for no ledger, whatever the mode', async ($, on) => {
+  // Nothing of such a session is archived and the door carries nothing to it, so its summary is all that holds it.
+  mock.env(on, { CLAUDE_CODE_ENTRYPOINT: 'sdk-cli' })
+  const seen = world(on, { files: asks('beside', 'note') })
+  for (const [mode, carry] of [['beside', 'note'], ['beside', 'message'], ['own', 'message']]) {
+    answering(seen, mode, carry)
+    for (const trigger of ['auto', 'precompute'] as const) {
+      await $.session.compact({ trigger, messages: BEFORE })
+      await $.session.compact({ trigger, messages: BEFORE, instructions: TYPED })
+    }
+  }
+  expect(seen.handed).toEqual(Array.from({ length: 12 }, (_, n) => (n % 2 ? TYPED : undefined)))
+})
+
+test('a session the harness names `cli` is asked for the ledger, as one it does not name at all is', async ($, on) => {
+  mock.env(on, { CLAUDE_CODE_ENTRYPOINT: 'cli' })
+  const seen = world(on, { files: asks('beside', 'note') })
+  await $.session.compact({ trigger: 'auto', messages: BEFORE })
+  await $.session.compact({ trigger: 'precompute', messages: BEFORE, instructions: TYPED })
+  expect(seen.handed).toEqual([LEDGER, `${LEDGER}\n\n${TYPED}`])
 })
 
 test('a summary computed ahead of time is asked for the ledger as one made at the cut is, and nothing else is done there', async ($, on) => {

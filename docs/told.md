@@ -104,7 +104,7 @@ The store holds 2 messages of the person's and 2 of the sessions before you, fro
 
 ## As a cut is made: what the harness's summary is asked for
 
-Told to the harness's summarizer, not to the session: as its instructions, wherever the harness makes a summary in a project whose cuts Crossings answers (the mode `beside` or `own`), at the cut and ahead of it alike, and not for a subagent's own cut. What the person typed after `/compact` follows it after an empty line, unchanged.
+Told to the harness's summarizer, not to the session: as its instructions, wherever the harness makes a summary in a project whose cuts Crossings answers (the mode `beside` or `own`), at the cut and ahead of it alike. Not for a subagent's own cut, not in a session no person sits in, and not where a message was to carry the frame and the door gave none. What the person typed after `/compact` follows it after an empty line, unchanged.
 
 ````text
 Keep only a ledger of tasks: what the person asked, in their own words; whether each is finished or unfinished, and for an unfinished one where it stands; the files it touched. Leave the section "All user messages" empty. No retelling of the conversation and no suggested next step. End with the standing constraints the person set, word for word.

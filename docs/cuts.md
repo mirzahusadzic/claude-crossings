@@ -148,7 +148,16 @@ Wherever the harness makes the summary under `beside` or `own`, ahead of time to
 - the section "All user messages" left empty, nothing retold and no next step suggested.
 - last, the standing constraints the person set, word for word.
 
-What the person types after `/compact` still applies. It follows the ledger after an empty line, unchanged, and so comes last. Under `native`, and at a subagent's own cut, the summary is asked for what the cut came with.
+What the person types after `/compact` still applies. It follows the ledger after an empty line, unchanged, and so comes last.
+
+No ledger is asked where nothing would stand beside it. The summary is then asked for what the cut came with:
+
+- **`native`.** No frame crosses, so the summary is left to retell.
+- **A subagent's own cut.** It is never touched.
+- **A session no person sits in.** Nothing of it is archived, and no frame is carried to it.
+- **No frame and no hand-over.** A message was to carry the frame, and the door gave neither.
+
+Under `own`, a cut the person starts has no summary, and so no ledger. The frame stands in its place.
 
 The ledger is a request, given to the harness's summarizer as the cut's instructions. The summarizer is not bound by it, and may not follow it.
 

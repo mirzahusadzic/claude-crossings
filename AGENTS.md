@@ -213,6 +213,7 @@ What is easy to get wrong.
 | A change during the count | `frame._stamp` sees a change by each file's name, size, time and inode. A change made in place that keeps them is not seen. |
 | What a session is told | It is read whole, not only piece by piece. Each sentence is reviewed on its own, and what they do together shows only where they are read together. |
 | The server's process | The door's server is one long-lived process a session. A new version is picked up when it is reconnected or in a new session. |
+| The ledger, with `note` | Under `beside` with `note` the module asks for the ledger before the hook makes the frame. It cannot see whether one comes. |
 | The types | `tsconfig.json` extends the types the harness lays in `.claude-plugin/types/` when the plugin is loaded. Git ignores that folder on purpose. |
 | One suite at a time | Run one suite at a time on a machine. A test of the second copy counts the stage folders in the system's temporary folder, and fails where another run makes one meanwhile. |
 | Pages read by tests | `tests/test_seams.py` holds two phrases of the Labels section of `docs/store.md`, on how a mark bounds a sentence's length. It also holds a sentence on `adopt` in `README.md` and `docs/settings.md`. |

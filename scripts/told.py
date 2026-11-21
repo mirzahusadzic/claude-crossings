@@ -59,8 +59,9 @@ def module_note() -> str:
 LEDGER_HEAD = "## As a cut is made: what the harness's summary is asked for"
 LEDGER_TOLD = (
     "Told to the harness's summarizer, not to the session: as its instructions, wherever the harness makes a summary "
-    "in a project whose cuts Crossings answers (the mode `beside` or `own`), at the cut and ahead of it alike, and not "
-    "for a subagent's own cut. What the person typed after `/compact` follows it after an empty line, unchanged."
+    "in a project whose cuts Crossings answers (the mode `beside` or `own`), at the cut and ahead of it alike. Not for "
+    "a subagent's own cut, not in a session no person sits in, and not where a message was to carry the frame and "
+    "the door gave none. What the person typed after `/compact` follows it after an empty line, unchanged."
 )
 
 

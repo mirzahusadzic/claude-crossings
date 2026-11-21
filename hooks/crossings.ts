@@ -52,6 +52,9 @@ const NOTE =
 // (beside or own): a ledger and nothing else, since the record keeps the words and the frame carries them,
 // so the summary need not retell. It is handed down as the cut's instructions, and whatever was typed after
 // /compact follows it after an empty line, unchanged: the person's word of the moment comes last.
+// It is asked only where that holds. In a session no person sits in, nothing is archived and the door carries
+// nothing; and where a message is to carry the frame and the door gives none, nothing stands beside the
+// summary. There the summary is asked for what the cut came with.
 const LEDGER =
   'Keep only a ledger of tasks: what the person asked, in their own words; whether each is finished or ' +
   'unfinished, and for an unfinished one where it stands; the files it touched. Leave the section "All user ' +
@@ -82,6 +85,12 @@ const entrypoint = async ($: any): Promise<Record<string, string>> => {
   } catch {
     return {}
   }
+}
+// A session the harness says it started otherwise than as `cli`: one no person sits in. Where the harness does
+// not say, it is not taken for one.
+const unseated = async ($: any): Promise<boolean> => {
+  const started = (await entrypoint($)).CLAUDE_CODE_ENTRYPOINT
+  return started !== undefined && started !== 'cli'
 }
 // The options of a command line put before its `--`, where it has one: what follows the `--` are the
 // person's own words, whatever they begin with, and the door takes them as words.
@@ -151,12 +160,13 @@ const registerCut = (on: Parameters<Register>[0]) => {
     if (e.trigger === 'precompute') {
       // A summary the harness computes ahead of time is asked for the ledger where a cut would be, so that it has
       // the shape of one made at the cut; nothing else is done here: no home asked, no frame, no trace.
-      return next((await asked($)).mode === 'native' ? e : ledgered(e))
+      return next((await asked($)).mode === 'native' || (await unseated($)) ? e : ledgered(e))
     }
     await askHome($) // where the home is, for the guard below: a cut is one of the moments it is asked
     const { mode, carry } = await asked($)
     if (mode === 'native') return next(e)
-    const told = ledgered(e) // every summary the harness makes from here on is asked for the ledger
+    // A summary the harness makes from here on is asked for the ledger, but not in a session no person sits in.
+    const told = (await unseated($)) ? e : ledgered(e)
 
     // The trace of what was done is a convenience, written by the door; the cut goes on without it.
     const said = async (did: object) => {
@@ -171,7 +181,7 @@ const registerCut = (on: Parameters<Register>[0]) => {
     }
 
     const { text, what } = await held($)
-    if (!text) return next(told)
+    if (!text) return next(e) // nothing to carry: the cut is the harness's as it came, with no ledger asked
     const carried = { role: 'user' as const, text, toolUses: [] }
     // An automatic cut comes in the middle of work, so the harness's summary is kept there.
     if (mode === 'own' && e.trigger !== 'auto') {
