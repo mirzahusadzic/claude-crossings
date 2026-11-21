@@ -27,7 +27,8 @@ When a session grows long, the harness compacts it, and a summary takes the conv
 - **What was said, kept.** Every message of yours and of the session's, under its id, from each session you sit in. Reasoning and tool traffic are never kept.
 - **The door.** Eight tools the session calls: `look`, `labels`, `find`, `thread`, `mark`, `leave`, `status`, `crossing`.
 - **Labels.** One sentence about a stretch of the record, resting on the ids of its messages. The session writes them as the work goes, and what it declined is one of them, kept with its reason.
-- **The frame.** About 9,000 characters across a cut: the standing lines, where the work stands, and your own sentences, each with what the session told of it beneath.
+- **What it declined.** A session can mark what it declined, with its reason. It crosses every cut whole, before anything else, until a later session or you put it to rest.
+- **The frame.** About 9,000 characters across a cut: the standing lines, what the session declined, where the work stands, and your own sentences, each with what the session told of it beneath and, where its line at the door rests on both, its own turn beside.
 - **A gentle wake.** A short note to the session that comes through a cut. It asks for no inventory and no report.
 - **The count.** How much of each voice the summary kept word for word, counted by script.
 - **Your own hand.** A switch for each project, a way to speak off the record, and a strike.
@@ -36,7 +37,7 @@ When a session grows long, the harness compacts it, and a summary takes the conv
 
 ### How it works
 
-Crossings is a set of hooks, a hooks module and a small server. The hooks read the session's transcript into the home's archive, and the server answers the door's tools from the same home. The module answers a cut where the home asks it to, gives you the `/crossings` command, and refuses a session's calls that open the archive's own files.
+Crossings is a set of hooks, a hooks module and a small server. The hooks read the session's transcript into the home's archive, and the server answers the door's tools from the same home. The module answers a cut where the home asks it to, asks the harness's summary of a cut for a ledger, gives you the `/crossings` command, and refuses a session's calls that open the archive's own files.
 
 A label is never made by itself: the session writes it. A label holds what the person tells and asks, and where the work stands; it is never a record of how they seem, of what works on them or of how to move them. Why: a label crosses every cut as standing, and the session that reads it acts on it. The same tool, used to keep what lands on someone, would be a tool for the harm it is meant to spare.
 
@@ -94,6 +95,7 @@ Off is not a pause: nothing said while it is off is ever taken in, and the door'
 - A message of yours that looks like it holds a key or a password is kept like any other, and its id is noted for you to strike. The frame never quotes it.
 - Striking is yours, from your own terminal. No strike reaches the harness's own transcript, an earlier second copy or a backup.
 - Its guards against a session are checks, not walls: a session with a shell you let run commands can do what you can.
+- Nothing proves who wrote a line: whoever can write the home's files can write one in the session's name. What holds a line is the record around it.
 - A second copy, where a home names a folder for one, is one encrypted disk image with its passphrase in the Keychain. It is a backup only: a home restored from it by hand is taken in with `adopt`.
 
 The licence is for the code. What a store holds is its person's alone.

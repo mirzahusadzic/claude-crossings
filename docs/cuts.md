@@ -8,7 +8,7 @@ What Crossings does when the harness compacts a session: the count and its page,
 
 | Moment | Crossings |
 | --- | --- |
-| the harness is about to cut (`session.compact`, in the hooks module) | asks the door where the home is, for the guard on the archive's files ([Privacy](privacy.md)), reads the home's `mode` and `carry` through the door, and answers the cut as they ask (below). A subagent's own cut, and one the harness computes ahead of time, are never touched |
+| the harness is about to cut (`session.compact`, in the hooks module) | asks the door where the home is, for the guard on the archive's files ([Privacy](privacy.md)), reads the home's `mode` and `carry` through the door, and answers the cut as they ask (below). A subagent's own cut is never touched. For a summary the harness computes ahead of time, only the home's words are read through the door, and where they answer a cut the summary is asked for the ledger (below); nothing else is done there |
 | the session starts again (`SessionStart`, source `compact`) | gives a session a person sits in the waking note, about this cut by its number, and the frame, where the home carries it as context |
 | the harness hands over its summary (`PostCompact`) | counts the cut and writes its page. For a session a person sits in, it brings the archive and the index up to date and renews the second copy where one is set. It shows the person one line where the summary mostly retells the one before. Where the hook's input names a subagent, nothing at all |
 
@@ -62,6 +62,8 @@ Two plain files of the home decide how a cut is answered, `mode` and `carry`, on
 | `beside` | `note` | the cut stands as the harness made it, whatever set it off, and the hook brings the frame as context when the session starts again. The same files give a session started new its frame |
 | `beside` | `message`, or missing | the frame goes into the cut's answer as a message, after the harness's summary |
 | `own` | either | at a cut the harness did not start by itself, the frame takes the summary's place, and an earlier cut's summary at the head of the conversation is carried on before it; at an automatic cut, as `beside` with `message` |
+
+Wherever the harness makes the summary under `beside` or `own`, ahead of time too, the module asks it for a ledger and nothing else: what the person asked, in their own words; whether each task is finished, and where an unfinished one stands; the files it touched; the section "All user messages" left empty, nothing retold and no next step suggested; and last the standing constraints the person set, word for word. The record keeps the words and the frame carries them, so the summary need not retell them. What the person types after `/compact` still applies: it follows the ledger after an empty line, unchanged, and so comes last. Under `native`, and at a subagent's own cut, the summary is asked for what the cut came with.
 
 A home `/crossings on` makes outside the project starts with `beside` and `note`, and so does a project's own `crossings/` folder that is empty as it is first switched on; files whose names begin with a dot (`.DS_Store`, `.gitkeep`, `.gitignore`) do not count. A folder that holds anything else is taken by `adopt` as it is, and nothing is written into it: with no `mode` file its cuts are `native`, and a person who wants the frame there writes `mode` and `carry` ([Settings](settings.md)). Switching off and on again never writes either file anew.
 

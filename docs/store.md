@@ -41,7 +41,7 @@ The files a person reads, and some they may write:
 | `*.words.md` | the words a hand-over's labels rest on, written by `crossing/handover.py` | a strike mends it or takes it away |
 | `<session>-cut-<n>.md`, `.json` | a cut's count: a page, and its sidecar of pointers and digests | no |
 | `models.txt` | which model wrote each label, by its key and its sentence's digest | a later line stands over an earlier one; a line from another hand is followed, and named once by `status` |
-| `struck.txt` | what was struck, a token a line, its reason after `#` | no |
+| `struck.txt` | what was struck, a token a line (a message by its whole id), its reason after `#` | no |
 | `off.txt` | when the switch was off: a span a line, in UTC | no |
 | `store.db` | the index | may be deleted at any time |
 | `switch`, `mode`, `carry`, `copy`, `frame-size`, `retelling-length`, `retelling-share`, `project`, `.gitignore` | one-line settings, and the ignore file | see [Settings](settings.md) |
@@ -85,16 +85,16 @@ Each line of `said/<session>.jsonl` is one message:
 | Field | Holds |
 | --- | --- |
 | `uuid` | the message's id, as the transcript gives it |
-| `id` | its first eight characters, by which the door names it |
+| `id` | its first eight characters, by which the door names it where no other message's begin the same |
 | `session` | the first eight characters of the transcript's name |
-| `voice` | `his` for the person, `session` for the session |
+| `voice` | `his` for the person, `session` for the session, as every make has written them, so that each make reads every archive. `his` is never shown: the door shows such a message as the person's, and `find` takes the person's voice as `their`, or as `his` still |
 | `at` | the time the transcript wrote beside it, where it has the shape of a moment (`2026-11-11T09:01:00.000Z`); empty otherwise |
 | `text` | what was said, as it was sent |
 | `model` | for the session's voice, the model its row names; left out where it names none, or a name with a space, a line break or a `#` in it |
 
 From a transcript the archive takes the person's text, typed at the prompt or sent while a turn ran, and the session's text blocks; nothing else ([Privacy](privacy.md) has what it never takes). Every rule about what a row is lives in `crossing/transcript.py`. A row of a shape those rules do not know is passed over, never guessed at, and the rows around it are read as ever. A cut's boundary whose figures are of the wrong kind is still the cut, and its page is written without them.
 
-A fork or a resume repeats earlier messages under the same ids: a message the archive holds already is not written twice, and one it holds twice is read once. Two messages whose whole ids differ but whose first eight characters are the same are both kept. The id is noted in `collided.txt` and said once by `status`, `thread` on it names both whole ids, and a strike by it strikes neither.
+A fork or a resume repeats earlier messages under the same ids: a message the archive holds already is not written twice, and one it holds twice is read once. Two messages whose whole ids differ but whose first eight characters are the same are both kept. The id is noted in `collided.txt` and said once by `status`, `thread` on it names each of them, and a strike by it strikes neither. Each of the two is named, wherever the door prints a message's id (`find`, `thread`, a pair, its pointers), by the shortest beginning of its whole id that no other message's whole id begins with, never fewer than eight characters, as `a1b2c3d4-1`; a whole id always names its own message, also where it begins another's. Every other message is named by its eight characters, as before.
 
 What the person pasted stays in the archive's line as it was sent. The harness wraps a paste in a pair of tags that carry one id, and a paste runs on to the closing tag of its own id, so a pasted text that holds the tags itself (a session's log, a program's source) is one paste whole. The index keeps each pasted text as a row of its own, `<id>+1`, `<id>+2`, in the voice `pasted`, and the message keeps a note of its size in its place, `[pasted: N characters]`. A paste is not counted as the person's words and the frame does not quote it; a label may rest on it by its id, and it is struck with the message it came in.
 
@@ -112,10 +112,12 @@ A label is one row of a page in `labels/`, named by the day it was marked:
 | --- | --- |
 | key | its kind by its letter, and a number: `R` a standing line about the person and the session, `W` about the work, `N` a line left at the door, `X` something the session declined, `S` a silencing, which puts a refusal to rest (see Refusals). A mark takes the next number after every key of its letter in the pages and among the struck, under the home's lock; a struck key is never given again |
 | sentence | meant as one sentence, on one line; a `|` in it is written `/`. A mark bounds its length alone, at 4,000 characters, and does not count its sentences; a row written by hand is read as it stands |
-| whose | `his` (the person's), `session` or `both`; a refusal is always written as the session's |
+| whose | `his` (the person's), `session` or `both`; a refusal is always written as the session's. The person's is written `his` whether a mark gives it as `their` or as `his`, as every make has written it, and printed `theirs` |
 | anchors | what it rests on, each in backticks: message ids, a pasted text's `<id>+<n>`, for a stack the keys of the lines beneath it, and for a judgment of a refusal or a silencing the key of the first refusal of its family |
 
 A mark is refused where it has no sentence or no anchor, where its sentence is longer than 4,000 characters (how many sentences it holds is not looked at), where an anchor is one the archive does not hold, where an anchor is an id two messages share (that refusal names both whole ids), or where its sentence or an anchor holds a character that is no text (a lone surrogate), which no page can hold; a model's name of that kind is taken as no model known. A line left at the door rests on messages alone, and one left through `leave` is always the session's.
+
+An anchor names every message whose id is its eight characters, and a mark takes one only where the archive holds one message so named; a second that comes later is a twin of the one the label was marked on. The label rests on the one the record can prove it meant. A twin said after the label was marked is not it: the mark's moment is the one `reached.jsonl` keeps for the label's key, to the second, where it is there, and otherwise the end of the day its page is named by, 36 hours after that day began in UTC, since the day is the marking computer's own. Where one twin is left, the label rests on it alone: `thread` shows the label on that one and not on the other, and `labels` gives the anchor with its name, as `a1b2c3d4 (a1b2c3d4-0)`. Where the record cannot tell, the label rests on neither: it is carried by its sentence, no frame quotes either twin for it, and `labels` gives the anchor with each one's name, as `a1b2c3d4 (a1b2c3d4-0 or a1b2c3d4-1)`. A twin struck by its whole id has no time left in the record and may be the one, `one struck` among those names: so a strike of one twin never moves a label to the other, and a label is unresolved where the struck twin is the only one it can rest on.
 
 A label can also come into the pages by no mark through the door (a pull, a branch switch, a hand), and it crosses cuts as any other. What the door wrote is known from receipts kept outside every project, beside the person's record (`switched.receipts`): every label the home has met, by its key and its sentence's digest, and every line of `models.txt`. `labelled.txt` and `models-met.txt` inside the home are written too, and are no proof alone, since a pull can bring a line of either with the label it names.
 
@@ -135,7 +137,7 @@ A label that rests on other labels of its kind is a stack, and they are the line
 | a line already stands beneath a stack that is not misaligned | refuses it: a line stands beneath one stack |
 | a line is itself a stack over stacks | refuses it: stacks go two deep at most |
 | a `leave` names a label | refuses it: a line at the door is neither a stack nor beneath one |
-| a new stack stands over a line of a misaligned stack | the new stack takes its place, and the old one is struck in the same act, and named. A session's mark is refused where the old stack is the person's (`his`) |
+| a new stack stands over a line of a misaligned stack | the new stack takes its place, and the old one is struck in the same act, and named. A session's mark is refused where the old stack is the person's |
 | a stack is struck | its lines are carried again as themselves |
 | a line beneath a stack is struck or reworded | the stack is misaligned |
 
@@ -164,7 +166,7 @@ A refusal is the session's own, and is written as `session` whatever a mark asks
 | the first refusal of a family is struck | the family is one all the same, named by that key as its rows name it, and the newest sound label of it still stands |
 | a row of a family, written by hand, names what no family is | it is misaligned, and carried as itself |
 
-`labels` on any key of a family gives the whole run: the first refusal, then each judgment and silencing in the order of writing, each by its kind. `look` and `status` count the families that stand apart from those that are silenced. What a frame carries of them is in [The door](door.md).
+`labels` on any key of a family gives the whole run: the first refusal, then each judgment and silencing in the order of writing, each by its kind. `look` and `status` count the families that stand apart from those that are silenced, and `labels` gives each label's state, for the model that asks: a session's own silencing written under another model puts the family to rest for that model alone, and the person's for every model ([Layers](layers.md)). What a frame carries of them is in [The door](door.md).
 
 Label pages written before these kinds were known read as they did. An index made then is of another make, and is made again from the plain files before it is read.
 
@@ -179,7 +181,7 @@ Every build finds each label in one of four states, from the pages and the archi
 | carried | stands by itself, or is the top of a stack |
 | cooled | stands beneath a sound stack, which is carried in its place |
 | misaligned | is a stack one of whose lines is gone, or was reworded since |
-| unresolved | rests on a message the archive does not hold, or on nothing |
+| unresolved | rests on a message the archive does not hold, or on nothing: of two that share an id, on one struck (see Labels) |
 
 A label's own trouble is said before its place: one misaligned or unresolved is called so though it stands beneath a sound stack. What stands beneath a stack that is not sound is carried. `status` and `look` count the states.
 

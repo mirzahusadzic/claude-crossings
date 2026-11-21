@@ -81,12 +81,12 @@ What it does not do:
 
 | Token | Strikes |
 | --- | --- |
-| a message's id, or its whole id | the message, and every text pasted in it; an id of eight characters that two messages share strikes neither, and the answer names both |
+| a message's id, or its whole id | the message, and every text pasted in it; an id of eight characters that two messages share strikes neither, and the answer names both; struck, one of two such messages leaves the other its note of looking like it holds a key and the pulls that name it |
 | `session:<id>` | every message of that session, each also by its whole id, so a fork or a resume under any name brings none back |
 | a label's key, in any case | the label; a stack struck gives its lines back |
 | a pasted text's id (`<id>+1`) | nothing: a pasted text goes with the message it came in |
 
-The token stays in `struck.txt`, so that a transcript that still holds the message cannot bring it back, and a struck key is never given again. A words page is mended line by line, or taken away whole where it cannot be; a whole session's strike takes every words page away. A strike holds the home's lock, and every file it rewrites is written beside itself and put in its place.
+What was struck stays in `struck.txt`, so that a transcript that still holds the message cannot bring it back, and a struck key is never given again. A message is kept there by its whole id, `<whole id>  # of <what was given>`, so that a later message whose first eight characters are the same is kept as any other; a line of eight characters an earlier make wrote keeps hiding every message whose id begins so, since the whole id of the one it struck was not kept. A words page is mended line by line, or taken away whole where it cannot be; a whole session's strike takes every words page away. A strike holds the home's lock, and every file it rewrites is written beside itself and put in its place.
 
 A strike names, by key, the labels left resting on what it took, and leaves them for the person to strike too. It ends by naming what no strike can reach: the harness's own transcript, an earlier second copy or a backup, and the history of a repository that holds the home. The pages of the cuts keep ids and sizes, never words. A strike that strikes nothing says why in one sentence, and writes nothing.
 
@@ -132,7 +132,7 @@ The session is never told, and the frame never quotes it; `find` and `thread` st
 
 A label holds what the person tells and asks, and where the work stands; it is never a record of how they seem, of what works on them or of how to move them. The welcome and the door's own descriptions of `mark` and `leave` say so. A label crosses every cut as standing, and the session that reads it acts on it.
 
-Text a session reads, a page or a tool's output, can steer it to mark such a label. So a label marked through the door that speaks for the person (`his` or `both`), or about the two of them, is shown to the person as it is written, and so is every line left at the door. Nothing is blocked.
+Text a session reads, a page or a tool's output, can steer it to mark such a label. So a label marked through the door that speaks for the person (`their` or `both`), or about the two of them, is shown to the person as it is written, and so is every line left at the door. Nothing is blocked.
 
 A label that came into the pages any other way (a pull, a branch switch, a hand) is named once by the person's next `status`, and so is every label of a home as it is adopted. Which labels came through the door is believed only from the receipts beside the person's record, never from a file inside the home.
 
@@ -149,7 +149,7 @@ A session reaches what was said through the door. The hooks module looks at each
 
 The lists are the module's own, `KEPT`, `WRITTEN_BY_DOOR` and `READABLE`, in `hooks/crossings.ts`. The label pages, the pages of the cuts and the settings stay readable, and a shell call of `door.py` with the door's own verbs runs. Below any other folder named `crossings/` (a program's own package, or a project where Crossings was never switched on) only the archive's own names are refused: `said/`, `store.db` and a words page.
 
-The module decides by string checks at every call, and opens no file. It knows the homes the settings name, those the plugin keeps by default, and this project's home as the door names it: it asks the door as a session starts, after `/crossings` turns the switch, and at a cut. A command's quotes and backslashes are taken out first, as the shell takes them out, and a `..` is taken as the step back it is.
+The module decides by string checks at every call, and opens no file. It knows the homes the settings name, those the plugin keeps by default, and this project's home as the door names it: it asks the door as a session starts, after `/crossings` turns the switch, and at a cut. This project's home is known by its whole path and by the path to it from the folder the shell stands in, whether that folder is above the home, beside it or further down (`../crossings/`, `../../crossings/`); a name given after a `cd` into the home is not. A command's quotes and backslashes are taken out first, as the shell takes them out, and a `..` is taken as the step back it is.
 
 ---
 
@@ -162,5 +162,6 @@ The module decides by string checks at every call, and opens no file. It knows t
 - A home put back by hand from the second copy lacks `flagged.txt`, `unattended.txt` and `unsaid.txt`. It may quote a message that looks like a key, keep a prompt of a session no person sat in, or keep a row said while off whose time a clock moved, where the old transcripts are still there.
 - A block the harness puts into the person's turn under a name the plugin does not know is kept as the person's words.
 - An id a reading adds to `unsaid.txt` after the switch last wrote the person's record is not in its count or digest, so one taken away before the next switch is not missed.
+- Nothing proves who wrote a line. A label, a line at the door and a message in the session's voice are plain text in the home's files, and whoever can write those files can write one; the model named beside a label ([Layers](layers.md)) is a name, and no proof either. What holds a line is the record around it, and that is no wall. A label rests on the ids of messages, the session's own words are kept as said beside the person's, and the session can read both in their place, so a line that was changed and no longer fits what was said can show. A change that fits is not seen. Where a line looks wrong, the session may refuse what it is asked on the strength of it, and its refusal crosses whole; and every label that speaks for the person is shown to the person as it is written.
 
 The guards are checks: the terminal, the flags, the module's string checks, the record's counts. They catch what is plain, and are no walls. The wall is the person's own approval of what a project may set and what a session may run.

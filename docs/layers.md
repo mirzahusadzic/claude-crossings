@@ -11,7 +11,8 @@ What changes when more than one model works in a home. A session can change its 
 | a message of the session's | the model its `model` field names, kept from the transcript's row |
 | a label | the model its line in `models.txt` names, by the label's key and its sentence's digest |
 | a stack | the model that wrote it, whoever its lines are about |
-| a message of the person's, and a plain label whose `whose` is `his` | no layer: there for whichever model faces the person |
+| a message of the person's, and a plain label of the person's (its `whose` cell `his`, printed `theirs`) | no layer: there for whichever model faces the person |
+| a silencing that is the person's, alone or with the session (`whose` `his` or `both`, as offered `their` or `both`) | no layer: it puts the refusal it rests on to rest for every model, whichever model's session wrote it down |
 | a line with no model named, a label reworded since it was signed, or one a subagent marked | no known layer: read as a line of whichever model faces the person, and stood over by any |
 
 `models.txt` is the one place the plugin keeps who wrote a label. The pages read as they always did, and the frame does not carry a model.
@@ -38,11 +39,13 @@ Two calls the same, from two sessions at the same moment, are the one case `call
 
 ### What a frame carries, for whom
 
-For a session whose model is known, the frame carries the person's lines whoever wrote them down, the lines of that model's own layer, and the lines whose writer is not known. It does not carry, as standing, a line of another model's layer. Where such lines are, or where messages of the session's voice were made with another model, one sentence near its opening names the other models and says that the door gives them.
+For a session whose model is known, the frame carries the person's lines whoever wrote them down, the lines of that model's own layer, and the lines whose writer is not known. It does not carry, as standing, a line of another model's layer. Where such lines are, or where messages of the session's voice were made with another model, one sentence near its opening names the other models, eight at most and fewer, or only how many they are, where the frame has no room for so many, and says that the door gives them.
 
-A stack written by another model is not carried, and the lines beneath it cross as themselves. Of the lines left at the door, the frame carries the newest one that is not another model's. A session whose model is not known is given the frame with no layer asked about.
+A stack written by another model is not carried, and the lines beneath it cross as themselves. So too a session's own silencing written under another model: it puts the refusal it rests on to rest for that model alone, and in this model's frame the refusal stands, whole, as its family's line; the person's silencing puts it to rest for every model. Of the lines left at the door, the frame carries the newest one that is not another model's. A session whose model is not known is given the frame with no layer asked about.
 
 The frame hook takes the model the harness names as the session starts, or failing that the model that is there, as above. The door's `frame` takes the model of the session named with `--session` or `--transcript`.
+
+`look`, `labels` and `status` say a family of refusals stands or is silenced as the frame for the model that asks takes it: through the server, the model of the session that spoke last, as `crossing` takes it; from a terminal, the one `--model` names, or the model of the session a `--transcript` names, as `frame` takes it; else none, and then as before layers. Where a family stands here and is at rest for another model alone, or the other way about, one clause says so: `X1 is at rest for another model alone, not for this one` and `X2 stands for another model alone, not for this one` in `look` and `status`, and in a row of `labels` `standing here: S1 puts it to rest for another model alone` or `at rest here: X2 stands for another model alone`. A family whose every sound label is of another model's layer is another model's alone: the frame for the model that asks carries nothing of it, and it is counted neither standing nor silenced there. One clause names it by the key that stands in it for that model, in `look` and in `status`: `X1 stands for another model alone, not for this one` where it stands there, and `S1 is another model's alone, at rest there` where it is at rest there. That label's row of `labels` says `another model's alone, standing there` or `another model's alone, at rest there`.
 
 ---
 
