@@ -11,7 +11,9 @@
 
 A Claude Code plugin for what a context cut keeps.
 
-When a session grows long, the harness compacts it, and a summary takes the conversation's place. Crossings has kept what was said, word for word, in plain files on your own disk. It gives the session a door back to it, and carries a small frame across the cut. No model is called anywhere in it, and nothing leaves the computer by its own doing.
+When a session grows long, the harness compacts it, and a summary takes the conversation's place. Crossings has kept what was said, word for word, in plain files on your own disk. It gives the session a door back to it, and carries a small frame across the cut.
+
+No model is called anywhere in it, and nothing leaves the computer by its own doing.
 
 <p align="center">
   <a href="docs/images/crossings-dark.svg">
@@ -26,9 +28,9 @@ When a session grows long, the harness compacts it, and a summary takes the conv
 
 - **What was said, kept.** Every message of yours and of the session's, under its id, from each session you sit in. Reasoning and tool traffic are never kept.
 - **The door.** Eight tools the session calls: `look`, `labels`, `find`, `thread`, `mark`, `leave`, `status`, `crossing`.
-- **Labels.** One sentence about a stretch of the record, resting on the ids of its messages. The session writes them as the work goes, and what it declined is one of them, kept with its reason.
+- **Labels.** A short line about a stretch of the record, resting on the ids of its messages. The session writes them as the work goes.
 - **What it declined.** A session can mark what it declined, with its reason. It crosses every cut whole, before anything else, until a later session or you put it to rest.
-- **The frame.** About 9,000 characters across a cut: the standing lines, what the session declined, where the work stands, and your own sentences, each with what the session told of it beneath and, where its line at the door rests on both, its own turn beside.
+- **The frame.** About 9,000 characters across a cut: the standing lines, what the session declined, where the work stands, and your own sentences. Beneath each sentence stands what the session told of it. Where the session's line at the door rests on both, its own turn stands beside the sentence too.
 - **A gentle wake.** A short note to the session that comes through a cut. It asks for no inventory and no report.
 - **The count.** How much of each voice the summary kept word for word, counted by script.
 - **Your own hand.** A switch for each project, a way to speak off the record, and a strike.
@@ -37,17 +39,25 @@ When a session grows long, the harness compacts it, and a summary takes the conv
 
 ### How it works
 
-Crossings is a set of hooks, a hooks module and a small server. The hooks read the session's transcript into the home's archive, and the server answers the door's tools from the same home. The module answers a cut where the home asks it to, asks the harness's summary of a cut for a ledger, gives you the `/crossings` command, and refuses a session's calls that open the archive's own files.
+Crossings is a set of hooks, a hooks module and a small server:
 
-A label is never made by itself: the session writes it. A label holds what the person tells and asks, and where the work stands; it is never a record of how they seem, of what works on them or of how to move them. Why: a label crosses every cut as standing, and the session that reads it acts on it. The same tool, used to keep what lands on someone, would be a tool for the harm it is meant to spare.
+- **The hooks.** They read the session's transcript into the home's archive.
+- **The server.** It answers the door's tools from the same home.
+- **The module.** It answers a cut where the home asks it to, and asks the harness's summary of a cut for a ledger. It gives you the `/crossings` command, and refuses a session's calls that open the archive's own files.
 
-[The store](docs/store.md) has every file of a home, and [the door](docs/door.md) the tools, the command and what a session is told. [Cuts](docs/cuts.md) has the count, the frame and the hand-over, and [layers](docs/layers.md) what changes when more than one model works in a home.
+A label is never made by itself: the session writes it.
+
+A label holds what the person tells and asks, and where the work stands; it is never a record of how they seem, of what works on them or of how to move them. Why: a label crosses every cut as standing, and the session that reads it acts on it. The same tool, used to keep what lands on someone, would be a tool for the harm it is meant to spare.
+
+[The store](docs/store.md) has every file of a home, and [the door](docs/door.md) the tools, the command and what a session is told. [The frame](docs/frame.md) has what crosses a cut. [Cuts](docs/cuts.md) has the count, how the frame crosses and the hand-over, and [layers](docs/layers.md) what changes when more than one model works in a home.
 
 ---
 
 ### Install
 
-It needs Claude Code with hooks modules, and a `python3` of 3.9 or later on the path, with SQLite's full-text search (FTS5) in its `sqlite3`. Everything else is Python's standard library. It runs on macOS and Linux; on Linux the tests pass, and it has not been loaded in a session there yet. The second copy needs macOS, and Windows is not supported yet.
+It needs Claude Code with hooks modules, and a `python3` of 3.9 or later on the path. That `python3` needs SQLite's full-text search (FTS5) in its `sqlite3`. Everything else is Python's standard library.
+
+It runs on macOS and Linux. On Linux the tests pass, and it has not been loaded in a session there yet. The second copy needs macOS, and Windows is not supported yet.
 
 There is no marketplace entry. Load the plugin from a copy of this folder:
 
@@ -65,7 +75,7 @@ python3 -c "import sqlite3; sqlite3.connect(':memory:').execute('create virtual 
 
 ### Switch it on
 
-Crossings keeps nothing for a project until you switch it on there. The switch is kept in a file of your own, outside every project, so a `crossings/` folder that a repository ships switches nothing on.
+Crossings keeps nothing for a project until you switch it on there. The switch is kept in a file of your own, outside every project. So a `crossings/` folder that a repository ships switches nothing on.
 
 | Command | Does |
 | --- | --- |
@@ -76,7 +86,9 @@ Crossings keeps nothing for a project until you switch it on there. The switch i
 | `/crossings` | turns the switch over |
 | `/crossings status`, `look`, `find <words>`, `labels`, `frame` | show what the store holds |
 
-A project with a `crossings/` folder of its own keeps its home there, beside the work; any other gets a home outside it, under `~/.claude/crossing/homes/`. Where a folder already holds something this computer has no record of switching on, `/crossings on` names what it holds and leaves it, and `adopt` takes it; nothing in it is changed ([Settings](docs/settings.md)). A session started in a folder below another home's keeps nothing of it until you answer once for that folder, with `join` or `here`.
+A project with a `crossings/` folder of its own keeps its home there, beside the work. Any other gets a home outside it, under `~/.claude/crossing/homes/`.
+
+Where a folder holds files this computer has no record of switching on, `/crossings on` names what it holds and leaves it, and `adopt` takes it. Its plain files are left as they are ([Settings](docs/settings.md)). A session started in a folder below another home's keeps nothing of it until you answer once for that folder, with `join` or `here`.
 
 Switching on in a running session takes that session in from its first message. An earlier session is brought in by hand, one transcript at a time:
 
@@ -92,7 +104,7 @@ Off is not a pause: nothing said while it is off is ever taken in, and the door'
 
 - Nothing leaves the computer by the plugin's own doing: it opens no connection.
 - Every folder it makes is yours alone (0700), and every file it writes (0600).
-- A message of yours that looks like it holds a key or a password is kept like any other, and its id is noted for you to strike. The frame never quotes it.
+- A message of yours that looks like it holds a key or a password is kept like any other. Its id is noted for you to strike, and the frame never quotes it.
 - Striking is yours, from your own terminal. No strike reaches the harness's own transcript, an earlier second copy or a backup.
 - Its guards against a session are checks, not walls: a session with a shell you let run commands can do what you can.
 - Nothing proves who wrote a line: whoever can write the home's files can write one in the session's name. What holds a line is the record around it.
@@ -104,15 +116,17 @@ The licence is for the code. What a store holds is its person's alone.
 
 ### Develop
 
-The tests write their own transcripts and use temporary homes alone; they need no network and no model.
+The tests write their own transcripts and use temporary homes alone. They need no network and no model.
+
+The first four run one test file, the hooks module's tests, the coverage of `crossing/` and the check of the manifests. The coverage floor is 100. The last two draw the figure above again and make the page of everything a session is told:
 
 ```sh
-python3 tests/test_store.py   # each test file runs on its own
-claude plugin test .          # the hooks module's tests
-sh scripts/coverage.sh        # branch coverage of crossing/; the floor is 100
+python3 tests/test_store.py
+claude plugin test .
+sh scripts/coverage.sh
 claude plugin validate .
-python3 scripts/figure.py     # draws the figure above again, in both themes
-python3 scripts/told.py > docs/told.md   # everything a session is told, as one page
+python3 scripts/figure.py
+python3 scripts/told.py > docs/told.md
 ```
 
 [AGENTS.md](AGENTS.md) is the guide for working on the code.
@@ -151,4 +165,4 @@ The software:
 
 ---
 
-[The store](docs/store.md) · [The door](docs/door.md) · [Privacy](docs/privacy.md) · [Cuts](docs/cuts.md) · [Layers](docs/layers.md) · [Settings](docs/settings.md) · [What a session is told](docs/told.md) · [Repository guide](AGENTS.md) · [Apache-2.0](LICENSE) · [Notices](NOTICE)
+[The words](docs/words.md) · [What a session is told](docs/told.md) · [The store](docs/store.md) · [The door](docs/door.md) · [The frame](docs/frame.md) · [Privacy](docs/privacy.md) · [Cuts](docs/cuts.md) · [Layers](docs/layers.md) · [Settings](docs/settings.md) · [Repository guide](AGENTS.md) · [Apache-2.0](LICENSE) · [Notices](NOTICE)

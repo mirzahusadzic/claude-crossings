@@ -399,7 +399,9 @@ def page() -> str:
         "this page is what a session is told now that it was not before.",
         "## As a session starts: the door's server",
         "### Its instructions, started by the plugin\n\n" + fenced(started),
-        "### Its instructions, given alone to another harness\n\n" + fenced(alone),
+        "### Its instructions, where the server runs without the plugin\n\n"
+        "The server can be added to another client by itself. No hook feeds the archive there, and the instructions "
+        "say so.\n\n" + fenced(alone),
         "### Its tools\n\n" + tools(),
         "## As a session starts in a home that holds no label yet, or as the person switches Crossings on during it\n\n"
         + fenced(hook.welcome()),
