@@ -655,6 +655,30 @@ def test_layer_writes_back_a_line_of_the_archive_that_is_no_text_as_it_was(tmp_p
     assert [one.get("model") for one in said if one["voice"] == "session"] == ["a-model", "a-model"], said
 
 
+def test_a_row_under_a_key_a_row_before_it_holds_is_passed_over_and_the_first_stands(tmp_path):
+    """A key a row before it holds, in the same page or an earlier one, is no new label: every reader of the pages
+    passes the row over, and the first row under the key stands. Measured on Python 3.9, no test walked it: 3.9
+    jumps past the line of that `continue` for a line that is no row at all, which is what walked it on 3.13."""
+    crossings, _ = home(tmp_path)
+    (crossings / "labels").mkdir()
+    head = "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n"
+    (crossings / "labels" / "2026-11-11.md").write_text(
+        head
+        + f"| W2 | The first row under the key. | both | `{A}` |\n"
+        + f"| W2 | A second, in one page. | both | `{E}` |\n",
+        encoding="utf-8",
+    )
+    (crossings / "labels" / "2026-11-12.md").write_text(
+        head
+        + f"| W2 | A third, in a later page. | both | `{E}` |\n"
+        + f"| W1 | Under the hand-over's key. | both | `{E}` |\n",
+        encoding="utf-8",
+    )
+    rows = [(label["id"], label["text"], label["anchors"], label["page"]) for label in store.labels(crossings)]
+    assert [each for each in rows if each[0] == "W2"] == [("W2", "The first row under the key.", [A], "2026-11-11.md")]
+    assert [each[3] for each in rows if each[0] == "W1"] == ["hand-over.md"]
+
+
 # --- the measure of coverage ----------------------------------------------------------------------------
 
 
@@ -674,7 +698,7 @@ def test_the_measure_of_coverage_fails_where_a_suite_fails(tmp_path):
     (tmp_path / "site").mkdir()
     (tmp_path / "bin").mkdir()
     (tmp_path / "bin" / "uv").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    bin_ = tmp_path / "tests" / ".work" / "coverage-venv" / "bin"
+    bin_ = tmp_path / "tests" / ".work" / "coverage-venv-3.13" / "bin"  # the venv named by the Python asked for
     bin_.mkdir(parents=True)
     # `-c` asks where its packages lie; `-m coverage run <suite>` runs the suite; erase, combine and report pass.
     (bin_ / "python").write_text(
@@ -690,11 +714,55 @@ def test_the_measure_of_coverage_fails_where_a_suite_fails(tmp_path):
         capture_output=True,
         text=True,
         timeout=60,
-        env={**os.environ, "PATH": f"{tmp_path / 'bin'}{os.pathsep}{os.environ['PATH']}"},
+        env={**os.environ, "PATH": f"{tmp_path / 'bin'}{os.pathsep}{os.environ['PATH']}", "UV_PYTHON": "3.13"},
     )
     assert measured.returncode != 0, measured
     assert "a line of its own" in measured.stdout and "ok test_" not in measured.stdout, measured
     assert "tests/test_two.py" in measured.stderr and "tests/test_one.py" not in measured.stderr, measured
+
+
+def test_the_measure_of_coverage_takes_a_venv_and_a_tool_of_its_own_for_each_python(tmp_path):
+    """Guard: the measure kept one venv, made with whichever Python asked first and reused by every later run, and
+    one tool, coverage 7.17.2, which needs 3.11 or later and does not install on 3.9, the python3 macOS ships. Each
+    Python uv is set to (`UV_PYTHON`) now has a venv named by it, and the tool pinned for it: 7.17.2 from 3.11 on,
+    7.10.7 below. With stand-ins for uv, which notes what it is asked, and for each venv's Python, which says by its
+    exit whether it is 3.11 or later; nothing is installed or measured."""
+    (tmp_path / "scripts").mkdir()
+    shutil.copy(ROOT / "scripts" / "coverage.sh", tmp_path / "scripts" / "coverage.sh")
+    shutil.copy(ROOT / ".coveragerc", tmp_path / ".coveragerc")
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_one.py").write_text("print('ok test_passes')\n", encoding="utf-8")
+    (tmp_path / "site").mkdir()
+    (tmp_path / "bin").mkdir()
+    asked = tmp_path / "asked.txt"
+    (tmp_path / "bin" / "uv").write_text(f'#!/bin/sh\necho "$*" >> "{asked}"\nexit 0\n', encoding="utf-8")
+    (tmp_path / "bin" / "uv").chmod(0o755)
+    for version, newer in (("3.9", 1), ("3.13", 0), ("/usr/bin/python3", 1)):
+        named = "coverage-venv-" + "".join(ch if ch.isalnum() or ch == "." else "_" for ch in version)
+        bin_ = tmp_path / "tests" / ".work" / named / "bin"
+        bin_.mkdir(parents=True)
+        (bin_ / "python").write_text(
+            "#!/bin/sh\n"
+            f'case "$1" in -c) case "$2" in *version_info*) exit {newer} ;; *) echo "{tmp_path / "site"}" ;; esac ;; '
+            f'-m) case "$3" in run) exec "{sys.executable}" "$4" ;; esac ;; esac\n',
+            encoding="utf-8",
+        )
+        (bin_ / "python").chmod(0o755)
+    for version in ("3.9", "3.13", "/usr/bin/python3"):
+        measured = subprocess.run(
+            ["sh", str(tmp_path / "scripts" / "coverage.sh")],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            env={**os.environ, "PATH": f"{tmp_path / 'bin'}{os.pathsep}{os.environ['PATH']}", "UV_PYTHON": version},
+        )
+        assert measured.returncode == 0, (version, measured)
+    venvs = tmp_path / "tests" / ".work"
+    assert asked.read_text(encoding="utf-8").splitlines() == [
+        f"pip install -q --python {venvs / 'coverage-venv-3.9' / 'bin' / 'python'} coverage==7.10.7",
+        f"pip install -q --python {venvs / 'coverage-venv-3.13' / 'bin' / 'python'} coverage==7.17.2",
+        f"pip install -q --python {venvs / 'coverage-venv-_usr_bin_python3' / 'bin' / 'python'} coverage==7.10.7",
+    ]  # each venv there already: none made again, and none reused for another Python
 
 
 if __name__ == "__main__":

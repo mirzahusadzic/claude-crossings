@@ -341,12 +341,12 @@ def astray(cwd: Path) -> str | None:
         value = os.environ.get(name)
         if not value:
             continue
+        if os.path.isabs(value) and not lies_in(Path(value), top):
+            continue  # an absolute place outside the project: followed
         if not os.path.isabs(value):
             why = f"the setting {name} names no absolute path: {value[:120]!r}"
-        elif lies_in(Path(value), top):
-            why = f"the setting {name} names a place inside the project: {Path(value).resolve()}"
         else:
-            continue
+            why = f"the setting {name} names a place inside the project: {Path(value).resolve()}"
         if (name, why) not in _told:
             _told.add((name, why))
             refused(Exception(why))

@@ -470,6 +470,14 @@ def staged(note: Path) -> Path:
     return Path(note.read_text(encoding="utf-8").strip().split("\t")[0])
 
 
+def written(path: Path) -> bool:
+    """Whether a file is there with something in it; a file gone between the two looks is not."""
+    try:
+        return path.is_file() and path.stat().st_size > 0
+    except OSError:
+        return False
+
+
 def killed_copy(tmp_path: Path, crossings: Path, **env: str) -> Path:
     """A copy killed once it staged, as the harness ends a hook that overran: the stage its note names."""
     bin_ = tmp_path / "bin"
@@ -489,8 +497,10 @@ def killed_copy(tmp_path: Path, crossings: Path, **env: str) -> Path:
     )
     note = crossings / NOTE
     try:
+        # Until what the tests after it look for is staged: the archive's file itself, with something in it. The stage's
+        # `said/` alone can stand a moment before its file is written, and a kill in that moment left no file to find.
         until = time.monotonic() + 20
-        while not (note.exists() and (staged(note) / "said").exists()):
+        while not (note.exists() and written(staged(note) / "said" / "session-.jsonl")):
             assert time.monotonic() < until, "the copy was never staged"
             time.sleep(0.05)
     finally:

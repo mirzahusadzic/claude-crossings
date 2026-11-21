@@ -1044,11 +1044,11 @@ def _composed(
         elif said_ids:
             words.pop()
             said_ids.pop()
-        elif door_at is not None and len(door_at(DOOR)) < len(door_line):
+        elif door_at is None or len(door_at(DOOR)) >= len(door_line):
+            break  # no line at the door, or one at its least: nothing is left to give way
+        else:
             shorter = door_at(max(DOOR, len(door_line) - over))
             door_line = shorter if len(shorter) < len(door_line) else door_at(DOOR)
-        else:
-            break
     # Only where the families would take the frame past MOST, the most a hook can carry, do the oldest go to the
     # sentence that counts them: by their keys, or by how many they are where the keys do not fit; and where even
     # that does not fit, it is not said, and `look` and `labels` still give them.

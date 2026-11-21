@@ -4345,10 +4345,10 @@ def _resting_on(label: dict, rested: dict, taken: set[str], wholes: set[str]) ->
         if (label["id"], anchor) not in rested:
             if eight in taken:
                 return True
-            continue
-        on = rested[label["id"], anchor]
-        if (on is not None and on.split("+")[0] in wholes) or (on == "" and eight in taken):
-            return True
+        else:
+            on = rested[label["id"], anchor]
+            if (on is not None and on.split("+")[0] in wholes) or (on == "" and eight in taken):
+                return True
     return False
 
 
