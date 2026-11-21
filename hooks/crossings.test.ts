@@ -75,7 +75,7 @@ const forModule = (argv: string[], home: string, files: Files, given: World): Ra
 const world = (on: any, given: World = {}) => {
   const seen = {
     ran: [] as string[][], inits: [] as any[], files: { ...(given.files ?? {}) } as Files, registered: [] as string[], opened: [] as string[],
-    logged: [] as string[],
+    logged: [] as string[], handed: [] as (string | undefined)[], // what each cut the harness made was told to keep
   }
   const home = given.home ?? HOME
   on('session.root', () => ({ value: (given.root ?? (() => '/project'))() }))
@@ -96,7 +96,10 @@ const world = (on: any, given: World = {}) => {
     if (played !== null) return { value: played }
     return { value: (given.script ?? (() => ({ exitCode: 0, stdout: FRAME, stderr: '' })))([...e.argv]) }
   })
-  on('session.compact', () => (given.made ?? (() => ({ messages: [SUMMARY, KEPT] })))())
+  on('session.compact', (_: unknown, e: { instructions?: string }) => {
+    seen.handed.push(e.instructions)
+    return (given.made ?? (() => ({ messages: [SUMMARY, KEPT] })))()
+  })
   on('ui.log', (_: unknown, e: { text: string }) => {
     seen.logged.push(e.text)
     return { value: undefined }
@@ -151,6 +154,9 @@ test('with the word message, the frame goes into the answer after the summary', 
     const root = seen.inits[n]?.env?.CLAUDE_PLUGIN_ROOT
     expect(typeof root === 'string' && root.length > 0 && argv[2] === `${root}/crossing/door.py`).toBe(true)
   }
+  // The frame a cut carries is asked for without --trade: the sentence of what the session's turns set in it take
+  // is the person's command's and the server's, after the frame, and never carried in it.
+  expect(seen.ran[2].slice(3)).toEqual(['frame', '--session', 'abcdef01-0000', '--by-module', '--cwd', '/project'])
   expect(trace(seen)).toEqual({ did: 'beside', carried: 'message', what: 'frame', chars: FRAME.length, trigger: 'auto', messagesBefore: 2 })
 })
 
@@ -170,6 +176,11 @@ test('where Crossings was never switched on, the cut is left to the harness and 
   expect((await $.session.compact({ trigger: 'manual', messages: BEFORE })).messages).toEqual([SUMMARY, KEPT])
   expect(verbs(seen)).toEqual(['home', 'words']) // the door was asked where the home is and for its words, and for nothing else
   expect(seen.files).toEqual(files)
+  // The summary is asked for what the cut came with, whatever set it off.
+  for (const trigger of ['manual', 'auto', 'precompute'] as const) {
+    await $.session.compact({ trigger, messages: BEFORE, instructions: 'Keep the number of the mooring.' })
+  }
+  expect(seen.handed).toEqual([undefined, 'Keep the number of the mooring.', 'Keep the number of the mooring.', 'Keep the number of the mooring.'])
 })
 
 test('with no word for carrying, a message is how it goes', async ($, on) => {
@@ -191,11 +202,87 @@ test('a project with no mode, or an unknown one, keeps the cut as it is', async 
   expect(seen.files[`${HOME}/last-cut.json`]).toBe(undefined)
 })
 
-test("a subagent's own cut, and one computed ahead of time, are never touched", async ($, on) => {
+test("a subagent's own cut is never touched", async ($, on) => {
   const seen = world(on, { files: asks('beside', 'message') })
   expect((await $.session.compact({ trigger: 'auto', messages: BEFORE, agentId: 'agent-1' })).messages).toEqual([SUMMARY, KEPT])
-  expect((await $.session.compact({ trigger: 'precompute', messages: BEFORE })).messages).toEqual([SUMMARY, KEPT])
+  expect((await $.session.compact({ trigger: 'precompute', messages: BEFORE, agentId: 'agent-1' })).messages).toEqual([SUMMARY, KEPT])
   expect(seen.ran).toEqual([])
+})
+
+// --- what the summary is asked for ----------------------------------------------------------------
+
+// What the harness's summary is asked for wherever it is made in a project whose cuts Crossings answers,
+// spelled out here so that the module's own text is held to it word for word.
+const LEDGER =
+  'Keep only a ledger of tasks: what the person asked, in their own words; whether each is finished or ' +
+  'unfinished, and for an unfinished one where it stands; the files it touched. Leave the section "All user ' +
+  'messages" empty. No retelling of the conversation and no suggested next step. End with the standing ' +
+  'constraints the person set, word for word.'
+const TYPED = 'Keep the number of the mooring.' // what the person typed after /compact
+const answering = (seen: { files: Files }, mode: string, carry: string) => {
+  seen.files[`${HOME}/mode`] = `${mode}\n`
+  seen.files[`${HOME}/carry`] = `${carry}\n`
+}
+
+for (const [trigger, kind] of [['manual', 'a chosen cut'], ['auto', 'a cut that came by itself']] as const) {
+  test(`${kind} the harness makes where Crossings answers the cuts is asked for the ledger, and what was typed comes after it`, async ($, on) => {
+    const seen = world(on, { files: asks('beside', 'note') })
+    // At a chosen cut the plugin's own mode answers in the harness's place, and no summary is made (below).
+    const modes = trigger === 'auto' ? [['beside', 'note'], ['beside', 'message'], ['own', 'message'], ['own', 'note']] : [['beside', 'note'], ['beside', 'message']]
+    for (const [mode, carry] of modes) {
+      answering(seen, mode, carry)
+      const made = await $.session.compact({ trigger, messages: BEFORE })
+      expect(texts(made)).toEqual(carry === 'note' && mode === 'beside' ? [SUMMARY.text, KEPT.text] : [SUMMARY.text, FRAME, KEPT.text])
+      await $.session.compact({ trigger, messages: BEFORE, instructions: TYPED })
+      await $.session.compact({ trigger, messages: BEFORE, instructions: '' }) // a bare /compact: nothing typed
+    }
+    expect(seen.handed).toEqual(modes.flatMap(() => [LEDGER, `${LEDGER}\n\n${TYPED}`, LEDGER]))
+  })
+}
+
+test('where no frame and no page can be carried, the summary the harness makes in their place is asked for the ledger too', async ($, on) => {
+  const seen = world(on, { files: asks('beside', 'message'), script: failing })
+  expect((await $.session.compact({ trigger: 'manual', messages: BEFORE, instructions: TYPED })).messages).toEqual([SUMMARY, KEPT])
+  answering(seen, 'own', 'message') // the plugin's own mode, with nothing of its own to answer a chosen cut with
+  expect((await $.session.compact({ trigger: 'manual', messages: BEFORE })).messages).toEqual([SUMMARY, KEPT])
+  expect(seen.handed).toEqual([`${LEDGER}\n\n${TYPED}`, LEDGER])
+})
+
+test('a summary computed ahead of time is asked for the ledger as one made at the cut is, and nothing else is done there', async ($, on) => {
+  const seen = world(on, { files: asks('beside', 'message') })
+  expect((await $.session.compact({ trigger: 'precompute', messages: BEFORE })).messages).toEqual([SUMMARY, KEPT]) // no frame
+  expect(seen.handed).toEqual([LEDGER])
+  expect(verbs(seen)).toEqual(['words']) // the home's words alone: no home asked, no frame made, no trace written
+  expect(seen.files[`${HOME}/last-cut.json`]).toBe(undefined)
+  for (const [mode, carry] of [['beside', 'note'], ['own', 'message']]) {
+    answering(seen, mode, carry)
+    expect((await $.session.compact({ trigger: 'precompute', messages: BEFORE, instructions: TYPED })).messages).toEqual([SUMMARY, KEPT])
+  }
+  expect(seen.handed).toEqual([LEDGER, `${LEDGER}\n\n${TYPED}`, `${LEDGER}\n\n${TYPED}`])
+  expect(verbs(seen)).toEqual(['words', 'words', 'words'])
+})
+
+test("a subagent's own cut, and a cut in a project whose cuts Crossings does not answer, are told what they came with", async ($, on) => {
+  const seen = world(on, { files: asks('beside', 'message') })
+  const triggers = ['manual', 'auto', 'precompute'] as const
+  for (const trigger of triggers) {
+    await $.session.compact({ trigger, messages: BEFORE, agentId: 'agent-1' })
+    await $.session.compact({ trigger, messages: BEFORE, agentId: 'agent-1', instructions: TYPED })
+  }
+  // Switched off, with the mode that leaves a cut to the harness, or with one the module does not know.
+  for (const [switched, mode] of [['off', 'beside'], ['on', 'native'], ['on', 'sideways']]) {
+    seen.files[`${HOME}/switch`] = `${switched}\n`
+    seen.files[`${HOME}/mode`] = `${mode}\n`
+    for (const trigger of triggers) {
+      await $.session.compact({ trigger, messages: BEFORE })
+      await $.session.compact({ trigger, messages: BEFORE, instructions: TYPED })
+    }
+  }
+  expect(seen.handed).toEqual(Array.from({ length: 24 }, (_, n) => (n % 2 ? TYPED : undefined)))
+  // And the main conversation's cut, where the same home answers it, is asked for the ledger.
+  answering(seen, 'beside', 'message')
+  await $.session.compact({ trigger: 'manual', messages: BEFORE, instructions: TYPED })
+  expect(seen.handed[seen.handed.length - 1]).toBe(`${LEDGER}\n\n${TYPED}`)
 })
 
 test("the plugin's own cut answers a chosen cut in the harness's place", async ($, on) => {
@@ -450,7 +537,7 @@ test('his own command shows the store through the same script', async ($, on) =>
   expect(await say($, 'look')).toBe('what the door said')
   expect(asked(seen)).toEqual(['look', ...tail]) // and not --touch: his looking is not the session's pull
   expect(await say($, 'FRAME')).toBe('what the door said')
-  expect(asked(seen)).toEqual(['frame', ...tail])
+  expect(asked(seen)).toEqual(['frame', '--trade', ...tail]) // with the sentence after the frame, which a cut's never holds
   await say($, 'find  Tern "at mooring" moor*')
   expect(asked(seen)).toEqual(['find', ...tail, '--', 'Tern', '"at', 'mooring"', 'moor*']) // the words last, after the door's --
   await say($, 'find --verbose -x')
@@ -498,15 +585,16 @@ const SAID = '/elsewhere/homes/made-up-tern-1a2b3c4d/said/abcdef01.jsonl'
 const OWN = '/project/crossings'
 
 // The engine beneath the module: every call that reaches it runs, and is counted. The session starts in the
-// project's folder, where the shell stands too, and the door names `believed` as this project's home ('' for
-// none, null where the door cannot be started at all); every process the module starts is kept in `ran`.
-const tools = async ($: any, on: any, places: Record<string, string> = PLACES, believed: string | null = OWN) => {
+// project's folder, where the shell stands too unless `cwd` names another, and the door names `believed` as this
+// project's home ('' for none, null where the door cannot be started at all); every process the module starts is
+// kept in `ran`.
+const tools = async ($: any, on: any, places: Record<string, string> = PLACES, believed: string | null = OWN, cwd = '/project') => {
   mock.env(on, places)
   const reached: string[] = []
   const ran: string[][] = []
   const logged: string[] = []
   on('session.root', () => ({ value: '/project' }))
-  on('session.cwd', () => ({ value: '/project' }))
+  on('session.cwd', () => ({ value: cwd }))
   on('session.id', () => ({ value: 'abcdef01-0000' }))
   on('session.start', (_: unknown, e: { cwd: string }) => ({ cwd: e.cwd }))
   on('command.register', (_: unknown, e: { name: string }) => ({ value: { command: e.name } }))
@@ -1027,4 +1115,98 @@ test('the door is asked where the home is once as the session starts, and never 
   for (const command of ['cat crossings/x.bak', 'echo x > crossings/mode', 'python3 door.py look', 'ls']) await $.tool.call({ tool: 'Bash', command })
   expect(reached.ran.length).toBe(1) // no tool call started a process
   expect(reached.logged).toEqual([])
+})
+
+// --- the path from the folder the shell stands in ---------------------------------------------
+
+// Files of this project's home by the list of the module's that holds them, and how the guard answers a call that
+// names each by its whole path: a file tool's read, a file tool's write, a shell's read and a shell's write.
+const LISTED = [
+  { list: 'ARCHIVE', files: ['said/abcdef01.jsonl', 'store.db'], read: REFUSED, write: REFUSED, reads: REFUSED, writes: REFUSED },
+  { list: 'KEPT', files: ['off.txt', 'models.txt', 'markers.jsonl'], read: undefined, write: PERSONS, reads: PERSONS, writes: PERSONS },
+  { list: 'WRITTEN_BY_DOOR', files: ['struck.txt', 'labels/2026-11-12.md', 'mode', 'abcdef01-cut-2.md'], read: undefined, write: WRITTEN,
+    reads: undefined, writes: WRITTEN },
+  { list: 'BELOW', files: ['x.bak', 'alias/x.jsonl'], read: REFUSED, write: REFUSED, reads: REFUSED, writes: REFUSED },
+]
+// The calls, each with the answer it is given by the list's whole path: every file tool, and a shell's cat, ls and redirect.
+type Made = (path: string) => Record<string, unknown>
+const CALLS: [string, Made, 'read' | 'write' | 'reads' | 'writes'][] = [
+  ['Read', p => ({ tool: 'Read', file_path: p }), 'read'],
+  ['Write', p => ({ tool: 'Write', file_path: p, content: '' }), 'write'],
+  ['Edit', p => ({ tool: 'Edit', file_path: p, old_string: 'a', new_string: 'b' }), 'write'],
+  ['MultiEdit', p => ({ tool: 'MultiEdit', file_path: p, edits: [] }), 'write'],
+  ['NotebookEdit', p => ({ tool: 'NotebookEdit', notebook_path: p, new_source: '' }), 'write'],
+  ['cat', p => ({ tool: 'Bash', command: `cat ${p}` }), 'reads'],
+  ['ls', p => ({ tool: 'Bash', command: `ls -l ${p}` }), 'reads'],
+  ['>', p => ({ tool: 'Bash', command: `echo x > ${p}` }), 'writes'],
+]
+// A shell's globs below the home, and what each is given.
+const GLOBS: [string, string | undefined][] = [['cat <home>/*', REFUSED], ['ls <home>/labels/*.md', undefined],
+  ['echo x > <home>/labels/*.md', WRITTEN], ['rm <home>/*.txt', REFUSED]]
+
+// A folder beside the home, and one two below the folder that holds it, each with the path from there to the home.
+for (const [cwd, step] of [['/project/sub', '../crossings'], ['/project/a/b', '../../crossings']]) {
+  test(`from ${cwd}, a file of the home by ${step}/ is answered as by its whole path, with or without a leading ./`, async ($, on) => {
+    const reached = await tools($, on, PLACES, OWN, cwd)
+    const short = (why: unknown) => (why === REFUSED ? 'REFUSED' : why === PERSONS ? 'PERSONS' : why === WRITTEN ? 'WRITTEN' : why ?? 'runs')
+    const answer = async (call: Record<string, unknown>) => short(refused(await $.tool.call(call as any)))
+    const whole: string[] = []
+    const relative: string[] = []
+    const expected: string[] = []
+    for (const { list, files, ...given } of LISTED) {
+      for (const file of files) {
+        for (const [name, made, kind] of CALLS) {
+          for (const lead of ['', './']) {
+            const said = `${list} ${name} ${lead}<home>/${file} => `
+            expected.push(said + short(given[kind]))
+            whole.push(said + (await answer(made(`${OWN}/${file}`))))
+            relative.push(said + (await answer(made(`${lead}${step}/${file}`))))
+          }
+        }
+      }
+    }
+    for (const [command, given] of GLOBS) {
+      for (const lead of ['', './']) {
+        const said = `${command.replace('<home>', `${lead}<home>`)} => `
+        expected.push(said + short(given))
+        whole.push(said + (await answer({ tool: 'Bash', command: command.replace('<home>', OWN) })))
+        relative.push(said + (await answer({ tool: 'Bash', command: command.replace('<home>', `${lead}${step}`) })))
+      }
+    }
+    expect(whole).toEqual(expected) // the whole path is answered as it was
+    expect(relative.filter((said, n) => said !== whole[n])).toEqual([]) // and every path from the shell's folder as its whole path
+    expect(reached.ran.length).toBe(1) // no tool call started a process
+  })
+}
+
+test("from a folder beside the home, a crossings/ that is not the home's is answered by the archive's names alone, as before", async ($, on) => {
+  // These hold on the code before the guard knew the home by a path that steps up.
+  const reached = await tools($, on, PLACES, OUTSIDE, '/project/sub')
+  for (const call of [{ tool: 'Write', file_path: '../crossings/struck.txt', content: '' }, { tool: 'Read', file_path: '../crossings/x.bak' },
+    { tool: 'Bash', command: 'echo x > ../crossings/off.txt' }, { tool: 'Bash', command: 'cat ./../crossings/mode' }]) {
+    expect(refused(await $.tool.call(call as any))).toBe(undefined)
+  }
+  for (const file_path of ['../crossings/said/x.jsonl', '../crossings/store.db', './../crossings/notes.words.md']) {
+    expect(refused(await $.tool.call({ tool: 'Read', file_path }))).toBe(REFUSED)
+  }
+  expect(reached.length).toBe(4)
+})
+
+test("from two folders below the home's, a path that steps up past the home or beside it names no file of it", async ($, on) => {
+  const reached = await tools($, on, PLACES, OWN, '/project/a/b')
+  // /project/a/crossings and /crossings are folders that only bear the name.
+  for (const command of ['echo x > ../crossings/struck.txt', 'echo x > ../../../crossings/off.txt', 'cat ../crossings/x.bak']) {
+    expect(refused(await $.tool.call({ tool: 'Bash', command }))).toBe(undefined)
+  }
+  expect(refused(await $.tool.call({ tool: 'Bash', command: 'cat ../crossings/said/x.jsonl' }))).toBe(REFUSED)
+  expect(reached.length).toBe(3)
+})
+
+test('from inside the home itself, its files by their whole paths are answered as before', async ($, on) => {
+  const reached = await tools($, on, PLACES, OWN, '/project/crossings/labels')
+  expect(refused(await $.tool.call({ tool: 'Write', file_path: '/project/crossings/struck.txt', content: '' }))).toBe(WRITTEN)
+  expect(refused(await $.tool.call({ tool: 'Bash', command: 'echo x > /project/crossings/off.txt' }))).toBe(PERSONS)
+  expect(refused(await $.tool.call({ tool: 'Read', file_path: '/project/crossings/x.bak' }))).toBe(REFUSED)
+  expect(refused(await $.tool.call({ tool: 'Read', file_path: '/project/crossings/labels/2026-11-12.md' }))).toBe(undefined)
+  expect(reached.length).toBe(1)
 })

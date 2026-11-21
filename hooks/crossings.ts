@@ -48,6 +48,18 @@ const NOTE =
   "A label can be mistaken; the home's plain files are the record. To read a message back, use the " +
   "door's find and thread, never the transcript file itself."
 
+// What the harness's summary is asked for wherever it is made in a project whose cuts Crossings answers
+// (beside or own): a ledger and nothing else, since the record keeps the words and the frame carries them,
+// so the summary need not retell. It is handed down as the cut's instructions, and whatever was typed after
+// /compact follows it after an empty line, unchanged: the person's word of the moment comes last.
+const LEDGER =
+  'Keep only a ledger of tasks: what the person asked, in their own words; whether each is finished or ' +
+  'unfinished, and for an unfinished one where it stands; the files it touched. Leave the section "All user ' +
+  'messages" empty. No retelling of the conversation and no suggested next step. End with the standing ' +
+  'constraints the person set, word for word.'
+const ledgered = <E extends { instructions?: string }>(e: E): E =>
+  ({ ...e, instructions: e.instructions?.trim() ? `${LEDGER}\n\n${e.instructions}` : LEDGER })
+
 // The project's root. A shell `cd` moves the session's working directory and must not move the
 // store: the door would otherwise look for the home of whatever folder the shell stood in.
 const root = async ($: any): Promise<string> => {
@@ -134,11 +146,17 @@ const held = async ($: any): Promise<{ text: string; what: string }> => {
 
 const registerCut = (on: Parameters<Register>[0]) => {
   on('session.compact', async ($, e, next) => {
-    // A subagent's own cut, and one the harness computes ahead of time, are never touched.
-    if (e.agentId !== undefined || e.trigger === 'precompute') return next(e)
+    // A subagent's own cut is never touched.
+    if (e.agentId !== undefined) return next(e)
+    if (e.trigger === 'precompute') {
+      // A summary the harness computes ahead of time is asked for the ledger where a cut would be, so that it has
+      // the shape of one made at the cut; nothing else is done here: no home asked, no frame, no trace.
+      return next((await asked($)).mode === 'native' ? e : ledgered(e))
+    }
     await askHome($) // where the home is, for the guard below: a cut is one of the moments it is asked
     const { mode, carry } = await asked($)
     if (mode === 'native') return next(e)
+    const told = ledgered(e) // every summary the harness makes from here on is asked for the ledger
 
     // The trace of what was done is a convenience, written by the door; the cut goes on without it.
     const said = async (did: object) => {
@@ -149,11 +167,11 @@ const registerCut = (on: Parameters<Register>[0]) => {
       // itself while the person is away. The plugin's SessionStart hook brings the frame as
       // context when the session starts again, so nothing is added here, or it would cross twice.
       await said({ did: 'beside', carried: 'context, by the hook' })
-      return next(e)
+      return next(told)
     }
 
     const { text, what } = await held($)
-    if (!text) return next(e)
+    if (!text) return next(told)
     const carried = { role: 'user' as const, text, toolUses: [] }
     // An automatic cut comes in the middle of work, so the harness's summary is kept there.
     if (mode === 'own' && e.trigger !== 'auto') {
@@ -164,7 +182,7 @@ const registerCut = (on: Parameters<Register>[0]) => {
       await said({ did: 'own', carried: 'message', what, chars: text.length, keptEarlierSummary: isEarlier })
       return { messages: isEarlier ? [earlier, carried] : [carried] }
     }
-    const made = await next(e)
+    const made = await next(told)
     if (made.skip !== undefined) return made
     // The engine's answer holds at least one message, the summary first: it refuses a cut that
     // leaves none. The frame goes after it.
@@ -223,7 +241,9 @@ const registerCommand = (on: Parameters<Register>[0]) => {
       const out = await door($, ['status', '--session', await $.session.id()])
       return { text: `${isOff ? 'Crossings is off for this project.' : 'Crossings is on for this project.'} ${out.text}` }
     }
-    if (said === 'look' || said === 'frame') return shown([said])
+    // The person's frame comes with the sentence of what the session's turns set in it take, after it and apart
+    // (--trade); a cut's frame, asked the same way without it, never holds that sentence.
+    if (said === 'look' || said === 'frame') return shown(said === 'frame' ? ['frame', '--trade'] : [said])
     // The person's words and keys go last, after a `--`, so that one that begins with a dash is a word.
     if (said === 'find') return rest.length ? shown(['find', '--', ...rest]) : { text: 'find needs words: /crossings find <words>' }
     if (said === 'labels') {
@@ -277,10 +297,10 @@ const registerCommand = (on: Parameters<Register>[0]) => {
 // that a link made inside a home is no way round. The homes are those outside a project (the
 // folder CROSSING_HOMES names, else ~/.claude/crossing/homes), the home on this computer
 // (CROSSING_OURS, else ~/.claude/crossing/ours), a home named outright (CROSSING_HOME), and this
-// project's home as the door last named it (`known`, below), by its whole path and, where it lies
-// below the folder the session stands in, by the path from there. The label pages, the pages of
-// the cuts and the other plain files a session may read stay readable: the person reads those
-// beside the work, and so may the session.
+// project's home as the door last named it (`known`, below), by its whole path and by the path to
+// it from the folder the shell stands in, wherever that folder is but in the home itself (`toward`).
+// The label pages, the pages of the cuts and the other plain files a session may read stay
+// readable: the person reads those beside the work, and so may the session.
 //
 // Any other folder named crossings/ is nobody's home as far as the guard knows: a program's own
 // package of that name, or a project's own folder where Crossings was never switched on. There a
@@ -364,10 +384,11 @@ const named = (e: Record<string, unknown>, home: string, settings: Partial<Setti
     if (value) text = text.replace(new RegExp(String.raw`\$\{${name}\}|\$${name}\b`, 'g'), () => value)
   }
   text = text.replace(/\/(?:\.\/)+/g, '/').replace(/\/{2,}/g, '/')
-  // A folder and a `..` after it are no step at all: `crossings/labels/../said` is `crossings/said`.
+  // A folder and a `..` after it are no step at all: `crossings/labels/../said` is `crossings/said`. A `.` is
+  // no folder: `./../crossings` is `../crossings`, and stays as it is spelled.
   for (let before = ''; before !== text;) {
     before = text
-    text = text.replace(/(^|[\/\s'"=])(?!\.\.(?:[\/\s'"\x60]|$))[^\/\s'"\x60]+\/\.\.(?=[\/\s'"\x60]|$)\/?/g, '$1')
+    text = text.replace(/(^|[\/\s'"=])(?!\.\.?(?:[\/\s'"\x60]|$))[^\/\s'"\x60]+\/\.\.(?=[\/\s'"\x60]|$)\/?/g, '$1')
   }
   return text.replace(/\/{2,}/g, '/')
 }
@@ -428,13 +449,20 @@ const askHome = async ($: any): Promise<void> => {
 }
 
 // The places a home's rules hold over: the homes the settings name or the plugin keeps by default,
-// and this project's home as the door named it, by its whole path and, where it lies below the
-// folder the session stands in (`cwd`), by the path from there.
+// and this project's home as the door named it, by its whole path and by the path to it from the
+// folder the shell stands in (`cwd`).
 type Where = { homes: string; ours: string; outright: string; known: string; cwd: string }
-const below = (folder: string, cwd: string): string => {
+// That path, by the steps a shell takes: down from a folder the home lies below (`crossings`), and up
+// first from one beside it or further down (`../crossings`, `../../crossings`). None from the home itself
+// or a folder in it, where a name is a `cd` into the home, which the guard does not see.
+const toward = (folder: string, cwd: string): string => {
   if (!folder || !cwd) return ''
-  const from = trimmed(cwd)
-  return folder.toLowerCase().startsWith(`${from.toLowerCase()}/`) ? folder.slice(from.length + 1) : ''
+  const there = folder.split('/')
+  const here = trimmed(cwd).split('/')
+  let same = 0
+  while (same < there.length && same < here.length && there[same]?.toLowerCase() === here[same]?.toLowerCase()) same += 1
+  if (same === there.length) return ''
+  return [...here.slice(same).map(() => '..'), ...there.slice(same)].join('/')
 }
 
 // The places of the archive's files, or of the home's kept files, as patterns over that text: `files`
@@ -449,7 +477,7 @@ const places = (at: Where, files: string, byName: string): RegExp[] => {
   for (const one of [at.ours, at.outright]) if (one) found.push(`${escaped(trimmed(one))}/${files}`)
   if (at.known) {
     found.push(String.raw`(?:^|[^\w.-])${escaped(at.known)}/${files}`)
-    const from = below(at.known, at.cwd)
+    const from = toward(at.known, at.cwd)
     if (from) found.push(String.raw`(?:^|[^\w./-])(?:\./)*${escaped(from)}/${files}`) // a relative name, from the shell's folder
   }
   if (byName) found.push(String.raw`(?:^|[^\w.-])crossings/${byName}`) // a folder that only bears the name
