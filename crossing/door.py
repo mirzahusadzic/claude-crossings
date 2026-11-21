@@ -3,12 +3,19 @@
 
   door.py look
   door.py labels [id ...] [--kind relation|work|next|refused] [--day YYYY-MM-DD]
-  door.py find <words> [--voice his|session] [--limit N]       word*  "a phrase"
-  door.py thread <id> [--around N]
-  door.py mark --kind relation|work|next|refused|silenced --whose his|session|both --anchors id,id <sentence>
+  door.py find <words> [--voice their|session] [--limit N]     word*  "a phrase"
+  door.py thread <id> [--around N | --role pair:me|pair:them]
+                                           with a role, a pair in place of the messages around: the session's turn
+                                           (pair:me) or the person's (pair:them), with the other's next turn in
+                                           answer, the one the message heads or the one it answers; too long to
+                                           show whole, a page of it that starts at the message named
+  door.py mark --kind relation|work|next|refused|silenced --whose their|session|both --anchors id,id <sentence>
                                            an id is a message's, or a label's key: the label then stands over that one,
                                            or, for a refusal, judges that one again, and for a silencing puts it to rest
-  door.py frame [--size N]
+  door.py frame [--size N]                 with --session or --transcript, a cut's frame for that session; where
+                                           the line at the door or a standing line sets the session's turns
+                                           beside the person's sentences, a sentence after the frame says what
+                                           they take, at a terminal, for the door's server and with --trade
   door.py status
   door.py build
   door.py strike <id | label | session:id> [--why text]
@@ -42,10 +49,10 @@ door's server in its own process; anywhere else they say in one sentence that th
 person's to run (see `personal`). `frame` and `page` carry nothing where no person sits in the
 session (record.attended) and the door stands at no terminal. `words` and `page` read and write
 nothing, and `build` writes the index alone, which is made from the plain files. With --touch a
-thread or a mark is noted in the home's plain log of what was pulled. With --bare no answer names
-a file or a folder: that is how the door's server asks, so that nothing a session reads points a
-hand at the file system. Nothing comes back without its place: an id, a voice, a time, and the
-labels that rest there. No model is called.
+thread, with a role or without, or a mark is noted in the home's plain log of what was pulled. With
+--bare no answer names a file or a folder: that is how the door's server asks, so that nothing a
+session reads points a hand at the file system. Nothing comes back without its place: an id, a
+voice, a time, and the labels that rest there. No model is called.
 
 A project's home is its own `crossings/` folder, or, where it has none, a folder outside it
 that `switch on` makes. Either is believed only once the person has switched Crossings on in
@@ -87,8 +94,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from crossing import frame, layer, record, sample, second, store  # noqa: E402
 
-VOICE = {"his": "the person", "session": "the session", "pasted": "pasted by the person"}
+VOICE = {store.HIS: "the person", store.OWN: "the session", store.PASTED: "pasted by the person"}
 SHORT = 240  # characters of a label's sentence in a list; by its id it is given whole
+# What `find` closes with where it shows a message in part.
+EXCERPTS = (
+    "These are excerpts where … stands; the record holds each message whole, and thread <id> gives it whole and in "
+    "its place."
+)
+ASKING = ("look", "labels", "status")  # the verbs that call a refusal standing or silenced, for the model that asks
 # How the person's switch stands, as their command says it; and what every other verb says of
 # a project that has no home, where nothing is kept and nothing is made by looking.
 SWITCHED = {
@@ -169,6 +182,21 @@ SIGNS_CAME = "came into this home without a signing through the door, and"
 COLLIDED = "Two messages of this home share the id {0}: thread {0} names both, and a strike takes one by its whole id."
 # The verbs that are the person's alone, or the hooks module's: those that write a kept file of the home.
 PERSONAL = ("switch", "strike", "layer", "copy", "trace", "welcome")
+# The roles `thread` is asked with to show a pair (see store.tied), named from the side of the session, which calls:
+# me, the session; them, the person. Each by the voice whose turn heads the pair.
+ROLES = {"pair:me": store.OWN, "pair:them": store.HIS}
+UNROLED = "thread takes one of two roles: pair:me or pair:them."
+# A role as it was spelled before, still taken, and meaning the same: an answer names it as ROLES does.
+SPELLED = {"pair:him": "pair:them"}
+
+
+def role_of(asked: object) -> str | None:
+    """The role `thread` is asked with, as ROLES names it, in either spelling it is taken in; or None, for a word that
+    is no role."""
+    if not isinstance(asked, str):
+        return None
+    named = SPELLED.get(asked, asked)
+    return named if named in ROLES else None
 
 
 def strayed(name: str) -> str:
@@ -269,10 +297,10 @@ def show_find(out: dict, named: bool = False) -> str:
         every = out["labels_all"]
         shown = out["labels"] if every else out["labels"][:3]
         lines += ["", "Labels:" if every else "Labels (holding any of these words):"] + [
-            f"- {label['id']} ({label['kind']}, {store.clean(label['whose'])}{by(label, named)}): "
+            f"- {label['id']} ({label['kind']}, {store.owner(label['whose'])}{by(label, named)}): "
             f"a standing line about the two of you, not recited here; `labels {label['id']}` gives it."
             if label["kind"] == "relation" and not every
-            else f"- {label['id']} ({label['kind']}, {store.clean(label['whose'])}{by(label, named)}): "
+            else f"- {label['id']} ({label['kind']}, {store.owner(label['whose'])}{by(label, named)}): "
             + (
                 store.clean(label["text"])
                 if every or len(label["text"]) <= SHORT
@@ -286,11 +314,14 @@ def show_find(out: dict, named: bool = False) -> str:
             lines.append(f"{many(more, 'more label')} hold{'s' if more == 1 else ''} one of these words.")
     if out["said"]:
         lines += ["", "Said:"] + [
-            f"- `{s['id']}` {voiced(s, named)}, {when(s['at'])}: {' '.join(store.clean(s['part']).split())}"
+            f"- `{s['name']}` {voiced(s, named)}, {when(s['at'])}: {' '.join(store.clean(s['part']).split())}"
             + (f" (labels: {', '.join(s['labels'])})" if s["labels"] else "")
             for s in out["said"]
         ]
-        lines += ["", "For any of these in its place: thread <id>."]
+        # A message shown in part is an excerpt, and the record holds it whole: said so, so that a cut excerpt is
+        # never taken for a message the record holds cut.
+        whole = all(s["whole"] for s in out["said"])
+        lines += ["", "For any of these in its place: thread <id>." if whole else EXCERPTS]
     return "\n".join(lines)
 
 
@@ -306,21 +337,46 @@ def row_of(label: dict, whole: bool = True, named: bool = False) -> str:
     day = f", {store.clean(label['day'])}" if label.get("day") else ""
     state = label.get("state", "carried")
     state = "" if state == "carried" else f", cooled beneath {label['parent']}" if state == "cooled" else f", {state}"
+    if label.get("elsewhere"):  # the family stands otherwise for another model than for the one that asks
+        state = (
+            f", standing here: {label['elsewhere']} puts it to rest for another model alone"
+            if label["kind"] == "refused"
+            else f", at rest here: {label['elsewhere']} stands for another model alone"
+        )
+    elif label.get("alone"):  # the family is another model's alone, and this label stands in it for that model
+        state = f", another model's alone, {'standing' if label['kind'] == 'refused' else 'at rest'} there"
     written = f", written by {store.clean(label['model'])}" if whole and label.get("model") else by(label, named)
     kind = f"{label['kind']}, " if label.get("run") or label.get("kind") == "silenced" else ""
     return (
         f"{'  ' * label.get('depth', 0)}- {label['id']} "
-        f"({kind}{store.clean(label['whose'])}{day}{state}{written}): {text} "
+        f"({kind}{store.owner(label['whose'])}{day}{state}{written}): {text} "
         f"[{store.rests(label)}]"
     )
 
 
 def standing_apart(refusals: dict) -> str:
-    """The families of refusals as `look` and `status` count them: those that stand, by the key that stands in
-    each, and apart from them those that are silenced (see store.refusals)."""
+    """The families of refusals as `look` counts them: those that stand, by the key that stands in each, and apart
+    from them those that are silenced, for the model that asks (see store.refusals), and the clause that names those
+    that stand otherwise for another model alone (see `elsewhere`)."""
     standing, silenced = refusals["standing"], refusals["silenced"]
     said = f"{many(len(standing), 'refusal')} standing" + (f" ({store.some(standing)})" if standing else "")
-    return said + (f", {len(silenced)} silenced ({store.some(silenced)})" if silenced else "")
+    said += f", {len(silenced)} silenced ({store.some(silenced)})" if silenced else ""
+    return said + (f"; {elsewhere(refusals)}" if elsewhere(refusals) else "")
+
+
+def elsewhere(refusals: dict) -> str:
+    """The families of refusals that stand otherwise for another model alone than for the one that asks, by the key
+    that stands in each here, or for that model: those at rest there alone, and those standing there alone (see
+    store.refusals); and those that are another model's alone and at rest there, by the key that stands in each for
+    that model; nothing where there are none."""
+    rest, stand, away = refusals.get("rest", []), refusals.get("stand", []), refusals.get("away", [])
+    return "; ".join(
+        [f"{store.some(rest)} {'is' if len(rest) == 1 else 'are'} at rest for another model alone, not for this one"]
+        * bool(rest)
+        + [f"{store.some(stand)} stand{'s' if len(stand) == 1 else ''} for another model alone, not for this one"]
+        * bool(stand)
+        + [f"{store.some(away)} {'is' if len(away) == 1 else 'are'} another model's alone, at rest there"] * bool(away)
+    )
 
 
 def show_look(out: dict, bare: bool = False, named: bool = False) -> str:
@@ -431,7 +487,7 @@ def show_thread(out: dict, named: bool = False) -> str:
         twins = [f"`{store.clean(each)}`" for each in out["twins"]]
         return (
             f"thread of `{asked}`: {'two' if len(twins) == 2 else len(twins)} messages are named `{asked}`, "
-            f"{', '.join(twins[:-1])} and {twins[-1]}; thread with a whole id gives each."
+            f"{', '.join(twins[:-1])} and {twins[-1]}; thread with one of them gives that one."
         )
     if not out["found"]:
         return f"thread of `{asked}`: no such message in the store."
@@ -442,7 +498,7 @@ def show_thread(out: dict, named: bool = False) -> str:
     for number, s in enumerate(out["said"], 1):
         lines += [gap(g) for g in gaps if g["before"] == s["seq"]]
         lines.append(
-            f"{number}. `{s['id']}` {voiced(s, named)}, {when(s['at'])}"
+            f"{number}. `{s['name']}` {voiced(s, named)}, {when(s['at'])}"
             + (", the one you named" if s["is_asked"] else "")
             + (f" (labels: {', '.join(s['labels'])})" if s["labels"] else "")
             + ":"
@@ -454,11 +510,167 @@ def show_thread(out: dict, named: bool = False) -> str:
     if out["labels"]:
         lines += ["Labels resting here:"] + [
             f"- {label['id']} ({label['kind']}, "
-            f"{store.clean(label['whose'])}{by(label, named)}): "
+            f"{store.owner(label['whose'])}{by(label, named)}): "
             f"{store.clean(label['text'])}"
             for label in out["labels"]
         ]
     return "\n".join(lines).rstrip()
+
+
+def shortened(text: str, most: int) -> str:
+    """A message's text as a list shows it: whole up to `most` characters, else cut there and marked so."""
+    return text if len(text) <= most else text[:most].rstrip() + " […]"
+
+
+def show_pair(out: dict, role: str, named: bool = False) -> str:
+    """What `thread` answers asked with a role (see ROLES): the pair that role's voice heads, the message named stands
+    in (see store.tied), a turn with the other voice's next turn beneath it in answer, in order. The first line says
+    what was asked, the id and the role, whose turn heads the pair and how many messages each side holds; each
+    message under its id, voice and time, numbered through the pair and cut as `thread` cuts the message it is asked
+    of; after a message of the person's, what was pasted into it by each paste's id and length alone; a span when the
+    switch was off in its place, as a thread says it; a sentence where the other voice said nothing after it in that
+    session; a closing line with where the pair before this one and the pair after it begin, and the role that gives
+    them, the other one, since each is headed by the other voice's turn; the keys of the labels resting on any message
+    of the pair, without their sentences, where two or more lines left at the door among them are not listed but
+    counted, with the newest by its key; and on a line of its own after it, only where a label rests on a text pasted
+    into the pair, each such paste by its id with the keys resting on it, its lines left at the door counted alike
+    (see `rested`). A pasted text is no message of the pair, so a label on a paste alone stands on that line alone,
+    and one on a message of the pair as well stands on both. Both lines speak of the whole pair, whichever id named it
+    and whichever voice heads it, also on a page. An id that names no message, or one two messages share, is answered
+    as `thread` answers it; one whose turn opens its session and answers none of the role's voice, in one sentence
+    that names the role that gives the pair it heads.
+
+    A pair whose texts, as they are shown, fit within store.PAIRED characters together is shown whole. One that
+    does not is a page that starts at the message named (at the one a paste was pasted into, for a paste's id) and
+    runs on while the texts fit, stopping at the first that does not: one sentence says how many of the pair stand
+    before it and where the pair begins, one how many come after the page, the last of them, and the id and the role,
+    the same, that the next page of the same pair starts at. Each message keeps its number in the whole pair, and a
+    span is said only before a message the page shows, or after the last of the pair where the page reaches it."""
+    if not out["found"]:
+        return show_thread(out)  # an id that names nothing, or one two messages share: as a thread says it
+    asked = store.clean(out["asked"])
+    called = f"thread of `{asked}` with the role `{role}`"
+    flipped = next(each for each in ROLES if each != role)  # the role of the pairs before and after this one
+    whose = VOICE[out["voice"]]
+    other = VOICE[store.OWN if store.theirs(out["voice"]) else store.HIS]
+    if not out["paired"]:
+        return (
+            f"{called}: {other}'s turn it stands in is the first of its session and answers no turn of {whose}'s, so "
+            f"there is no such pair; the role `{flipped}` gives the pair it heads."
+        )
+    said = [*out["head"], *out["answer"]]
+    texts = [shortened(s["text"], store.WHOLE) for s in said]
+    first, end = 0, len(said)  # the page: from the first it shows to the first after it
+    if sum(map(len, texts)) > store.PAIRED:  # too long to show whole: a page from the one named, while they fit
+        first = next((at for at, s in enumerate(said) if s["is_asked"] or any(p["is_asked"] for p in s["pastes"])), 0)
+        room, end = store.PAIRED - len(texts[first]), first + 1
+        while end < len(said) and len(texts[end]) <= room:
+            room -= len(texts[end])
+            end += 1
+    lines = [
+        f"{called}: {whose}'s turn, {many(len(out['head']), 'message')}, and {other}'s answer, "
+        f"{many(len(out['answer']), 'message')}, in the order they were said",
+        "",
+    ]
+    if first:
+        lines += [
+            f"{many(first, 'message')} of this pair {'stands' if first == 1 else 'stand'} before the one you named and "
+            f"{'is' if first == 1 else 'are'} not shown here; the pair begins at `{store.clean(said[0]['name'])}`.",
+            "",
+        ]
+    gaps = list(out["gaps"])
+    for number, (s, text) in enumerate(zip(said, texts), 1):
+        # A span off the record stands before the first message said after it began, as in a thread.
+        here = [g for g in gaps if g["before"] is not None and g["before"] <= s["seq"]]
+        gaps = [g for g in gaps if g["before"] is None or g["before"] > s["seq"]]
+        if not first < number <= end:
+            continue  # not on this page: neither it nor a span that stands before it is said here
+        lines += [gap(g) for g in here]
+        lines.append(
+            f"{number}. `{s['name']}` {voiced(s, named)}, {when(s['at'])}"
+            + (", the one you named" if s["is_asked"] else "")
+            + ":"
+        )
+        # Each of the message's own lines is marked as its own, as in a thread.
+        lines += [QUOTED + part for part in store.clean(text, lines=True).splitlines()] + [""]
+        if s["pastes"]:
+            pastes = [
+                f"`{store.clean(each['name'])}` ({each['length']:,} character{'' if each['length'] == 1 else 's'})"
+                for each in s["pastes"]
+            ]  # by id and length alone, never a word of what was pasted
+            lines += [
+                f"The person pasted {many(len(pastes), 'text')} into it, not shown here"
+                + (", the one you named among them" if any(each["is_asked"] for each in s["pastes"]) else "")
+                + f": {joined(pastes)}; thread gives {'it' if len(pastes) == 1 else 'each'} in its place.",
+                "",
+            ]
+    if end == len(said):
+        lines += [gap(g) for g in gaps]  # after the last of the pair, where the page reaches it
+    else:
+        after = len(said) - end
+        lines += [
+            f"{many(after, 'message')} of this pair {'comes' if after == 1 else 'come'} after this page"
+            + (f", the last of them `{store.clean(said[-1]['name'])}`" if after > 1 else "")
+            # with the same role, so that the next page is of this same pair
+            + f"; thread of `{store.clean(said[end]['name'])}` with the role `{role}` goes on from there.",
+            "",
+        ]
+    if not out["answer"]:
+        lines += [f"{other.capitalize()} said nothing after it in that session.", ""]
+    # Where the pair before this one and the pair after it begin, each only where there is one: each is headed by the
+    # other voice's turn, so the other role gives it.
+    before, following = (f"`{store.clean(out[side])}`" if out[side] else "" for side in ("before", "after"))
+    if before and following:
+        lines += [
+            f"The pair before this one begins at {before}, and the pair after it at {following}; thread with the role "
+            f"`{flipped}` gives each.",
+            "",
+        ]
+    elif before or following:
+        side = "before" if before else "after"
+        lines += [
+            f"The pair {side} this one begins at {before or following}; thread with the role `{flipped}` gives it.",
+            "",
+        ]
+    # The labels on the pair's own messages; then, apart, those on what was pasted into it, which is no message of the
+    # pair: each paste by its id, of the whole pair also on a page.
+    pastes = [each for s in said for each in s["pastes"]]
+    lines += [
+        line
+        for line in (
+            rested([(out["labels"], "")], out["left"], "Labels resting here: ", "here", "here"),
+            rested(
+                [(each["labels"], f" on `{store.clean(each['name'])}`") for each in pastes],
+                out["pasted_left"],
+                "Resting on what was pasted into this pair: ",
+                "on what was pasted into this pair",
+                "there",
+            ),
+        )
+        if line
+    ]
+    return "\n".join(lines).rstrip()
+
+
+def rested(places: list[tuple[list[str], str]], left: list[str], lead: str, alone: str, after: str) -> str:
+    """A line of `show_pair`'s, of the labels resting on something: `lead`, then each place's keys in the order
+    written, followed by what names the place (nothing, for the pair's own messages), the places set apart by `; `.
+    Lines left at the door (`left`, those among the keys of the kind `next`, in the order written) rest on many of the
+    same messages, one after another, and only the newest is carried: two or more are counted, with the newest by its
+    key, and not listed, in a sentence that says they rest `alone` where no key is listed, and `after`, with "too",
+    where one is; one stays a key among the others. A place on which only counted lines rest is not named. Empty where
+    no key rests."""
+    left = left if len(left) > 1 else []
+    listed = []
+    for keys, place in places:
+        shown = [key for key in keys if key not in left]
+        if shown:
+            listed.append(", ".join(shown) + place)
+    sentences = [f"{lead}{'; '.join(listed)}."] if listed else []
+    if left:
+        where = f"{after} too" if listed else alone
+        sentences.append(f"{many(len(left), 'line')} left at the door rest {where}, the newest of them {left[-1]}.")
+    return " ".join(sentences)
 
 
 def main(argv: list[str] | None = None, served: bool = False) -> int:
@@ -492,17 +704,22 @@ def main(argv: list[str] | None = None, served: bool = False) -> int:
     parser.add_argument("--home", choices=["here", "ours"], default="here")
     parser.add_argument("--session")
     parser.add_argument("--transcript")
-    parser.add_argument("--voice", choices=["his", "session"])
+    # The person's side in either spelling it is taken in, as it is offered (store.offered_as), which the usage names.
+    parser.add_argument("--voice", type=store.offered_as, choices=[store.THEIR, store.OWN])
     parser.add_argument("--limit", type=int, default=8)
     parser.add_argument("--around", type=int, default=2)
+    parser.add_argument("--role")  # thread's: one of ROLES, and any other word is answered in a sentence
     parser.add_argument("--kind", choices=["relation", "work", "next", "refused", "silenced"])
     parser.add_argument("--day")
     parser.add_argument("--touch", action="store_true")
     parser.add_argument("--bare", action="store_true")
-    parser.add_argument("--whose", choices=["his", "session", "both"], default="session")
+    parser.add_argument("--whose", type=store.offered_as, choices=[store.THEIR, store.OWN, "both"], default="session")
     parser.add_argument("--anchors", default="")
     parser.add_argument("--size", type=int)
     parser.add_argument("--why", default="")
+    # frame's, for the person's command: the sentence after the frame of what the session's turns set in it take,
+    # which the frame a cut carries, asked the same way, never holds
+    parser.add_argument("--trade", action="store_true", help=argparse.SUPPRESS)
     # the hooks' own build, not the person's
     parser.add_argument("--by-hook", action="store_true", help=argparse.SUPPRESS)
     # the hooks module, for the person's command
@@ -673,24 +890,37 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
     project = folder if not ours else store.kept(cwd)
     facing = layer.named(args.model) or (
         layer.current(project, source.stem[:8])
-        if args.verb in ("mark", "frame") and source is not None and project is not None
+        if args.verb in ("mark", "frame", *ASKING) and source is not None and project is not None
         else ""
     )
+    if served and not facing and args.verb in ASKING and project is not None:
+        # What a refusal's family is called, standing or silenced, is said for the model that asks (see
+        # store.refusals): through the server, the model of the session that spoke last, as `crossing` takes it.
+        last = spoke_last(folder)
+        facing = layer.current(project, last) if last else ""
     # The session a frame is for, as the archive names one: by its transcript, else by the id it was asked by.
     session = source.stem[:8] if source is not None else (args.session or "")[:8]
     # In a home where more than one model is known, the lists say which made each line of the session's.
     named = args.verb in ("look", "labels", "find", "thread") and len(store.known(folder)) > 1
     if args.verb == "look":
-        out = store.look(folder)
+        out = store.look(folder, model=facing)
         if named and out["left"]:
             out["left"]["model"] = store.listed(folder, ids=(out["left"]["id"],))["labels"][0]["model"]
         print(show_look(out, args.bare, named))
     elif args.verb == "labels":
-        print(
-            show_labels(store.listed(folder, args.kind, args.day, tuple(args.rest)), bool(args.rest), args.bare, named)
-        )
+        out = store.listed(folder, args.kind, args.day, tuple(args.rest), model=facing)
+        print(show_labels(out, bool(args.rest), args.bare, named))
     elif args.verb == "find":
         print(show_find(store.find(folder, said, args.voice, args.limit), named))
+    elif args.verb == "thread" and args.role is not None:  # a pair in place of the messages around: --around is idle
+        role = role_of(args.role)  # and so named in the answer, whichever spelling asked for it
+        if role is None:
+            print(UNROLED)
+            return 2
+        out = store.tied(folder, said.strip("`"), ROLES[role])
+        if args.touch and on and out["found"] and out["paired"]:  # a pull as a thread's: the id named, and no more
+            store.reached(folder, "thread", [out["asked"]])
+        print(show_pair(out, role, named))
     elif args.verb == "thread":
         out = store.thread(folder, said.strip("`"), args.around)
         if args.touch and on and out["found"]:
@@ -717,9 +947,8 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
         if not out["written"]:
             print(f"not marked: {out['why']}")
             return 1
-        if not served and (
-            out_kind(args) == "relation" or store.settled(out_kind(args), args.whose) in ("his", "both")
-        ):
+        written = store.settled(out_kind(args), args.whose)  # whose it was written as
+        if not served and (out_kind(args) == "relation" or store.theirs(written) or written == "both"):
             store.shell_marked(folder, out["id"])  # no hook shows it to the person: their status will
         print(
             f"marked {out['id']}"
@@ -739,7 +968,7 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             if weighs:
                 print("\n" + weighs)
     elif args.verb == "frame":
-        size = frame.bounded(args.size) if args.size else None
+        size = frame.bounded(args.size) if args.size is not None else None  # a size of 0 is asked, and held
         held = store.status(folder) if served else {}
         if served and not any(held[each] for each in ("his", "session", "pasted", "labels", "struck")):
             # the door's server's `crossing`, in a room that holds nothing: no frame is made of it, and it is said as
@@ -749,10 +978,21 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             if served:  # the server is told no session: the frame is the one of the session that spoke last here
                 session = spoke_last(folder)
                 facing = facing or (layer.current(project, session) if session and project is not None else "")
-            print(frame.compose(folder, size, model=facing, session=session), end="")
+            # What the session's turns set beside the person's sentences take (see frame.trade) is told after the
+            # frame and apart from it: to a session through the server, and to the person at their terminal or
+            # through their command (--trade). The hooks module asks for a cut's frame as the command does, but
+            # with no --trade, and carries what the door gives whole: so a carried frame never holds it. Where it is
+            # told, it comes of the making that made the frame (see frame.with_trade).
+            telling = served or args.trade or record.terminal()
+            made, traded = (
+                frame.with_trade(folder, size, model=facing, session=session)
+                if telling
+                else (frame.compose(folder, size, model=facing, session=session), "")
+            )
+            print(made + (f"\n{traded}\n" if traded else ""), end="")
     elif args.verb in ("status", "build"):
-        held = store.status(folder)
-        apart = store.refusals(folder)
+        held = store.status(folder, facing)
+        apart = store.refusals(folder, facing)
         # What is said once is said only where it can be noted as told: a home switched off is read, and nothing
         # is written to it, so those sentences wait until it is on (see store.once).
         quiet = args.bare or not on
@@ -767,7 +1007,8 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             )
             + (
                 f" Of the refusals, {len(apart['standing'])} stand{'s' if len(apart['standing']) == 1 else ''} and "
-                f"{len(apart['silenced'])} {'is' if len(apart['silenced']) == 1 else 'are'} silenced."
+                f"{len(apart['silenced'])} {'is' if len(apart['silenced']) == 1 else 'are'} silenced"
+                + (f"; {elsewhere(apart)}." if elsewhere(apart) else ".")
                 if any(apart.values())
                 else ""
             )
@@ -937,14 +1178,14 @@ def told_once(args: argparse.Namespace, folder: Path, held: dict, quiet: bool = 
 
 
 def as_such(folder: Path, keys: list[str]) -> list[str]:
-    """Labels by their keys, a standing line and one that speaks for the person (`his` or `both`)
+    """Labels by their keys, a standing line and one that speaks for the person (theirs or both)
     each said as such."""
     by = {label["id"]: label for label in store.labels(folder)}
     out = []
     for key in keys:
         label = by.get(key, {})
         such = (["a standing line about the two of you"] if label.get("kind") == "relation" else []) + (
-            ["speaking for the person"] if label.get("whose") in ("his", "both") else []
+            ["speaking for the person"] if store.theirs(label.get("whose")) or label.get("whose") == "both" else []
         )
         out.append(f"{key} ({', '.join(such)})" if such else key)
     return out
@@ -1055,7 +1296,7 @@ def handed_over(folder: Path) -> str:
     gone = store.struck(folder)
     rows = [label for label in store.labels(folder) if label["page"] == "hand-over.md" and label["id"] not in gone]
     lines = [
-        f"- {label['id']} ({store.clean(label['whose'])}): {store.clean(label['text'])} "
+        f"- {label['id']} ({store.owner(label['whose'])}): {store.clean(label['text'])} "
         f"[{store.rests({**label, 'beneath': [key for key, _ in label['beneath']]})}]"
         for label in rows
     ]

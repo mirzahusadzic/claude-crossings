@@ -106,7 +106,9 @@ def built(folder: Path, said_ids: tuple) -> sqlite3.Connection:
                 "",
             ),
         )
-        db.executemany("insert into anchor values (?,?)", [(label["id"], each) for each in label["anchors"]])
+        db.executemany(
+            "insert into anchor (label, said) values (?,?)", [(label["id"], each) for each in label["anchors"]]
+        )
         db.executemany("insert into beneath values (?,?,?)", [(label["id"], k, was) for k, was in label["beneath"]])
     return db
 
@@ -398,7 +400,9 @@ def test_refusals_come_first_in_the_packed_list_and_their_sentences_are_not_quot
     assert section(before, OWN_WORDS) == ["- `b0000002`: tove", "- `b0000001`: tove"]
 
 
-def test_four_families_give_three_and_the_sentence_for_the_one_left(tmp_path):
+def test_four_families_cross_all_four_and_no_sentence_counts_them(tmp_path):
+    """Every family that stands crosses, the newest first: there is no cap of three, and no sentence counts the
+    oldest in its place (it was "1 more refusal stands and is not carried: X1; `labels` gives it.")."""
     labels = tuple(x(f"X{k}", f"Refused {k}.") for k in range(1, 5))
     anchors = tuple((f"X{k}", b(k)) for k in range(1, 5))
     with framed(tmp_path, his(*(b(k) for k in range(1, 5))), labels, anchors):
@@ -406,33 +410,29 @@ def test_four_families_give_three_and_the_sentence_for_the_one_left(tmp_path):
         before = frame.compose(tmp_path, 9000)
         new = frame.compose(tmp_path, 9000, new=True)  # a session started new is given them too
     assert section(made, frame.PACKED_HEAD) == [
-        "- `b0000004`: tove",
-        "     ↳ X4 · refused: Refused 4.",
-        "- `b0000003`: tove",
-        "     ↳ X3 · refused: Refused 3.",
-        "- `b0000002`: tove",
-        "     ↳ X2 · refused: Refused 2.",
+        line for k in (4, 3, 2, 1) for line in (f"- `{b(k)}`: tove", f"     ↳ X{k} · refused: Refused {k}.")
     ]
-    one = "1 more refusal stands and is not carried: X1; `labels` gives it."
-    assert after(made, frame.PACKED_HEAD) == one and "Refused 1." not in made
+    for laid in (made, before, new):
+        assert "more refusal" not in laid
     for laid in (before, new):
-        assert section(laid, frame.REFUSED_HEAD) == [f"- X{k} (session): Refused {k}. [{b(k)}]" for k in (4, 3, 2)]
-        assert after(laid, frame.REFUSED_HEAD) == one
+        assert section(laid, frame.REFUSED_HEAD) == [f"- X{k} (session): Refused {k}. [{b(k)}]" for k in (4, 3, 2, 1)]
 
 
-def test_five_families_name_the_two_left_oldest_first_and_the_work_follows_the_sentence(tmp_path):
+def test_five_families_all_cross_and_the_work_follows_them(tmp_path):
+    """Five families, all of them carried, the newest first, and the work after them; by count, as a frame past its
+    size is made, no sentence counts them either (it was "2 more refusals stand and are not carried: X1, X2")."""
     labels = tuple(x(f"X{k}", f"Refused {k}.") for k in range(1, 6)) + (WABE,)
     anchors = tuple((f"X{k}", b(k)) for k in range(1, 6)) + (("W1", b(6)),)
     with framed(tmp_path, his(*(b(k) for k in range(1, 7))), labels, anchors):
         made = frame.compose(tmp_path, 9000, session="s1")
         counted = frame._composed(tmp_path, 9000, False, "", by_count=True)
-    two = "2 more refusals stand and are not carried: X1, X2; `labels` gives them."
-    assert after(made, frame.PACKED_HEAD) == two
-    assert after(made, frame.PACKED_HEAD, 2).split("\n") == [
+    assert section(made, frame.PACKED_HEAD) == [
+        *(line for k in (5, 4, 3, 2, 1) for line in (f"- `{b(k)}`: tove", f"     ↳ X{k} · refused: Refused {k}.")),
         "- `b0000006`: tove",
         "     ↳ W1 (session): The wabe is mapped. [b0000006]",
     ]
-    assert after(counted, frame.REFUSED_HEAD) == "2 more refusals stand and are not carried; `labels` gives them."
+    assert section(counted, frame.REFUSED_HEAD) == [f"- X{k} (session): Refused {k}. [{b(k)}]" for k in (5, 4, 3, 2, 1)]
+    assert "more refusal" not in made and "more refusal" not in counted
 
 
 def test_laid_out_as_before_the_refusals_are_a_part_of_their_own_before_the_work_and_quote_nothing(tmp_path):
@@ -488,15 +488,15 @@ def test_a_family_in_another_models_hand_or_resting_on_nothing_held(tmp_path):
     assert "1 label rests on what the archive no longer holds: X3; `labels` gives them." in made
 
 
-def long_refusals(folder: Path, refusals: bool = True, digits: int = 1):
+def long_refusals(folder: Path, refusals: bool = True, digits: int = 1, long: int = 0):
     """A home with five families of refusals, each asked by two long messages, and a line at the door and a work
-    label resting on twenty more: the refusals take what room they find, and the rest goes to the sentence. Without
-    `refusals`, the same home with none; with `digits`, keys of that many digits, as a page written by hand may
-    hold."""
+    label resting on twenty more. Without `refusals`, the same home with none; with `digits`, keys of that many
+    digits, as a page written by hand may hold; with `long`, reasons of that many characters."""
     asks = [b(k) for k in range(1, 11)]
     words = [b(k) for k in range(11, 31)]
     key = [f"X{k:0{digits}d}" for k in range(1, 6)]
-    labels = tuple(x(key[k - 1], f"Refused {k}, " + "for a reason " * 20) for k in range(1, 6) if refusals)
+    reason = [(f"Refused {k}, " + "for a reason " * 400)[: long or 271].rstrip() + "." for k in range(1, 6)]
+    labels = tuple(x(key[k - 1], reason[k - 1]) for k in range(1, 6) if refusals)
     labels += (DOOR, WABE)
     anchors = tuple((key[k - 1], asks[2 * k - 2 + n]) for k in range(1, 6) for n in (0, 1))
     anchors += tuple((name, each) for name in ("N1", "W1") for each in words)
@@ -512,39 +512,72 @@ def families_in(made: str) -> int:
     )
 
 
-def test_a_frame_with_refusals_never_passes_its_size(tmp_path):
+def test_a_frame_carries_every_family_at_every_size_and_passes_its_size_only_for_them(tmp_path):
+    """Five families, at every size, packed, laid out as before and for a new session: all five cross, by their
+    sentences whole, and no sentence counts them (three crossed at the most, none at the least size, and the rest
+    were counted). A frame stays within its size where everything else it carries can give way to them; where it
+    is longer, it is the frame of the least size, which carries nothing that can give way: no work, no sentence
+    of the person's, and the line at the door at its least."""
     sizes = range(frame.LEAST, frame.MOST + 1, 25)
-    with long_refusals(tmp_path, refusals=False):  # a new session's frame at the smallest sizes is past it already
-        none = {size: len(frame.compose(tmp_path, size, new=True)) for size in sizes}
-    carried = set()
+    variants = (("s1", False), ("", False), ("", True))
     with long_refusals(tmp_path):
+        least = {
+            variant: frame.compose(tmp_path, frame.LEAST, new=variant[1], session=variant[0]) for variant in variants
+        }
         for size in sizes:
-            for session, new in (("s1", False), ("", False), ("", True)):
+            for session, new in variants:
                 made = frame.compose(tmp_path, size, new=new, session=session)
-                assert len(made) <= (max(size, none[size]) if new else size), (size, session, new)
-                carried.add(families_in(made))
-                # five families, three carried at the most: the rest are named, unless a new session's frame is past
-                # its size already with none
-                shortest = len("5 more refusals stand and are not carried; `labels` gives them.") + 2
-                assert "more refusal" in made or (new and none[size] + shortest > size), (size, session, new)
-    assert carried >= {0, 1, 2, 3}  # none at the least size, three at the most, and some between
+                assert families_in(made) == 5 and "more refusal" not in made, (size, session, new)
+                assert all(f"Refused {k}, for a reason" in made for k in range(1, 6)), (size, session, new)
+                assert len(made) <= frame.MOST, (size, session, new)
+                if len(made) > size:
+                    assert made == least[session, new], (size, session, new)
+    for made in least.values():
+        assert len(made) > frame.LEAST and "W1" not in made and "- `b00000" not in made and "tove tove" not in made
 
 
-def test_where_no_family_fits_the_sentence_alone_names_them_by_key_or_by_count_where_that_is_all_that_fits(tmp_path):
+def test_only_past_the_most_a_frame_may_be_do_the_oldest_families_go_to_the_sentence_that_counts_them(tmp_path):
+    """Five families of 3,000-character reasons are more than the most a hook can carry (MOST): the newest cross whole
+    as long as they fit within it, and the oldest go to the sentence that names them by key, oldest first; with keys
+    written by hand so long that naming them would pass MOST, it says how many they are. At the least size five
+    families of short reasons all cross, and the frame is longer than the size asked (they went to that sentence)."""
     with long_refusals(tmp_path):
         least = frame.compose(tmp_path, frame.LEAST, session="s1")
-    with long_refusals(tmp_path, digits=40):
-        long_keys = frame.compose(tmp_path, frame.LEAST, session="s1")
-    for made in (least, long_keys):
-        assert frame.REFUSED_HEAD not in made and "· refused:" not in made and families_in(made) == 0
-        assert len(made) <= frame.LEAST
-    by_key = "\n\n5 more refusals stand and are not carried: X1, X2, X3, X4, X5; `labels` gives them.\n\n"
-    assert by_key in least
-    # keys written by hand so long that naming them would pass the size: the sentence says how many they are
-    assert "\n\n5 more refusals stand and are not carried; `labels` gives them.\n\n" in long_keys
-    assert len(long_keys) - len("; `labels` gives them.") + len(": " + ", ".join(["X" + "0" * 39 + "1"] * 5)) > (
-        frame.LEAST
-    )
+    assert families_in(least) == 5 and "more refusal" not in least and frame.LEAST < len(least) <= frame.MOST
+    with long_refusals(tmp_path, long=3000):
+        most = frame.compose(tmp_path, frame.MOST, session="s1")
+        least = frame.compose(tmp_path, frame.LEAST, session="s1")
+    carried = families_in(most)
+    left = [f"X{k}" for k in range(1, 6 - carried)]
+    assert 0 < carried < 5 and len(most) <= frame.MOST and len(least) <= frame.MOST
+    for made in (most, least):  # at the least size as at the most: the frame is as long as the families make it
+        assert families_in(made) == carried, made
+        assert f"{len(left)} more refusals stand and are not carried: {', '.join(left)}; `labels` gives them." in made
+    one_more = len(f"- X{5 - carried} (session): ") + 3000
+    assert len(most) + one_more > frame.MOST  # the newest of those left would pass it
+    with long_refusals(tmp_path, digits=1000, long=3000):
+        long_keys = frame.compose(tmp_path, frame.MOST, session="s1")
+    carried = families_in(long_keys)
+    assert 0 < carried < 5 and len(long_keys) <= frame.MOST
+    counted = f"{5 - carried} more refusal{'s' if carried < 4 else ''} stand{'' if carried < 4 else 's'} and "
+    assert counted in long_keys and "not carried; `labels` gives" in long_keys
+    named = ", ".join("X" + "0" * 999 + str(k) for k in range(1, 6 - carried))
+    assert len(long_keys) + len(": " + named) > frame.MOST  # naming them by key would pass it
+
+
+def test_a_family_whose_line_alone_passes_the_most_goes_to_the_sentence_that_counts_it_in_a_part_of_its_own(tmp_path):
+    """One family whose reason is 9,400 characters, as a page written by hand may hold it (a mark takes LONGEST at the
+    most): beside what the frame cannot give way, its line would take the frame past MOST, so it goes to the sentence
+    that counts the families, and no family is carried. The sentence then follows no refusal: it stands as a part of
+    its own, where their part would be, packed, laid out as before and for a new session, within MOST."""
+    reason = ("Refused, " + "for a reason " * 800)[:9400].rstrip() + "."
+    counted = "1 more refusal stands and is not carried: X1; `labels` gives it."
+    with framed(tmp_path, his(b(1), b(2)), (DOOR, x("X1", reason), WABE), (("N1", b(2)), ("X1", b(1)), ("W1", b(2)))):
+        for session, new in (("s1", False), ("", False), ("", True)):
+            made = frame.compose(tmp_path, frame.MOST, new=new, session=session)
+            assert families_in(made) == 0 and "for a reason" not in made, (session, new)
+            assert f"\n\n{counted}\n\n" in made and made.count("more refusal") == 1, (session, new)
+            assert frame.REFUSED_HEAD not in made and len(made) <= frame.MOST, (session, new)
 
 
 def test_a_frame_with_no_refusal_is_as_it_was(tmp_path):
@@ -623,11 +656,11 @@ def test_crossing_gives_the_frame_of_the_session_that_spoke_last_as_the_door_mak
     folder, project = tmp_path.resolve() / "home", tmp_path.resolve() / "project"
     folder.mkdir()
     asked: list = []
-    compose = frame.compose
+    with_trade = frame.with_trade  # the server tells the sentence after the frame: both are of one making
 
     def composed(*args, **kwargs):
         asked.append(kwargs)
-        return compose(*args, **kwargs)
+        return with_trade(*args, **kwargs)
 
     with kept_home(folder, b(1), f"{b(2)}@s2"), served(folder, project):
         assert serve.call("mark", {"kind": "refused", "sentence": BRANCH, "anchors": [b(1)]}) == ("marked X1", False)
@@ -638,7 +671,7 @@ def test_crossing_gives_the_frame_of_the_session_that_spoke_last_as_the_door_mak
         assert [line.split(" ")[1] for line in listed] == ["X2", "X1"]
         store.build(folder)
         was = files(folder)
-        with standing_in(frame, "compose", composed):
+        with standing_in(frame, "with_trade", composed):
             text, failed = serve.call("crossing", {})
         answer = serve.handle({"id": 1, "method": "tools/call", "params": {"name": "crossing", "arguments": {}}})
         assert files(folder) == was
@@ -652,7 +685,7 @@ def test_crossing_gives_the_frame_of_the_session_that_spoke_last_as_the_door_mak
         f"     ↳ X2 · refused: {AGAIN} (judged again once)",
     ]
     asked.clear()
-    with kept_home(folder, f"{b(2)}@s2", b(1)), served(folder, project), standing_in(frame, "compose", composed):
+    with kept_home(folder, f"{b(2)}@s2", b(1)), served(folder, project), standing_in(frame, "with_trade", composed):
         assert serve.call("crossing", {})[1] is False
     assert [each["session"] for each in asked] == ["s1"]  # now s1 spoke last
 
@@ -692,7 +725,7 @@ def test_the_texts_a_session_is_told_of_refusals_and_of_crossing_stand_word_for_
     assert kind["description"] == MARK_KIND and kind["enum"] == ["relation", "work", "refused", "silenced"]
     listing = tools["labels"]["inputSchema"]["properties"]["kind"]
     assert listing["enum"] == ["relation", "work", "next", "refused"] and listing["description"] == LABELS_KIND
-    assert len(json.dumps(serve.TOOLS)) < 5400  # the size the server's own test holds every tool to
+    assert len(json.dumps(serve.TOOLS)) < 5900  # the size the server's own test holds every tool to
     assert tools["crossing"]["description"] == CROSSING
     assert set(tools["crossing"]["inputSchema"]["properties"]) == {"home"} and serve.NAMES[-1] == "crossing"
     for told in (started, alone):
@@ -798,10 +831,14 @@ def test_a_misaligned_refusal_is_carried_as_itself_with_the_note_a_misaligned_st
     lines = [f"- X6 (session): Over a standing line.{again} [R1, b0000003]"]
     lines += [f"- X5 (session): Of two families.{again} [X1, X4, b0000003]"]
     assert section(made, frame.REFUSED_HEAD) == lines  # packed: they quote nothing, so they stand apart
-    assert section(before, frame.REFUSED_HEAD) == lines + ["- X4 (session): The tag is not pushed. [b0000002]"]
+    assert section(before, frame.REFUSED_HEAD) == lines + [
+        "- X4 (session): The tag is not pushed. [b0000002]",
+        f"- X1 (session): {BRANCH} [b0000001]",
+    ]
     assert "- `b0000003`" not in made  # quoted on no misaligned label's account
-    for laid in (made, before):  # four, and three carried at the most: the oldest is named
-        assert "1 more refusal stands and is not carried: X1; `labels` gives it." in laid
+    assert f"     ↳ X1 · refused: {BRANCH}" in made.split("\n")  # four, and every one carried: the oldest too
+    for laid in (made, before):
+        assert "more refusal" not in laid
     kept = [
         {"id": "X1", "kind": "refused", "text": "a", "anchors": [b(1)], "beneath": []},
         {"id": "X2", "kind": "refused", "text": "b", "anchors": [b(1)], "beneath": [("R1", "000000")]},
@@ -880,7 +917,7 @@ def test_an_index_made_by_a_make_before_refusals_or_silencings_is_made_again_and
         f"| W1 | The wabe is mapped. | session | `{b(1)}` |\n| X1 | {BRANCH} | session | `{b(1)}` |\n"
         f"| S1 | {DROPPED} | his | `X1@{x1}`, `{b(1)}` |\n"
     )
-    assert store.MADE == 8
+    assert store.MADE == 9
     for make, gone in ((6, "('refused', 'silenced')"), (7, "('silenced')")):  # before refusals; before silencings
         store.build(tmp_path)
         db = sqlite3.connect(tmp_path / "store.db")
@@ -895,7 +932,7 @@ def test_an_index_made_by_a_make_before_refusals_or_silencings_is_made_again_and
         assert store.refresh(tmp_path) is False, make  # made again whole, on disk
         db = sqlite3.connect(tmp_path / "store.db")
         try:
-            assert db.execute("pragma user_version").fetchone()[0] == 8
+            assert db.execute("pragma user_version").fetchone()[0] == 9
             assert [r[0] for r in db.execute("select id from label where kind in ('refused', 'silenced')")] == [
                 "X1",
                 "S1",
@@ -1187,7 +1224,7 @@ def test_the_run_of_a_family_is_given_by_any_of_its_keys_in_order_with_kinds_and
     lines = [
         f"- X1 (refused, session, cooled beneath X3): {BRANCH} [b0000001]",
         f"  - X2 (refused, session, cooled beneath X3): {AGAIN} [X1, b0000002]",
-        f"  - S1 (silenced, his, cooled beneath X3): {DROPPED} [X1, b0000003]",
+        f"  - S1 (silenced, theirs, cooled beneath X3): {DROPPED} [X1, b0000003]",
         f"  - X3 (refused, session): {LAST} [X1, b0000004]",
     ]
     assert all(each == ("\n".join(lines), False) for each in run)
@@ -1195,7 +1232,7 @@ def test_the_run_of_a_family_is_given_by_any_of_its_keys_in_order_with_kinds_and
         "- S2 (silenced, session): Pushed by hand. [X4, b0000005]",
         "- X4 (session, cooled beneath S2): The tag is not pushed. [b0000005]",
         f"- X3 (session): {LAST} [X1, b0000004]",
-        f"- S1 (silenced, his, cooled beneath X3): {DROPPED} [X1, b0000003]",
+        f"- S1 (silenced, theirs, cooled beneath X3): {DROPPED} [X1, b0000003]",
         f"- X2 (session, cooled beneath X3): {AGAIN} [X1, b0000002]",
         f"- X1 (session, cooled beneath X3): {BRANCH} [b0000001]",
     ]

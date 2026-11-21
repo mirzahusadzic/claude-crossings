@@ -107,14 +107,14 @@ def test_the_protocol_is_spoken_by_hand_over_a_pipe(tmp_path):
 
 def test_every_handle_is_a_small_tool_kept_in_front_of_a_session():
     """A harness shows a model only a server's tool names until it searches for one, unless the
-    tool says to be loaded. Seven small handles are to be in front of a session."""
+    tool says to be loaded. Eight small handles are to be in front of a session."""
     for one in serve.TOOLS:
         assert one["_meta"] == {"anthropic/alwaysLoad": True} and one["inputSchema"]["type"] == "object"
         assert set(one["inputSchema"]["required"]) <= set(one["inputSchema"]["properties"])
         assert len(one["description"]) < (
             400 if one["name"] in ("mark", "leave") else 260
         )  # these two also say what a label is for
-    assert len(json.dumps(serve.TOOLS)) < 5400
+    assert len(json.dumps(serve.TOOLS)) < 5900
     wired = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]["door"]
     assert wired == {
         "command": "python3",
@@ -255,7 +255,7 @@ def test_each_handle_answers_as_the_door_does(tmp_path):
         assert said("look", home="ours")[0].startswith("The store in outline: 0 days, 0 messages")
         assert "- W1 (both, 2026-11-11): The hull is to be painted grey in spring." in said("labels")[0]
         assert said("labels", kind="relation", day="2026-11-11", ids=[])[0].startswith(
-            "- R1 (his, 2026-11-11): His boat"
+            "- R1 (theirs, 2026-11-11): Their boat"
         )
         assert said("labels", kind="gossip", day=" ", ids=["w1", 5, " "])[0].startswith("- W1 (both, 2026-11-11)")
         assert f"- `{D}` the person" in said("find", words="painted")[0]

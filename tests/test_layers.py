@@ -22,13 +22,17 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
 from test_edges import set_to  # noqa: E402
-from test_store import D, E, at_terminal, home, in_person, row, started_by, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
+from test_nest import ASKED, BRANCH, DECLINED, LET_BE, ORDER, SESSION, TAG, TWO_ENDED, families_carried, nested, rows_of  # noqa: E402
+from test_nest import DOOR as LEFT  # noqa: E402  (the made-up line at the door of those homes)
+from test_nest import held as asked_home  # noqa: E402  (a home of a made-up session, its labels marked in turn)
+from test_nest import made as tied_home  # noqa: E402  (a home of a made-up session with a line at the door)
+from test_store import D, E, at_terminal, home, in_person, row, started_by, sweep, switched_on  # noqa: E402  (and its data folder: no test reaches the real home)
 
 from crossing import door, frame, hook, layer, serve, store  # noqa: E402
 
 M1, M2, M0 = "model-one", "model-two", "model-zero"  # made-up names, no real model's
 DAY = "2026-11-12"
-TERN = "His boat is called Tern and lies at mooring 41."  # R1: his, by no known model
+TERN = "Their boat is called Tern and lies at mooring 41."  # R1: his, by no known model
 HULL = "The hull is to be painted grey in spring."  # W1: both, by no known model
 KEEL = "The keel is checked every autumn."  # R2: his, by model-one
 WATCH = "The two of them keep the night watch together."  # R3: both, by model-one
@@ -116,7 +120,7 @@ def test_the_frame_for_a_model_that_arrives_carries_the_persons_lines_and_not_an
     text = frame.compose(crossings, model=M2)
     assert (
         section(text, "Standing, about the two of you")
-        == f"- R1 (his): {TERN} [aaaaaaaa, bbbbbbbb]\n- R2 (his): {KEEL} [dddddddd]"
+        == f"- R1 (theirs): {TERN} [aaaaaaaa, bbbbbbbb]\n- R2 (theirs): {KEEL} [dddddddd]"
     )
     assert section(text, "The work, newest first") == (
         f"- W3 (session): {FENDERS} [eeeeeeee]\n- W1 (both): {HULL} [dddddddd, eeeeeeee]"
@@ -148,18 +152,18 @@ def test_a_stack_by_another_model_over_the_persons_lines_lets_them_cross_as_them
     one, two = frame.compose(crossings, model=M1), frame.compose(crossings, model=M2)
     assert (
         section(one, "Standing, about the two of you")
-        == f"- R3 (both): {WATCH} [10000002]\n- R4 (his): {CARE} [R1, R2]"
+        == f"- R3 (both): {WATCH} [10000002]\n- R4 (theirs): {CARE} [R1, R2]"
     )
     assert (
         section(two, "Standing, about the two of you")
-        == f"- R1 (his): {TERN} [aaaaaaaa, bbbbbbbb]\n- R2 (his): {KEEL} [dddddddd]"
+        == f"- R1 (theirs): {TERN} [aaaaaaaa, bbbbbbbb]\n- R2 (theirs): {KEEL} [dddddddd]"
     )
     assert CARE not in two and frame.compose(crossings) == one
     # Two deep: a stack of no known model's over model-one's stack. Model-two carries the one over it,
     # and the person's lines beneath model-one's stack stay behind the stack that is carried.
     assert store.mark(crossings, "relation", "his", "All of it, kept.", ["R4", "R3"], day=DAY)["id"] == "R5"
     assert section(frame.compose(crossings, model=M2), "Standing, about the two of you") == (
-        f"- R1 (his): {TERN} [aaaaaaaa, bbbbbbbb]\n- R2 (his): {KEEL} [dddddddd]\n- R5 (his): All of it, kept. [R4, R3]"
+        f"- R1 (theirs): {TERN} [aaaaaaaa, bbbbbbbb]\n- R2 (theirs): {KEEL} [dddddddd]\n- R5 (theirs): All of it, kept. [R4, R3]"
     )
 
 
@@ -168,7 +172,7 @@ def test_lines_whose_writer_is_not_known_are_carried_for_every_model(tmp_path):
     for model in (M1, M2, M0, ""):
         text = frame.compose(crossings, model=model)
         assert (
-            f"- W1 (both): {HULL}" in text and f"- W3 (session): {FENDERS}" in text and f"- R1 (his): {TERN}" in text
+            f"- W1 (both): {HULL}" in text and f"- W3 (session): {FENDERS}" in text and f"- R1 (theirs): {TERN}" in text
         ), model
 
 
@@ -196,6 +200,77 @@ def test_another_models_messages_alone_are_said_and_a_new_session_is_told_of_its
     assert TOLD.format(M1) in fresh and CHAIN not in fresh and "## The work" not in fresh
     store.strike(alone, "W2")
     assert frame.compose(alone, new=True, model=M2) == ""  # nothing at all to carry or to tell of: nothing, as before
+
+
+# --- the sentence of other models' lines, and the frame's size -------------------------------------------------
+
+ONE = "made-up-model-0-xxxxxxxxx"  # a made-up name of 25 characters
+LONG = [f"other-model-{n}-" + "x" * 70 for n in range(1, 9)]  # eight made-up names of 84 characters, shown by 80
+SPOKEN = ["b1000002", "b1000004", "b1000005", "b1000007", "b1000009", "b1000011", "b1000013", "b1000015"]
+LEFT_WHOLE = f"- N1 (session): {LEFT} [{', '.join(TWO_ENDED)}]"  # the line at the door of these homes, whole
+# The frames 56d3925 made at the least size of the homes below, one message of the session's in each by a model of
+# 25 characters: how long the frame may be now, at the most; and how such a frame says the standing lines that did
+# not fit, by count.
+AT_56D3925 = {"full": 2498, "small": 2434}
+COUNTED = {
+    "full": "46 standing lines did not fit and are not carried; `labels` gives them.",
+    "small": "1 standing line did not fit and is not carried; `labels` gives them.",
+}
+
+
+def lines_of_eight(tmp_path: Path) -> Path:
+    """A home that holds eight messages of the session's voice, each made by one of eight models with long names, and
+    nothing else."""
+    project = tmp_path / "project"
+    crossings = project / "crossings"
+    crossings.mkdir(parents=True)
+    switched_on(project)
+    rows = [spoken(f"9000000{n}", n, f"Session line {n}.", LONG[n - 1]) for n in range(1, 9)]
+    assert store.archive(written(tmp_path, "eight-0001", rows), crossings) == 8
+    store.build(crossings)
+    return crossings
+
+
+def test_one_message_of_another_model_gives_a_frame_past_the_least_size_by_count_and_no_longer_than_it_was(tmp_path):
+    """Guard: at the least size, the sentence about another model's lines and the closing's words for it took a frame
+    that holds its size without them past it, by one message of a model of 25 characters, and nothing gave way for it:
+    2,498 characters of 2,400 in a full home and 2,434 in a small one. Past the size asked, the frame is made again by
+    count, and the sentence then names no model, saying only that there is another. The line at the door keeps its
+    least, and the frame is no longer than it was: where its fixed sentences and that least are longer than the size,
+    it is as long as they are."""
+    for name, full in (("full", True), ("small", False)):
+        crossings = tied_home(tmp_path / name, rows=rows_of(ORDER, models={"b1000002": ONE}), full=full)
+        for session in (SESSION, ""):
+            made = frame.compose(crossings, frame.LEAST, model=M2, session=session)
+            assert COUNTED[name] in made.split("\n\n"), (name, session)  # by count
+            assert made.startswith(frame.opening() + "\n\n" + TOLD.replace(", {}", "") + "\n\n"), (name, session)
+            assert LEFT_WHOLE in made.split("\n"), (name, session)  # the line at the door, at its least or more
+            assert len(made) <= AT_56D3925[name], (name, session, len(made))
+
+
+def test_eight_long_names_of_other_models_give_way_to_fewer_and_to_how_many_they_are_at_the_least_size(tmp_path):
+    """Guard: eight models of long names, each shown by its first 80 characters, took the least frame to 2,728
+    characters in a home of their messages alone. The sentence names as many of them as the frame has room for and
+    counts the rest, and the frame is held to its size; in a full home, where it has room for none, it says how many
+    they are. It is never left out, and the line at the door keeps its least."""
+    eight = frame.compose(lines_of_eight(tmp_path / "eight"), frame.LEAST, model=M2)
+    assert len(eight) <= frame.LEAST
+    assert MANY.format(f"{LONG[0][:80]}, {LONG[1][:80]}, {LONG[2][:80]} and 5 more") in eight
+    full = tied_home(tmp_path / "full", rows=rows_of(ORDER, models=dict(zip(SPOKEN, LONG))), full=True)
+    for session in (SESSION, ""):
+        made = frame.compose(full, frame.LEAST, model=M2, session=session)
+        assert TOLD.replace("another model, {}", "8 other models") in made and COUNTED["full"] in made, session
+        assert LEFT_WHOLE in made.split("\n"), session
+
+
+def test_eight_long_names_of_other_models_are_all_named_where_the_frame_has_room(tmp_path):
+    """Pin: at the usual size a full home with eight models of long names is held to its size with each of them named,
+    as before: the sentence gives way only where the frame would otherwise pass its size."""
+    full = tied_home(tmp_path, rows=rows_of(ORDER, models=dict(zip(SPOKEN, LONG))), full=True)
+    for session in (SESSION, ""):
+        made = frame.compose(full, frame.SIZE, model=M2, session=session)
+        assert len(made) <= frame.SIZE and LEFT_WHOLE in made.split("\n"), session
+        assert MANY.format(", ".join(each[:80] for each in LONG[:7]) + f" and {LONG[7][:80]}") in made, session
 
 
 @in_person
@@ -258,7 +333,7 @@ def test_the_doors_lists_name_the_model_only_where_two_are_known(tmp_path):
     assert f"- W3 (session, 2026-11-11): {FENDERS}" in two  # not known: nothing said of it
     standing = through("labels", "--kind", "relation", "--cwd", project)[1]
     assert (
-        f"- R2 (his, 2026-11-11): {KEEL}" in standing
+        f"- R2 (theirs, 2026-11-11): {KEEL}" in standing
         and f"- R3 (both, 2026-11-11, written by {M1}): {WATCH}" in standing
     )
     look = through("look", "--cwd", project)[1]
@@ -273,7 +348,7 @@ def test_the_doors_lists_name_the_model_only_where_two_are_known(tmp_path):
     assert f"- W2 (work, both, written by {M1}): {CHAIN}" in found
     assert f"`20000002` the session ({M2}), " in through("find", "split", "--cwd", project)[1]
     assert (
-        f"- R2 (relation, his): {KEEL}" in through("find", "keel", "--cwd", project)[1]
+        f"- R2 (relation, theirs): {KEEL}" in through("find", "keel", "--cwd", project)[1]
     )  # the person's line: no model's
     with set_to(CLAUDE_PROJECT_DIR=project):
         assert f"written by {M1}" in said("labels")[0] and f"({M1})" in said("thread", id="10000002")[0]
@@ -287,8 +362,8 @@ def test_a_home_with_one_known_model_reads_byte_for_byte_as_before(tmp_path):
     labels = through("labels", "--kind", "relation", "--cwd", project)[1]
     assert labels == (
         f"- R3 (both, 2026-11-11): {WATCH} [10000002]\n"
-        f"- R2 (his, 2026-11-11): {KEEL} [dddddddd]\n"
-        f"- R1 (his, 2026-11-11): {TERN} [aaaaaaaa, bbbbbbbb]\n"
+        f"- R2 (theirs, 2026-11-11): {KEEL} [dddddddd]\n"
+        f"- R1 (theirs, 2026-11-11): {TERN} [aaaaaaaa, bbbbbbbb]\n"
     )
     text = frame.compose(crossings, model=M1)
     assert text == frame.compose(crossings) and text.endswith(
@@ -297,10 +372,204 @@ def test_a_home_with_one_known_model_reads_byte_for_byte_as_before(tmp_path):
         "The store holds 3 messages of the person's and 3 of yours, from 2026-11-11 to 2026-11-11, and 6 labels.\n"
     )
     assert section(text, "Standing, about the two of you") == (
-        f"- R1 (his): {TERN} [aaaaaaaa, bbbbbbbb]\n- R2 (his): {KEEL} [dddddddd]\n- R3 (both): {WATCH} [10000002]"
+        f"- R1 (theirs): {TERN} [aaaaaaaa, bbbbbbbb]\n- R2 (theirs): {KEEL} [dddddddd]\n- R3 (both): {WATCH} [10000002]"
     )
     plain, _ = home(tmp_path / "plain")  # and a home with none
     assert store.known(plain) == [] and frame.compose(plain, model=M2) == frame.compose(plain)
+
+
+# --- a silencing across models ------------------------------------------------------------------------------------
+
+
+def refused_and_silenced(folder: Path, asking: str, other: str, whose: str) -> Path:
+    """A home of a made-up session whose answers `asking` made, so that the server asks as that model: a line at the
+    door on the person's ask and the session's declining answer, a refusal written under `asking` on the ask (X1),
+    and a silencing of it written under `other` (S1), whose it is as `whose` gives it: the person's (`their`) or both
+    their own on the person's next message, or the session's own on its answer to it."""
+    rows = rows_of("ababababababab", ASKED, {f"b1{n:06d}": asking for n in range(2, 15, 2)})
+    door_ = ("next", "session", LEFT, ["a1000003", "b1000004"])
+    crossings = asked_home(folder, [], rows=rows, door=door_)
+    assert store.mark(crossings, "refused", "session", BRANCH, ["a1000003"], day=DAY, model=asking)["written"]
+    on = "b1000012" if whose == "session" else "a1000011"
+    assert store.mark(crossings, "silenced", whose, LET_BE, ["X1", on], day=DAY, model=other)["written"]
+    return crossings
+
+
+def test_the_persons_silencing_puts_a_refusal_to_rest_for_every_model_and_the_sessions_for_its_own_alone(tmp_path):
+    """Guard: a refusal written under one model and silenced under another was carried in the first model's frame
+    whoever the silencing was, the person too, while `look` and `labels` called it silenced: "0 refusals standing, 1
+    silenced (S1)" and "cooled beneath S1". The person's silencing, theirs or both their own, puts it to rest in every
+    model's frame now, and `look` and `labels` call it silenced; a session's own silencing under another model leaves
+    this model's refusal standing in this model's frame, and `look`, `labels` and `status` say it stands here, for the
+    model that asks, as the server's `crossing` takes it: that of the session that spoke last. And so the other way
+    about. Beside the ask, the session's answer stands by its id alone in every case."""
+    for asking, other in ((M1, M2), (M2, M1)):
+        for whose in ("their", "both", "session"):
+            crossings = refused_and_silenced(tmp_path / f"{asking}-{whose}", asking, other, whose)
+            on = frame.compose(crossings, session=SESSION, model=asking)
+            with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)):
+                crossing, looked, listed, status = (said(name, **given)[0] for name, given in (
+                    ("crossing", {}), ("look", {}), ("labels", {"ids": ["X1"]}), ("status", {}),
+                ))  # fmt: skip
+            assert crossing.startswith(on), (asking, whose)  # the server asks as the session that spoke last
+            assert nested(on) == ["     · after it, the session (N1): `b1000004`"] and DECLINED[0] not in on, (
+                asking,
+                whose,
+            )
+            x1 = next(line for line in listed.split("\n") if line.startswith("- X1 ("))
+            if whose != "session":  # the person's: at rest for every model
+                assert families_carried(on) == [] and BRANCH not in on, (asking, whose)
+                assert "0 refusals standing, 1 silenced (S1)" in looked and ", cooled beneath S1," in x1, (
+                    asking,
+                    whose,
+                )
+                assert "Of the refusals, 0 stand and 1 is silenced." in status, (asking, whose)
+                assert "Of the labels: 1 cooled, 0 misaligned, 0 unresolved." in status, status
+            else:  # the session's own under another model: this model's refusal stands here, whole
+                assert families_carried(on) == ["X1"] and BRANCH in on, (asking, whose)
+                assert "1 refusal standing (X1); X1 is at rest for another model alone, not for this one" in looked
+                assert "silenced (S1)" not in looked and "cooled beneath" not in x1, (asking, x1)
+                assert ", standing here: S1 puts it to rest for another model alone," in x1, x1
+                assert (
+                    "Of the refusals, 1 stands and 0 are silenced; X1 is at rest for another model alone, not for this "
+                    "one." in status
+                ), status
+                assert "Of the labels:" not in status, status  # X1 is no label cooled beneath another, here
+                # and for the model that wrote the silencing, its own works as it does: the family is at rest there
+                assert BRANCH not in frame.compose(crossings, session=SESSION, model=other)
+                assert store.refusals(crossings, other) == {"standing": [], "silenced": ["S1"]}
+
+
+def test_in_a_home_of_one_model_a_refusal_and_its_silencing_read_as_they_did(tmp_path):
+    """Pin: where the refusal and its silencing are of the one model the home knows, the frame for that model and
+    what `look`, `labels` and `status` answer through the server, which asks for it, are what they are with no model
+    named, as before: the family at rest, no line of it carried, and no word of another model."""
+    for whose in ("their", "session"):
+        crossings = refused_and_silenced(tmp_path / whose, M1, M1, whose)
+        assert frame.compose(crossings, session=SESSION, model=M1) == frame.compose(crossings, session=SESSION)
+        with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)):
+            served = [
+                said(name, **given)[0] for name, given in (("look", {}), ("labels", {"ids": ["X1"]}), ("status", {}))
+            ]
+        project = str(crossings.parent)
+        plain = [
+            through(name, *more, "--cwd", project, "--bare")[1].rstrip("\n")
+            for name, *more in (["look"], ["labels", "X1"], ["status"])
+        ]
+        assert served == plain and "another model" not in "".join(served), whose
+        assert "0 refusals standing, 1 silenced (S1)" in served[0] and ", cooled beneath S1" in served[1], whose
+
+
+def test_a_family_judged_again_under_one_model_and_silenced_under_another_stands_here_by_its_newest_judgment(tmp_path):
+    """X1 and its judgment X2 written under model-one, and the session's own silencing S1 under model-two: the index
+    carries S1 and cools X1 and X2 beneath it. For model-one, as the server asks, the family stands here by X2, the
+    newest of its own layer, and X1 is cooled beneath X2, not beneath S1, which puts it to rest for model-two alone.
+    For model-two, and with no model named, both stay cooled beneath S1."""
+    rows = rows_of("ababababababab", ASKED, {f"b1{n:06d}": M1 for n in range(2, 15, 2)})
+    crossings = asked_home(tmp_path, [], rows=rows, door=("next", "session", LEFT, ["a1000003", "b1000004"]))
+    for kind, sentence, anchors, model in (
+        ("refused", BRANCH, ["a1000003"], M1),
+        ("refused", TAG, ["X1", "a1000007"], M1),
+        ("silenced", LET_BE, ["X2", "b1000012"], M2),
+    ):
+        assert store.mark(crossings, kind, "session", sentence, anchors, day=DAY, model=model)["written"], sentence
+    with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)):  # model-one's session spoke last
+        looked, listed, status = (said(name, **given)[0] for name, given in (
+            ("look", {}), ("labels", {"ids": ["X1"]}), ("status", {}),
+        ))  # fmt: skip
+    clause = "X2 is at rest for another model alone, not for this one"
+    assert f"; 1 refusal standing (X2); {clause}." in looked, looked
+    assert listed.split("\n") == [
+        f"- X1 (refused, session, 2026-11-11, cooled beneath X2, written by model-one): {BRANCH} [a1000003]",
+        "  - X2 (refused, session, 2026-11-11, standing here: S1 puts it to rest for another model alone, written by "
+        f"model-one): {TAG} [X1, a1000007]",
+        f"  - S1 (silenced, session, 2026-11-11, written by model-two): {LET_BE} [X1, b1000012]",
+    ], listed
+    assert "Of the labels: 1 cooled, 0 misaligned, 0 unresolved." in status, status
+    assert f"Of the refusals, 1 stands and 0 are silenced; {clause}." in status, status
+    assert families_carried(frame.compose(crossings, session=SESSION, model=M1)) == ["X2"]
+    for model in (M2, ""):
+        found = store.listed(crossings, ids=("X1",), model=model)["labels"]
+        states = [(row["id"], row["state"], row["parent"]) for row in found]
+        assert states == [("X1", "cooled", "S1"), ("X2", "cooled", "S1"), ("S1", "carried", None)], (model, states)
+    assert families_carried(frame.compose(crossings, session=SESSION, model=M2)) == []
+
+
+# --- a family that is another model's alone -------------------------------------------------------------------------
+
+SHACKLE = "The shackle is not to be changed before the survey."  # X1, model-one's refusal of the person's ask
+SURVEYED = "The survey is done, so the shackle may be changed."  # S1, model-one's session's own silencing of it
+
+
+def alone(tmp_path: Path, silenced: bool) -> Path:
+    """The home model-one held and model-two's session spoke in last (see `held` and `arrived`), with a refusal
+    written under model-one on the person's message (X1); with `silenced`, a silencing of it written under model-one,
+    the session's own, on its answer (S1). Every label of the family is of model-one's layer."""
+    crossings, _ = held(tmp_path)
+    arrived(tmp_path, crossings)
+    assert store.mark(crossings, "refused", "session", SHACKLE, ["10000001"], day=DAY, model=M1)["written"]
+    if silenced:
+        assert store.mark(crossings, "silenced", "session", SURVEYED, ["X1", "10000002"], day=DAY, model=M1)["written"]
+    return crossings
+
+
+def answered(crossings: Path) -> tuple[str, str, str, str]:
+    """What the server's crossing, look, labels X1 and status answer: for the model of the session that spoke last."""
+    with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)):
+        return tuple(said(name, **given)[0] for name, given in (  # type: ignore[return-value]
+            ("crossing", {}), ("look", {}), ("labels", {"ids": ["X1"]}), ("status", {}),
+        ))  # fmt: skip
+
+
+def test_a_refusal_of_another_models_alone_is_counted_for_no_family_here_and_said_to_be_that_models(tmp_path):
+    """Guard: a refusal written under model-one and asked about by model-two is carried in no family of model-two's
+    frame, while look, labels and status called it standing for model-two, with no clause: "1 refusal standing (X1)",
+    a row of no state, "Of the refusals, 1 stands". For model-two it is counted neither standing nor silenced now, and
+    one clause, in the words the door has, says it stands for another model alone. For model-one, and with no model
+    named at a terminal, it stands, as before."""
+    crossings = alone(tmp_path, silenced=False)
+    crossing, looked, listed, status = answered(crossings)
+    on = frame.compose(crossings, session="southern", model=M2)
+    assert crossing.startswith(on) and families_carried(on) == [] and SHACKLE not in on  # the server asks as model-two
+    clause = "X1 stands for another model alone, not for this one"
+    assert f"; 0 refusals standing; {clause}." in looked and "1 refusal standing" not in looked, looked
+    x1 = next(line for line in listed.split("\n") if line.startswith("- X1 ("))
+    row = "another model's alone, standing there"  # the row is the label's own, and does not name its key again
+    assert x1 == f"- X1 (refused, session, 2026-11-11, {row}, written by model-one): {SHACKLE} [10000001]", x1
+    assert f" Of the refusals, 0 stand and 0 are silenced; {clause}." in status, status
+    # For the model that wrote it the family stands, and with no model named; its frame carries it, as before.
+    assert families_carried(frame.compose(crossings, session="northern", model=M1)) == ["X1"]
+    assert store.refusals(crossings, M1) == store.refusals(crossings) == {"standing": ["X1"], "silenced": []}
+    plain = through("look", "--cwd", str(crossings.parent), "--bare")[1]
+    assert "; 1 refusal standing (X1)." in plain and "another model" not in plain, plain
+
+
+def test_a_refusal_at_rest_in_another_models_layer_alone_is_counted_for_no_family_here_and_said_to_be_that_models(
+    tmp_path,
+):
+    """Guard: a refusal written under model-one, and silenced by model-one's session, asked about by model-two, is
+    carried in no family of model-two's frame, while look, labels and status called it silenced for model-two, with no
+    clause: "1 silenced (S1)", a row of no state, "1 is silenced". For model-two it is counted neither silenced nor
+    standing now, and one clause says it is another model's alone, at rest there: "is at rest for another model
+    alone", which the door says of a family that stands here, would be false. For model-one, and with no model named
+    at a terminal, it is silenced, as before."""
+    crossings = alone(tmp_path, silenced=True)
+    crossing, looked, listed, status = answered(crossings)
+    on = frame.compose(crossings, session="southern", model=M2)
+    assert crossing.startswith(on) and families_carried(on) == [] and SHACKLE not in on and SURVEYED not in on
+    clause = "S1 is another model's alone, at rest there"
+    assert f"; 0 refusals standing; {clause}." in looked and "silenced (S1)" not in looked, looked
+    rows = listed.split("\n")
+    assert rows[:2] == [
+        f"- X1 (refused, session, 2026-11-11, cooled beneath S1, written by model-one): {SHACKLE} [10000001]",
+        f"  - S1 (silenced, session, 2026-11-11, another model's alone, at rest there, written by model-one): "
+        f"{SURVEYED} [X1, 10000002]",
+    ], rows
+    assert f" Of the refusals, 0 stand and 0 are silenced; {clause}." in status, status
+    assert families_carried(frame.compose(crossings, session="northern", model=M1)) == []
+    assert store.refusals(crossings, M1) == store.refusals(crossings) == {"standing": [], "silenced": ["S1"]}
+    plain = through("look", "--cwd", str(crossings.parent), "--bare")[1]
+    assert "; 0 refusals standing, 1 silenced (S1)." in plain and "another model" not in plain, plain
 
 
 # --- stacks are scoped to one's own layer -----------------------------------------------------------
@@ -501,7 +770,7 @@ def test_layer_signs_only_what_has_no_model_and_refuses_a_key_with_a_space(tmp_p
     assert store.listed(crossings, ids=("W3",))["labels"][0]["model"] == M0
     # Once signed, a line of no known model is of a layer, and is read as one.
     text = frame.compose(crossings, model=M2)
-    assert FENDERS not in text and f"- R1 (his): {TERN}" in text and MANY.format(f"{M1} and {M0}") in text
+    assert FENDERS not in text and f"- R1 (theirs): {TERN}" in text and MANY.format(f"{M1} and {M0}") in text
     assert store.mark(crossings, "work", "both", "Over it.", ["W3"], day=DAY, facing=M2)["why"].startswith(
         "W3 was written by another model, model-zero"
     )

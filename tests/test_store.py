@@ -111,7 +111,7 @@ PAGE = f"""# a hand-over
 
 | # | Label | Whose | Anchors |
 | --- | --- | --- | --- |
-| R1 | His boat is called Tern and lies at mooring 41. | his | 7 / 8 |
+| R1 | Their boat is called Tern and lies at mooring 41. | his | 7 / 8 |
 | W1 | The hull is to be painted grey in spring. | both | `{D}` / `{E}` |
 
 | Line | Id | Voice |
@@ -275,7 +275,7 @@ def test_the_frame_is_small_opens_as_the_plugins_note_and_names_the_door(tmp_pat
     text = frame.compose(crossings)
     assert text.startswith(transcript.CARRIED) and len(text) <= frame.SIZE
     assert frame.TOOL in text and "find" in text and "thread" in text and "mark" in text
-    assert text.index("## Standing") < text.index("R1 (his)") < text.index("## The work") < text.index("W1 (both)")
+    assert text.index("## Standing") < text.index("R1 (theirs)") < text.index("## The work") < text.index("W1 (both)")
     assert f"- `{D}`: We paint the hull grey in spring" in text  # his own words, for their tone
     assert "Grey it is" not in text and "Noted: Tern" not in text  # the session's are one ask away
     assert "left alone until they bring it up" in text
@@ -487,7 +487,7 @@ def test_at_any_cut_the_frame_comes_as_context_from_the_hook(tmp_path):
     out = json.loads(hook.carried(event))
     text = out["hookSpecificOutput"]["additionalContext"]
     assert out["hookSpecificOutput"]["hookEventName"] == "SessionStart"
-    assert text.startswith(transcript.CARRIED) and "- R1 (his): His boat is called Tern" in text
+    assert text.startswith(transcript.CARRIED) and "- R1 (theirs): Their boat is called Tern" in text
     assert "the door's tools" in text and len(text) <= 10000
     assert store.status(crossings)["his"] == 3  # the archive was brought up to the cut first
     line = out["systemMessage"]
@@ -633,7 +633,7 @@ CUT_FRAME = (
     "\n"
     "## Standing, about the two of you\n"
     "\n"
-    "- R1 (his): His boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]\n"
+    "- R1 (theirs): Their boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]\n"
     "\n"
     "## The work, newest first\n"
     "\n"
@@ -768,7 +768,7 @@ def test_a_new_session_is_given_the_frame_in_words_true_for_it(tmp_path):
     assert text.startswith(
         frame.opening(new=True) + "\n\n## Left at the door by the session before you\n\n"
         f"- N1 (session): {DOOR_LINE} [{D}]\n\n"
-        "## Standing, between the person and the sessions before you\n\n- R1 (his): His boat is called Tern"
+        "## Standing, between the person and the sessions before you\n\n- R1 (theirs): Their boat is called Tern"
     )
     assert "\n\n## The work, newest first\n\n- W1 (both): " in text
     assert f"\n\n## The person's own words, as they stand in the record\n\n- `{D}`: We paint the hull grey" in text

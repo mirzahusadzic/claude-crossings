@@ -29,7 +29,7 @@ from crossing import door, frame, handover, serve, store  # noqa: E402
 
 DAY = "2026-11-12"
 HEAD = "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n"
-TERN = "His boat is called Tern and lies at mooring 41."  # R1 of the page every home starts with
+TERN = "Their boat is called Tern and lies at mooring 41."  # R1 of the page every home starts with
 KEEL, SAILS = "The keel is checked every autumn.", "The sails are stowed dry."
 MAST, RIGGING = "The mast was stepped again.", "The rigging was tuned."
 CARE, GEAR, SPARS = (
@@ -392,7 +392,7 @@ def test_a_database_of_an_older_make_is_built_again_before_it_is_read(tmp_path):
     held = store.status(crossings)
     assert (held["his"], held["labels"], held["states"]["cooled"]) == (2, 7, 2)
     older()
-    assert f"- R4 (his): {CARE} [R1, R2]" in frame.compose(crossings)
+    assert f"- R4 (theirs): {CARE} [R1, R2]" in frame.compose(crossings)
     older()
     assert store.look(crossings)["stacks"] == {"lines": 2, "stacks": 1}
 
@@ -476,10 +476,10 @@ def test_a_label_in_a_list_says_its_state_and_a_stack_shows_what_stands_beneath_
         1
     ]  # by kind: one line a label, none beneath another
     assert standing == (
-        f"- R4 (his, 2026-11-11): {CARE} [R1, R2, dddddddd]\n"
-        f"- R3 (his, 2026-11-11): {SAILS} [aaaaaaaa]\n"
-        f"- R2 (his, 2026-11-11, cooled beneath R4): {KEEL} [dddddddd]\n"
-        f"- R1 (his, 2026-11-11, cooled beneath R4): {TERN} [aaaaaaaa, bbbbbbbb]\n"
+        f"- R4 (theirs, 2026-11-11): {CARE} [R1, R2, dddddddd]\n"
+        f"- R3 (theirs, 2026-11-11): {SAILS} [aaaaaaaa]\n"
+        f"- R2 (theirs, 2026-11-11, cooled beneath R4): {KEEL} [dddddddd]\n"
+        f"- R1 (theirs, 2026-11-11, cooled beneath R4): {TERN} [aaaaaaaa, bbbbbbbb]\n"
     )
     store.strike(crossings, "W3")
     store.strike(crossings, E)
@@ -507,23 +507,23 @@ def test_a_stack_named_by_its_key_is_given_whole_with_every_line_beneath_it(tmp_
     ]
     assert out["labels"][0]["beneath"] == ["R4", "R3"] and out["missing"] == [] and out["quiet"] == []
     whole = (
-        f"- R5 (his): {GEAR} [R4, R3]\n"
-        f"  - R4 (his, 2026-11-11, cooled beneath R5): {CARE} [R1, R2, dddddddd]\n"
-        f"    - R1 (his, 2026-11-11, cooled beneath R4): {TERN} [aaaaaaaa, bbbbbbbb]\n"
-        f"    - R2 (his, 2026-11-11, cooled beneath R4): {KEEL} [dddddddd]\n"
-        f"  - R3 (his, 2026-11-11, cooled beneath R5): {SAILS} [aaaaaaaa]\n"
+        f"- R5 (theirs): {GEAR} [R4, R3]\n"
+        f"  - R4 (theirs, 2026-11-11, cooled beneath R5): {CARE} [R1, R2, dddddddd]\n"
+        f"    - R1 (theirs, 2026-11-11, cooled beneath R4): {TERN} [aaaaaaaa, bbbbbbbb]\n"
+        f"    - R2 (theirs, 2026-11-11, cooled beneath R4): {KEEL} [dddddddd]\n"
+        f"  - R3 (theirs, 2026-11-11, cooled beneath R5): {SAILS} [aaaaaaaa]\n"
     )
     assert through("labels", "R5", "--cwd", project)[1] == whole
     # A line named beside its stack is given once, beneath it; and a kind named beside a key changes nothing.
     assert through("labels", "R1", "R5", "R4", "--kind", "work", "--cwd", project)[1] == whole
     assert through("labels", "R4", "--cwd", project)[1] == "".join(line[2:] + "\n" for line in whole.splitlines()[1:4])
     assert through("labels", "R2", "W9", "--cwd", project)[1] == (
-        f"- R2 (his, 2026-11-11, cooled beneath R4): {KEEL} [dddddddd]\nNo such label: W9.\n"
+        f"- R2 (theirs, 2026-11-11, cooled beneath R4): {KEEL} [dddddddd]\nNo such label: W9.\n"
     )
     store.strike(crossings, "R2")  # what is left beneath a misaligned stack is still given under it
     assert through("labels", "R4", "--cwd", project)[1] == (
-        f"- R4 (his, 2026-11-11, misaligned): {CARE} [R1, R2, dddddddd]\n"
-        f"  - R1 (his, 2026-11-11): {TERN} [aaaaaaaa, bbbbbbbb]\n"
+        f"- R4 (theirs, 2026-11-11, misaligned): {CARE} [R1, R2, dddddddd]\n"
+        f"  - R1 (theirs, 2026-11-11): {TERN} [aaaaaaaa, bbbbbbbb]\n"
     )
 
 
@@ -533,12 +533,12 @@ def test_a_cooled_line_is_still_found_by_its_words_and_in_its_thread(tmp_path):
     stack(crossings, "relation", CARE, ["R1", "R2", D])
     assert states(crossings)["R2"] == "cooled"
     assert [label["id"] for label in store.find(crossings, "keel autumn")["labels"]] == ["R2"]
-    assert f"- R2 (relation, his): {KEEL} [dddddddd]" in through("find", "keel", "autumn", "--cwd", project)[1]
+    assert f"- R2 (relation, theirs): {KEEL} [dddddddd]" in through("find", "keel", "autumn", "--cwd", project)[1]
     resting = store.thread(crossings, D, 0)
     assert {"R2", "R4"} <= {label["id"] for label in resting["labels"]} and "R2" in resting["said"][0]["labels"]
-    assert f"- R2 (relation, his): {KEEL}" in through("thread", D, "--around", "0", "--cwd", project)[1]
+    assert f"- R2 (relation, theirs): {KEEL}" in through("thread", D, "--around", "0", "--cwd", project)[1]
     # A stack that is found shows in its brackets what it rests on, as it does in a list.
-    assert f"- R4 (relation, his): {CARE} [R1, R2, dddddddd]" in through("find", "care", "year", "--cwd", project)[1]
+    assert f"- R4 (relation, theirs): {CARE} [R1, R2, dddddddd]" in through("find", "care", "year", "--cwd", project)[1]
 
 
 # --- the frame -------------------------------------------------------------------------------------
@@ -556,7 +556,7 @@ def test_the_frame_carries_the_top_of_a_stack_and_not_the_lines_beneath_it(tmp_p
     text = frame.compose(crossings)
     assert len(text) < len(before) and TERN in before and MAST in before  # smaller by what was stacked
     assert section(text, "Standing, about the two of you") == (
-        f"- R3 (his): {SAILS} [aaaaaaaa]\n- R4 (his): {CARE} [R1, R2, dddddddd]"
+        f"- R3 (theirs): {SAILS} [aaaaaaaa]\n- R4 (theirs): {CARE} [R1, R2, dddddddd]"
     )
     assert section(text, "The work, newest first") == (
         f"- W4 (both): {SPARS} [W2, W3]\n- W1 (both): The hull is to be painted grey in spring. [dddddddd, eeeeeeee]"
@@ -579,12 +579,12 @@ def test_a_misaligned_stack_crosses_with_its_lines_and_says_it_is_to_be_written_
     reworded(crossings, "checked every autumn", "checked every spring")
     text = frame.compose(crossings)
     assert section(text, "Standing, about the two of you") == (
-        f"- R1 (his): {TERN} [aaaaaaaa, bbbbbbbb]\n"
-        "- R2 (his): The keel is checked every spring. [dddddddd]\n"
-        f"- R4 (his): {CARE} (to be written again: a line beneath it changed) [R1, R2, dddddddd]\n"
-        f"- R5 (his): {GEAR} [R4, R3]"
+        f"- R1 (theirs): {TERN} [aaaaaaaa, bbbbbbbb]\n"
+        "- R2 (theirs): The keel is checked every spring. [dddddddd]\n"
+        f"- R4 (theirs): {CARE} (to be written again: a line beneath it changed) [R1, R2, dddddddd]\n"
+        f"- R5 (theirs): {GEAR} [R4, R3]"
     )
-    assert "- R3 (his)" not in text  # still cooled, beneath the stack that is sound
+    assert "- R3 (theirs)" not in text  # still cooled, beneath the stack that is sound
 
 
 def test_what_the_archive_no_longer_holds_up_is_named_by_key_and_not_carried(tmp_path):
@@ -676,15 +676,15 @@ def test_striking_a_stack_gives_its_lines_back_and_striking_a_line_misaligns_its
     assert "| R4 |" not in page and f"| R2 | {KEEL} | his | `{D}` |\n" in page  # the stack's row leaves; its lines stay
     assert states(crossings) == {key: "carried" for key in ("R1", "R2", "R3", "W1", "W2", "W3")}
     text = frame.compose(crossings)
-    assert f"- R1 (his): {TERN}" in text and f"- R2 (his): {KEEL}" in text and CARE not in text
+    assert f"- R1 (theirs): {TERN}" in text and f"- R2 (theirs): {KEEL}" in text and CARE not in text
     again = stack(crossings, "relation", CARE, ["R1", "R2"])  # the lines are free to be stacked again, under a new key
     assert again["written"] and again["id"] == "R5"
     store.strike(crossings, "R1")
     assert (states(crossings)["R5"], states(crossings)["R2"]) == ("misaligned", "carried")
     text = frame.compose(crossings)
     assert (
-        f"- R5 (his): {CARE} (to be written again: a line beneath it changed) [R1, R2]" in text
-        and f"- R2 (his): {KEEL}" in text
+        f"- R5 (theirs): {CARE} (to be written again: a line beneath it changed) [R1, R2]" in text
+        and f"- R2 (theirs): {KEEL}" in text
     )
     assert TERN not in text
     (crossings / "store.db").unlink()  # and nothing struck comes back at a build
@@ -720,7 +720,7 @@ def test_a_misaligned_stack_is_replaced_by_the_stack_written_over_its_lines(tmp_
     assert store.listed(crossings, ids=("R4",))["missing"] == ["R4"]
     text = frame.compose(crossings)
     assert CARE not in text and "to be written again" not in text
-    assert f"- R5 (his): {AGAIN} [R1, R2]" in text and f"- R3 (his): {SAILS} [aaaaaaaa]" in text
+    assert f"- R5 (theirs): {AGAIN} [R1, R2]" in text and f"- R3 (theirs): {SAILS} [aaaaaaaa]" in text
     last = stack(crossings, "relation", GEAR, ["R5", "R3"])  # the old stack's key is not used again
     assert (last["id"], last["replaced"]) == ("R6", [])
 
@@ -783,7 +783,8 @@ def test_a_sound_stack_is_still_protected_and_a_refused_stack_strikes_nothing(tm
     )
     assert refused["beneath an unresolved stack"]["why"].startswith("W2 already stands beneath W4")
     assert {page: page.read_text(encoding="utf-8") for page in store.pages(crossings)} == pages
-    assert store.struck(crossings) == {B} and states(crossings) == now  # nothing was struck by a refusal
+    # nothing was struck by a refusal: the one message struck is noted by its whole id
+    assert store.struck(crossings) == {f"{B}-0000-4000-8000-000000000000"} and states(crossings) == now
 
 
 def test_the_door_and_its_server_say_which_stack_the_new_one_took_the_place_of(tmp_path):
@@ -858,7 +859,7 @@ def test_the_door_and_its_server_stack_lines_and_say_plainly_what_they_refuse(tm
             "not marked: R5 already stands over stacks, and stacking goes no deeper than that"
         )
         whole = said("labels", ids=["R5"])[0]
-        assert whole.splitlines()[0] == f"- R5 (his): {GEAR} [R4, R3]"
+        assert whole.splitlines()[0] == f"- R5 (theirs): {GEAR} [R4, R3]"
         assert [line[: line.index("(")] for line in whole.splitlines()[1:]] == [
             "  - R4 ",
             "    - R1 ",
@@ -905,7 +906,7 @@ def test_a_session_is_told_that_lines_can_be_stacked_and_what_a_stack_is_given_w
         "labels" not in by_name["leave"]["inputSchema"]["properties"]["anchors"]["description"]
     )  # a line at the door stacks nothing
     assert all(len(one["description"]) < (400 if one["name"] in ("mark", "leave") else 260) for one in serve.TOOLS)
-    assert len(json.dumps(serve.TOOLS)) < 5400  # mark also says what a label is for: what the person tells and asks
+    assert len(json.dumps(serve.TOOLS)) < 5900  # mark also says what a label is for: what the person tells and asks
     with set_to(CLAUDE_PLUGIN_ROOT=str(ROOT)):
         told = serve.instructions()
     assert (

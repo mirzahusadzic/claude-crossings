@@ -18,6 +18,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
+from test_edges import set_to  # noqa: E402
+from test_serve import said as served  # noqa: E402
 from test_store import ROWS, A, B, D, E, at_terminal, home, row, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
 
 from crossing import count, door, frame, store, transcript  # noqa: E402
@@ -94,6 +96,69 @@ def said_ids(crossings: Path, words: str, **more) -> list[str]:
     return [s["id"] for s in store.find(crossings, words, **more)["said"]]
 
 
+def test_the_labels_resting_on_a_message_are_named_in_the_order_they_were_written(tmp_path):
+    """Guard: `thread` and `find` named the labels resting on a message in the order of their keys as text, so that
+    W10 to W13 stood before W2: "(labels: W1, W10, W11, W12, W13, W2, W3, …)". They are named in the order they were
+    written, as a pair and the labels themselves always named them."""
+    crossings, _ = home(tmp_path)
+    for n in range(2, 14):
+        assert store.mark(crossings, "work", "session", f"Work {n} on the hull.", [D], day="2026-11-11")["written"]
+    written = f"(labels: {', '.join(f'W{n}' for n in range(1, 14))})"
+    cwd = ("--cwd", str(crossings.parent))
+    named = [line for line in through("thread", D, *cwd)[1].splitlines() if "the one you named" in line]
+    assert len(named) == 1 and written in named[0], named
+    found = [line for line in through("find", "spring", *cwd)[1].splitlines() if f"`{D}`" in line]
+    assert len(found) == 1 and written in found[0], found
+
+
+def test_find_says_where_it_shows_an_excerpt_that_the_record_holds_the_message_whole(tmp_path):
+    """Guard: `find` showed a long message as a stretch around the word, cut where "…" stands, and closed with "For any
+    of these in its place: thread <id>.", so that a session told the person the rest "is cut off in the record". Where
+    it shows a message in part it closes now with a sentence that says these are excerpts and that `thread` gives the
+    message whole; where every match is shown whole, with the line it always had."""
+    long = (
+        "The old paint comes off the hull, plank by plank, before anything else. " * 6
+        + "The keel wants varnish. "
+        + ("Then the hull is washed and left to dry for a week, and painted grey after. " * 6)
+    )
+    crossings, _ = home(tmp_path, rows=[*ROWS, row("user", "f0f0f0f0", 9, long)])
+    with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)):
+        cut, whole = served("find", words="varnish")[0], served("find", words="Tern")[0]
+    assert "- `f0f0f0f0` the person, 2026-11-11 09:09 UTC: … " in cut and cut.count("…") >= 2, cut
+    assert cut.endswith(
+        "\n\nThese are excerpts where … stands; the record holds each message whole, and thread <id> gives it whole and "
+        "in its place."
+    ), cut
+    assert "…" not in whole and whole.endswith("\n\nFor any of these in its place: thread <id>."), whole
+
+
+def test_find_calls_a_stretch_an_excerpt_where_what_it_leaves_out_holds_no_word(tmp_path):
+    """Guard: `find` took a stretch for the whole message where it held as many word characters as the message, so a
+    long message cut where only marks were left out, a run of them before and after the words, was called whole and
+    closed with "For any of these in its place: thread <id>.". The stretch itself says now whether it was cut, and the
+    closing line follows it."""
+    long = "!" * 200 + " The bilgePump is checked" + "!" * 200
+    crossings, _ = home(tmp_path, rows=[*ROWS, row("user", "f1f1f1f1", 9, long)])
+    hit = next(s for s in store.find(crossings, "bilge")["said"] if s["id"] == "f1f1f1f1")  # inside a longer word
+    assert hit["part"].startswith("… ") and hit["part"].endswith(" …") and hit["whole"] is False, hit
+    with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)):
+        cut = served("find", words="bilge")[0]
+    assert cut.endswith("\n\n" + door.EXCERPTS), cut
+
+
+def test_find_calls_a_short_message_with_marks_of_its_own_whole(tmp_path):
+    """Pin: a short message that holds marks of its own, "…" among them, is shown whole and closed with the line it
+    always had, found by a word inside a longer one and by a word of its own alike."""
+    short = "The deckPump … works?! (Yes, twice!!!)"
+    crossings, _ = home(tmp_path, rows=[*ROWS, row("user", "f2f2f2f2", 9, short)])
+    for words in ("deck", "works"):  # inside a longer word, and a word of the index's own
+        hit = next(s for s in store.find(crossings, words)["said"] if s["id"] == "f2f2f2f2")
+        assert hit["part"].replace("[", "").replace("]", "") == short and hit["whole"] is True, (words, hit)
+        with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)):
+            whole = served("find", words=words)[0]
+        assert whole.endswith("\n\nFor any of these in its place: thread <id>."), whole
+
+
 def test_find_takes_a_stem_a_star_and_a_phrase(tmp_path):
     """A word is found by its stem, a `*` takes every word that begins so, and quotes hold a phrase."""
     crossings, _ = home(tmp_path)
@@ -152,12 +217,12 @@ def test_a_standing_line_that_only_shares_a_word_is_named_and_not_recited(tmp_pa
     some = through("find", "Tern zeppelin", "--cwd", project)[1]
     labels_part = some.split("Said:")[0]
     assert (
-        "- R1 (relation, his): a standing line about the two of you, not recited here; `labels R1` gives it."
+        "- R1 (relation, theirs): a standing line about the two of you, not recited here; `labels R1` gives it."
         in labels_part
     )
     assert "lies at mooring" not in labels_part
     every = through("find", "Tern lies", "--cwd", project)[1]  # every word asked for is in it
-    assert "- R1 (relation, his): His boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]" in every
+    assert "- R1 (relation, theirs): Their boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]" in every
     work = through("find", "hull zeppelin", "--cwd", project)[1]  # a label about the work is given either way
     assert "- W1 (work, both): The hull is to be painted grey in spring." in work
 
@@ -227,11 +292,11 @@ def test_the_room_stays_small_however_much_the_store_holds(tmp_path):
     assert "1 standing line about the two of you (R1 to R1) is not listed here: labels --kind relation." in listed
     assert "Tern" not in listed and " […] [dddddddd]" in listed  # cut short in a list
     one = through("labels", "w46", "R1", "W99", "--cwd", project)[1]  # by id: whole, and of any kind
-    assert "to no end. [dddddddd]" in one and "- R1 (his, 2026-11-11): His boat is called Tern" in one
+    assert "to no end. [dddddddd]" in one and "- R1 (theirs, 2026-11-11): Their boat is called Tern" in one
     assert "No such label: W99." in one and "not listed here" not in one
     assert (
         through("labels", "--kind", "relation", "--cwd", project)[1].strip()
-        == "- R1 (his, 2026-11-11): His boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]"
+        == "- R1 (theirs, 2026-11-11): Their boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]"
     )
     assert through("labels", "--day", "2026-01-01", "--cwd", project)[1].startswith("No label of that kind or day.")
     assert "- W46 (both, 2026-11-11)" in through("labels", "--kind", "work", "--day", "2026-11-11", "--cwd", project)[1]
@@ -376,7 +441,7 @@ def test_the_standing_lines_cross_whole_before_the_work_takes_room(tmp_path):
     text = frame.compose(crossings)
     standing = text.split("## Standing, about the two of you\n\n")[1].split("\n\n")[0]
     carried = standing.count("\n") + 1
-    assert "- R1 (his)" in standing
+    assert "- R1 (theirs)" in standing
     assert "## The work, newest first\n\n- W11 (both)" in text  # and the newest work still crosses
     assert 40 < carried < 70  # far more than half the frame's room, where it stopped before
     assert (

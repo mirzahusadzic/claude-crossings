@@ -307,14 +307,14 @@ def shown(event: dict, folder: Path) -> str | None:
     target = store.ours() if given.get("home") == "ours" else folder
     label = next((each for each in store.labels(target) if each["id"] == key and each["text"] == sentence), None)
     if label is None:  # not in the page as it now stands: what was sent, as the server would have written it
-        whose = given.get("whose") if given.get("whose") in ("his", "both") else "session"
+        whose = store.kept_as(given["whose"]) if given.get("whose") in (*store.SIDE, "both") else "session"
         label = {"kind": store.KINDS[key[0]], "whose": whose, "text": sentence}
     text = unmarked(label["text"])
     text = text if len(text) <= SHOWN else text[:SHOWN].rstrip() + " […]"
     if label["kind"] == "next":
         return f"Crossings · left at the door: {text}"
-    if label["kind"] == "relation" or label["whose"] in ("his", "both"):
-        return f"Crossings · marked {key} ({unmarked(label['whose'])}): {text}"
+    if label["kind"] == "relation" or store.theirs(label["whose"]) or label["whose"] == "both":
+        return f"Crossings · marked {key} ({store.owner(label['whose'])}): {text}"  # the person's as theirs
     return None
 
 

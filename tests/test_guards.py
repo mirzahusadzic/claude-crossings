@@ -662,6 +662,10 @@ ASKED = (
     ("leave", {"sentence": "Find out whether the tove is gyred.", "anchors": [b(1)]}),
     ("labels", {"ids": ["X1"]}),
     ("labels", {"kind": "refused"}),
+    ("thread", {"id": b(1), "role": "pair:them"}),
+    ("thread", {"id": "c0000003", "role": "pair:me"}),
+    ("thread", {"id": b(1), "role": "pair:me"}),  # the person's first turn answers nothing: no such pair
+    ("thread", {"role": "pair:me"}),
     ("crossing", {}),
 )
 

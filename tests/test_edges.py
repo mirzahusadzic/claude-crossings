@@ -220,7 +220,7 @@ def test_the_frame_still_crosses_where_its_small_conveniences_fail(tmp_path):
     (crossings / "last-carry.json").mkdir()  # the trace cannot be written
     gone = {**event, "transcript_path": str(tmp_path / "no-such-file.jsonl")}  # nor the archive brought up to date
     text = json.loads(hook.carried(gone))["hookSpecificOutput"]["additionalContext"]
-    assert text.startswith(transcript.CARRIED) and "- R1 (his): His boat is called Tern" in text
+    assert text.startswith(transcript.CARRIED) and "- R1 (theirs): Their boat is called Tern" in text
     crossings, _, event = after_a_cut(tmp_path / "b")
     (crossings / "mode").unlink()  # a project that never said how it cuts
     assert hook.carried(event) is None
@@ -310,7 +310,7 @@ def test_the_door_says_plainly_what_it_did_not_find(tmp_path):
     crossings, path = home(tmp_path)
     project = str(crossings.parent)
     label_only = through("find", "lies", "--cwd", project)[1]  # a word of the label's, in no message
-    assert "- R1 (relation, his)" in label_only and "Said:" not in label_only
+    assert "- R1 (relation, theirs)" in label_only and "Said:" not in label_only
     assert "That is a miss, not a no" in through("find", "?!", "--cwd", project)[1]  # no word at all
     assert store.find(crossings, "?!") == {
         "asked": "?!",
@@ -416,7 +416,7 @@ def test_a_damaged_line_in_the_archive_does_not_stop_a_strike(tmp_path):
 def test_a_frame_is_made_where_no_store_was_built_yet(tmp_path):
     crossings, _ = home(tmp_path)
     (crossings / "store.db").unlink()
-    assert "- R1 (his): His boat is called Tern" in frame.compose(crossings)
+    assert "- R1 (theirs): Their boat is called Tern" in frame.compose(crossings)
     assert not (crossings / "store.db").exists()  # made in memory: a read makes no database
 
 
@@ -433,6 +433,42 @@ def test_a_frame_too_small_for_anything_else_still_names_the_door(tmp_path):
     (crossings / "frame-size").write_text("-5\n", encoding="utf-8")
     assert frame.size_of(crossings) == frame.LEAST and frame.bounded(10**9) == frame.MOST
     assert through("frame", "--size", "5", "--cwd", str(crossings.parent)) == (0, text)
+
+
+def test_a_key_of_any_length_on_a_page_written_by_hand_takes_no_frame_past_its_size(tmp_path):
+    """Guard: a page written by hand can give a label a key of any length, and the sentence about the labels that rest
+    on what the archive no longer holds named it: the frame was made again by count only past the most a hook may
+    carry (frame.MOST), so a frame asked for at 2,400 or at 9,000 came to 9,000 characters and more. It is made again
+    by count past the size it is asked for: the sentence says how many such labels there are, and not the key."""
+    crossings, _ = home(tmp_path)
+    key = "R" + "9" * 7300
+    (crossings / "labels").mkdir(exist_ok=True)
+    (crossings / "labels" / "2026-11-20.md").write_text(
+        "| # | Label | Whose | Anchors |\n| --- | --- | --- | --- |\n"
+        f"| {key} | A line written by hand whose message is gone. | session | `0a0a0a0a` |\n",
+        encoding="utf-8",
+    )
+    store.build(crossings)
+    for size in (frame.LEAST, frame.SIZE):
+        for session in ("", "session-"):
+            made = frame.compose(crossings, size, session=session)
+            assert len(made) <= size, (size, session, len(made))
+            assert key not in made and "1 label rests on what the archive no longer holds; `labels` gives them." in made
+
+
+def test_a_size_of_naught_is_a_size_asked_and_held_to_the_least_as_one_is(tmp_path):
+    """Guard: a size of 0, asked of `compose` or of the door's `frame --size`, was taken for no size at all, and the
+    frame was made at the home's size; it is a size given, held to the least as 1 is. No size given is still the
+    home's."""
+    crossings, _ = home(tmp_path)
+    (crossings / "frame-size").write_text("9500\n", encoding="utf-8")
+    least = frame.compose(crossings, frame.LEAST)
+    assert frame.compose(crossings, 0) == frame.compose(crossings, 1) == least != frame.compose(crossings)
+    assert frame.compose(crossings) == frame.compose(crossings, frame.MOST) and frame.compose(crossings, None) != least
+    project = str(crossings.parent)
+    for size in ("0", "1"):
+        assert through("frame", "--size", size, "--cwd", project) == (0, least), size
+    assert through("frame", "--cwd", project) == (0, frame.compose(crossings))
 
 
 # --- the second copy -------------------------------------------------------------------------

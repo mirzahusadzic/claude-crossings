@@ -179,7 +179,9 @@ def test_the_frame_never_exceeds_its_most_and_a_long_line_at_the_door_says_where
     for size in (frame.MOST, frame.SIZE, frame.LEAST):
         for new in (False, True):
             text = frame.compose(crossings, size, new=new)
-            assert len(text) <= frame.MOST and "`labels N1` gives it whole" in text, (size, new, len(text))
+            # a new session's frame at the least size is past it by key, and is made again by count, which names no key
+            whole = "`labels` gives it whole" if (size, new) == (frame.LEAST, True) else "`labels N1` gives it whole"
+            assert len(text) <= frame.MOST and whole in text, (size, new, len(text))
     usual = ("We keep to the plan the person set, one step a day. " * 39).strip()  # about 2,000 characters
     assert 1900 < len(usual) < 2100 and store.mark(crossings, "next", "session", usual, [D])["id"] == "N2"
     text = frame.compose(crossings)
@@ -427,7 +429,7 @@ def test_two_messages_that_share_an_eight_character_id_are_told_apart(tmp_path):
     assert code == 1 and first in out and twin in out and "nothing was struck" in out, out
     assert ids(crossings).count(A) == 2 and not (crossings / "struck.txt").exists()
     code, out = through("thread", A, "--cwd", project)
-    assert code == 0 and f"two messages are named `{A}`" in out and first in out and twin in out, out
+    assert code == 0 and f"two messages are named `{A}`, `{A}-0` and `{A}-1`;" in out, out  # each by its name
     told = through("status", "--cwd", project)[1]
     assert COLLIDED.format(A) in told, told
     assert "share the id" not in through("status", "--cwd", project)[1]  # once

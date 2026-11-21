@@ -377,7 +377,7 @@ def test_the_plugin_imports_the_standard_library_alone_and_nothing_that_opens_a_
     assert [line for line in module.splitlines() if line.startswith("import ")] == [
         "import type { Register } from 'claude-code'"
     ]
-    # The door's server offers its seven tools and no verb of the person's or of the hooks module.
+    # The door's server offers its eight tools and no verb of the person's or of the hooks module.
     assert serve.NAMES == ["look", "labels", "find", "thread", "mark", "leave", "status", "crossing"]
 
 

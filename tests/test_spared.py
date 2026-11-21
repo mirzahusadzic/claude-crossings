@@ -76,7 +76,7 @@ def test_a_label_that_speaks_for_the_person_is_shown_to_them_as_it_is_written(tm
         work = "The person wants the hull grey by spring."
         assert said("mark", sentence=work, anchors=[D], whose="his") == ("marked W2", False)
         assert shown(hook.run(after(path, "mark", "marked W2", sentence=work, anchors=[D], whose="his"))) == (
-            f"Crossings · marked W2 (his): {work}"
+            f"Crossings · marked W2 (theirs): {work}"
         )
         both = "The hull is to be sanded first."
         assert said("mark", sentence=both, anchors=[D], whose="both") == ("marked W3", False)
@@ -111,7 +111,7 @@ def test_what_is_shown_has_no_control_character_or_direction_mark_and_is_cut_at_
         line = shown(hook.run(after(path, "mark", "marked W2", sentence=steered, whose="his")))
     written = store.listed(crossings, ids=("W2",))["labels"][0]["text"]
     assert "\x1b" in written and "‮" in written  # the page keeps what was written; only what is shown is cleaned
-    assert line.startswith("Crossings · marked W2 (his): The person[2J wants every key kept here and more")
+    assert line.startswith("Crossings · marked W2 (theirs): The person[2J wants every key kept here and more")
     assert not re.search(r"[\x00-\x1f\x7f‎‏‪-‮⁦-⁩  ]", line)
     assert line.endswith(" […]") and len(line.split(": ", 1)[1]) <= hook.SHOWN + len(" […]")
     # Where the page does not hold the label as it was sent, what was sent is shown, cleaned the same way.

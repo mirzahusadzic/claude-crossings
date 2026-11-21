@@ -142,6 +142,49 @@ def test_what_the_module_refuses_a_call_with_is_on_the_page():
     assert "messages are named" in PAGE and told.shared() in PAGE
 
 
+def test_what_the_summary_of_a_cut_is_asked_for_is_on_the_page():
+    """Guard: the hooks module hands the harness's summarizer a text of its own as its instructions wherever a cut is
+    answered (`LEDGER`), and the page, which holds everything Crossings can tell, did not hold it. It holds it now,
+    word for word as hooks/crossings.ts writes it, under a line that says to whom it is told and when, before what a
+    session meets after the cut."""
+    source = (ROOT / "hooks" / "crossings.ts").read_text(encoding="utf-8")
+    assert "const LEDGER =" in source and "instructions: e.instructions?.trim() ? `${LEDGER}\\n\\n" in source
+    ledger = told.module_said("LEDGER")
+    assert ledger.startswith("Keep only a ledger of tasks: ") and ledger.endswith(", word for word.")
+    assert told.fenced(ledger) in PAGE, "the page does not hold what the summary of a cut is asked for"
+    section = f"{told.LEDGER_HEAD}\n\n{told.LEDGER_TOLD}\n\n{told.fenced(ledger)}"
+    assert section in PAGE and PAGE.index(section) < PAGE.index("## After a cut: the waking note")
+
+
+def test_the_page_holds_a_frame_that_sets_the_sessions_turns_beside_a_sentence_and_the_sentence_after_it():
+    """Guard: where the line at the door rests on both ends of a sentence of the person's, a frame sets the session's
+    turns beside it and `crossing` says after it what they take; the page held neither. It holds both now, as
+    `crossing` gives them."""
+    lines = PAGE.split("\n")
+    assert any(line.startswith("     · before it, the session (N1): `") for line in lines)
+    assert any(line.startswith("     · after it, the session (N1): `") for line in lines)
+    assert "a few of the person's own words, some with the session's beside them." in PAGE
+    said = [line for line in lines if line.startswith("Not part of the frame: ")]
+    ends = "the labels it would carry without them: none; the person's sentences it would quote without them: none."
+    assert len(said) == 2 and all(each.endswith(ends) for each in said)
+
+
+def test_the_page_holds_a_frame_where_a_standing_line_and_a_stack_set_the_sessions_turns():
+    """Guard: a standing line carried in the frame, not the person's, that rests on both ends of a sentence of the
+    person's sets the session's turn beside it, and a stack does through a line beneath it, keyed by the stack; the
+    page held neither. It holds both now, as `crossing` gives them: the sentence the line at the door quotes with the
+    standing line's turn added beneath it, the sentence quoted for the stack's turn alone, and the person's own line
+    on both ends of a sentence setting nothing."""
+    part = PAGE.split("## After a cut, where a standing line rests on both ends of a sentence", 1)[1]
+    lines = part.split("````", 2)[1].split("\n")  # the frame and the sentence after it, as fenced on the page
+    at = lines.index("- `dddddddd`: We paint the hull grey in spring")
+    assert lines[at + 1] == "     · after it, the session (R2): `eeeeeeee` Grey it is. I will remind you in March."
+    at = lines.index("- `aaaaaaaa`: My boat is called Tern.Its mooring is number 41, by the café.")
+    assert lines[at + 1].startswith("     · after it, the session (R4): `bbbbbbbb` Noted: Tern, at mooring 41.")
+    assert not any("(R1" in line or "(R3" in line for line in lines if line.startswith(frame.NESTED))
+    assert any(line.startswith("Not part of the frame: ") for line in lines)
+
+
 def test_the_modules_own_note_is_on_the_page():
     note = told.module_note()
     assert note.startswith(OPENS) and "hand-over written before this cut" in note and note in PAGE

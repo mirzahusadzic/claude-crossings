@@ -125,18 +125,25 @@ TOOLS = [
         words={"type": "string", "description": "The words to look for: all of them, or failing that any."},
         voice={
             "type": "string",
-            "enum": ["his", "session"],
+            "enum": [store.THEIR, store.OWN],  # the person's side as it is offered; `his` is still taken (see `asked`)
             "description": "Only the person's messages, or only the session's.",
         },
     ),
     tool(
         "thread",
-        "A message in its place, by its id: what stood before and after it, and the labels resting there.",
+        "A message in its place, by its id: what stood before and after it, and the labels resting there. With a "
+        "role, its place is a pair: a turn with the other voice's answer beneath it.",
         ("id",),
         id={"type": "string", "description": "The id of a message, as find gives it."},
         around={
             "type": "integer",
             "description": "How many messages before and after to show (default 2, at most 50).",
+        },
+        role={
+            "type": "string",
+            "enum": list(door.ROLES),  # named from the session's side, which calls: me, the session; them, the person
+            "description": "`pair:them`: the pair headed by the person's turn; `pair:me`: by the session's. The one "
+            "the message heads, or the one it answers.",
         },
     ),
     tool(
@@ -155,7 +162,7 @@ TOOLS = [
         },
         whose={
             "type": "string",
-            "enum": ["his", "session", "both"],
+            "enum": [store.THEIR, store.OWN, "both"],
             "description": "Whose the labelled thing is (default: the session's).",
         },
     ),
@@ -198,12 +205,17 @@ def asked(name: str, given: dict) -> list[str] | str:
             return "find needs words."
         return (
             ["find"]
-            + (["--voice", given["voice"]] if given.get("voice") in ("his", "session") else [])
+            + (["--voice", given["voice"]] if given.get("voice") in (*store.SIDE, store.OWN) else [])
             + ["--", given["words"]]
         )
     if name == "thread":
         if not (isinstance(given.get("id"), str) and given["id"].strip()):
             return "thread needs an id."
+        role = given.get("role")
+        if role is not None:  # a pair in place of the messages around, where `around` does nothing
+            if door.role_of(role) is None:  # either spelling of a role is taken (door.SPELLED)
+                return door.UNROLED  # refused as the door refuses it, before anything is read
+            return ["thread", f"--role={door.role_of(role)}", "--touch", "--", given["id"].strip()]
         around = (
             given.get("around")
             if isinstance(given.get("around"), int) and not isinstance(given.get("around"), bool)
@@ -221,7 +233,7 @@ def asked(name: str, given: dict) -> list[str] | str:
             if given.get("kind") in ("relation", "refused", "silenced")
             else "work"
         )
-        whose = "session" if name == "leave" or given.get("whose") not in ("his", "both") else given["whose"]
+        whose = "session" if name == "leave" or given.get("whose") not in (*store.SIDE, "both") else given["whose"]
         return [
             "mark",
             "--kind",

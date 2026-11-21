@@ -17,8 +17,9 @@ a folder outside it; or the one on this computer that is the person's and the se
                          was added to it since.
   unattended.txt         the ids of what sessions no person sat in held, by the hooks of those
                          sessions: never archived, from their own transcript or from any other.
-  struck.txt             what was struck, by id; a session's strike adds the whole id of each message
-                         it took. Every build obeys it, so nothing struck comes back.
+  struck.txt             what was struck: a message by its whole id, a label by its key, a session by
+                         its id, to which its strike adds the whole id of each message it took. Every
+                         build obeys it, so nothing struck comes back.
   flagged.txt            the ids of messages of the person's that look like they hold a key or a
                          password, by id alone: the person's `status` and `look` say so until each
                          is struck. The message itself is kept: the archive keeps what was said.
@@ -72,6 +73,12 @@ from crossing.handover import named  # noqa: E402
 from crossing.record import Linked, within  # noqa: E402,F401  (every file of a home is reached through `within`)
 
 HIS, OWN, PASTED = "his", "session", "pasted"
+# The person's side is kept as HIS in every file of a home (the voice of the archive's lines, the whose cell of a
+# label's row) and in the index, as every make has written it, so that each make reads every home as the others do;
+# it is never shown. A session is offered THEIR for it, and HIS is still taken, meaning the same (see `kept_as`);
+# where a label's owner is printed, the person's is THEIRS (see `owner`).
+THEIR, THEIRS = "their", "theirs"
+SIDE = (THEIR, HIS)  # the words taken for the person's side, the one offered first
 # A label's key says its kind: R a standing line about the two of them, W about the work, N a
 # line the session left at the door for the one who wakes after the next cut, X something the
 # session declined, resting on the message that asked for it, its sentence the session's reason,
@@ -100,9 +107,9 @@ STACKED = re.compile(r"\b([RW]\d+)@([0-9a-f]{6})\b")
 STATES = ("carried", "cooled", "misaligned", "unresolved")
 # A pasted text's id, as an anchor is written: its message's id and a number, between backticks.
 PASTED_ID = re.compile(r"`([0-9a-f]{8}\+\d+)`")
-MADE = 8  # the make of the database: one of another make is built again before it is read (5: anchors by label;
+MADE = 9  # the make of the database: one of another make is built again before it is read (5: anchors by label;
 # 6: a paste ends at the closing tag of its own id; 7: a label of the kind refused, which an older make never read;
-# 8: a label of the kind silenced)
+# 8: a label of the kind silenced; 9: each anchor with the message it rests on, of two that share its id)
 # Which model wrote a label is kept beside the pages, not in them, so that every page reads as it did.
 MODELS = "models.txt"
 SIGNED = re.compile(r"^([RWNXS]\d+)@([0-9a-f]{6})\s+(\S+)$")
@@ -114,6 +121,7 @@ NEAR = 500  # characters of a neighbour shown in a thread
 AROUND = 50  # messages before and after the one a thread is about, at most
 TRIED = 5  # words of a miss whose nearest words are looked for: the answer names five at most
 WHOLE = 6000  # characters of the message a thread is about
+PAIRED = 12000  # characters of the texts of one pair the door shows, together; each is still cut at WHOLE
 
 
 def place(cwd: Path) -> tuple[Path, Path | None]:
@@ -1471,7 +1479,7 @@ def _archive(path: Path, folder: Path, whole: bool, taken: bool, kept_off: list,
             page, "".join(json.dumps(said, ensure_ascii=False) + "\n" for said in new)
         )  # a last line cut short is ended first
         noted = [
-            said["id"] for said in new if said["voice"] == HIS and secret(said["text"]) and record.nameable(said["id"])
+            said["id"] for said in new if theirs(said["voice"]) and secret(said["text"]) and record.nameable(said["id"])
         ]
         if noted:  # by id alone: nothing of what the message holds is copied
             record.add(
@@ -1621,15 +1629,48 @@ def moved_on(folder: Path, session: str, path: Path | None = None) -> bool:
 # model is not known is of no known layer, and is read as every line was before layers.
 
 
+def theirs(word: object) -> bool:
+    """Whether a label's `whose`, or a message's voice, as a home keeps it, is the person's side: the one test of it,
+    as every make has read it (HIS)."""
+    return word == HIS
+
+
+def kept_as(word: str) -> str:
+    """A `whose` or a voice as it is given, in the word a home keeps: the person's side, in either spelling it is
+    taken in (SIDE), as HIS; any other as it is given."""
+    return HIS if word in SIDE else word
+
+
+def offered_as(word: str) -> str:
+    """A `whose` or a voice as it is given, in the word a session is offered: the person's side, in either spelling
+    it is taken in (SIDE), as THEIR; any other as it is given."""
+    return THEIR if word in SIDE else word
+
+
+def owner(whose: str) -> str:
+    """Whose a label is, as it is printed: the person's as THEIRS, never in the word a home keeps; any other as its
+    row holds it, cleaned (`clean`)."""
+    return THEIRS if theirs(whose) else clean(whose)
+
+
 def persons(label: dict) -> bool:
     """Whether a label is the person's: theirs by its `whose`, and no stack."""
-    return label.get("whose") == HIS and not label.get("beneath")
+    return theirs(label.get("whose")) and not label.get("beneath")
 
 
 def foreign(label: dict, model: str) -> bool:
     """Whether a label is of another model's layer than `model`'s: written by a known model other
-    than it, and not the person's. Where `model` is not known, no label is."""
-    return bool(model and label.get("model") and label["model"] != model and not persons(label))
+    than it, and not the person's. Where `model` is not known, no label is. A silencing that is the
+    person's, alone or with the session, is of no model's layer: it puts its refusal to rest for
+    every model, whichever model's session wrote it down (see `quiets_all`)."""
+    return bool(
+        model and label.get("model") and label["model"] != model and not persons(label) and not quiets_all(label)
+    )
+
+
+def quiets_all(label: dict) -> bool:
+    """Whether a label is a silencing that is the person's side's, alone (HIS) or with the session's (`both`)."""
+    return label.get("kind") == "silenced" and label.get("whose") in (HIS, "both")
 
 
 def known(folder: Path) -> list[str]:
@@ -1806,7 +1847,15 @@ def _label_added(folder: Path, before: dict, key: str) -> bool:
             or db.execute("select 1 from label where id = ?", (key,)).fetchone()
         ):
             return False
-        held = all(db.execute("select 1 from said where id = ?", (each,)).fetchone() for each in label["anchors"])
+        # What each anchor rests on, as a whole build finds it: the one message that holds its id, where no struck
+        # message's whole id begins with it too; any other is left to a whole build (see `_rested`).
+        found = {
+            each: db.execute("select uuid from said where id = ?", (each,)).fetchall() for each in label["anchors"]
+        }
+        eights = {each.partition("+")[0] for each in label["anchors"]}
+        if any(len(rows) > 1 for rows in found.values()) or eights & _struck_eights(struck(folder)):
+            return False
+        held = all(found.values())
         n = db.execute("select coalesce(max(n), 0) from label").fetchone()[0] + 1
         db.execute(
             "insert into label values (?,?,?,?,?,?,?,?,?,?)",
@@ -1824,7 +1873,10 @@ def _label_added(folder: Path, before: dict, key: str) -> bool:
             ),
         )
         db.execute("insert into label_fts(rowid, text) values (?,?)", (n, label["text"]))
-        db.executemany("insert into anchor values (?,?)", [(key, each) for each in label["anchors"]])
+        db.executemany(
+            "insert into anchor values (?,?,?,?)",
+            [(key, each, rows[0][0] if rows else None, 0) for each, rows in found.items()],
+        )
         _restood(folder, db, before)
         db.commit()
         return True
@@ -1891,8 +1943,10 @@ def overtaken(folder: Path, key: str) -> bool:
 
 def rests(label: dict) -> str:
     """What a label rests on, as its brackets give it: the lines stacked beneath it by their
-    keys, then the ids of messages."""
-    return ", ".join([*label.get("beneath", ()), *label["anchors"]])
+    keys, then the ids of messages, each as `shown` gives it where the label holds that (see
+    `_shown`)."""
+    shown = label.get("shown") or {}
+    return ", ".join([*label.get("beneath", ()), *(shown.get(each, each) for each in label["anchors"])])
 
 
 def some(keys: list[str], most: int = 24) -> str:
@@ -1910,7 +1964,7 @@ def _voices(row: dict) -> list[dict]:
     what the person said: it becomes a row of its own beside the message, under the message's
     id with a number, and the message keeps a note of how much was pasted. Held as the person's,
     a paste would be counted and quoted as theirs."""
-    if row["voice"] != HIS:
+    if not theirs(row["voice"]):
         return [row]
     typed, pastes = transcript.unpasted(row["text"])
     if not pastes:
@@ -1922,9 +1976,11 @@ def _voices(row: dict) -> list[dict]:
     ]
 
 
-def _stood(kept: list[dict], held: set[str]) -> tuple[dict[str, str], dict[str, str]]:
+def _stood(kept: list[dict], held: set[str], lost: set = frozenset()) -> tuple[dict[str, str], dict[str, str]]:
     """Which stack each line stands beneath, and the state of every label, from the pages'
-    rows and the ids the archive holds. See STATES.
+    rows and the ids the archive holds. See STATES. An anchor among `lost`, by the label's key
+    and the anchor, rests on no message the archive still holds, though its id is held: the
+    twin it rests on was struck (see `_rested`).
 
     A stack stands over a line that is there, of its own kind and older than itself. The door
     marks no other; a page edited by hand may name one, and a ring of labels that each stood
@@ -1965,7 +2021,11 @@ def _stood(kept: list[dict], held: set[str]) -> tuple[dict[str, str], dict[str, 
             askew = not all(under(label, k) and digest(by_key[k]["text"]) == was for k, was in label["beneath"])
         if askew:
             wrong[label["id"]] = "misaligned"
-        elif not (label["anchors"] or label["beneath"]) or not held.issuperset(label["anchors"]):
+        elif (
+            not (label["anchors"] or label["beneath"])
+            or not held.issuperset(label["anchors"])
+            or any((label["id"], anchor) in lost for anchor in label["anchors"])
+        ):
             wrong[label["id"]] = "unresolved"
     # Of each family, the newest that is sound stands; the others are cooled beneath it.
     for members in _members(first).values():
@@ -1976,6 +2036,108 @@ def _stood(kept: list[dict], held: set[str]) -> tuple[dict[str, str], dict[str, 
         key: wrong.get(key) or ("cooled" if key in parent and parent[key] not in wrong else "carried") for key in by_key
     }
     return parent, state
+
+
+def _rested(folder: Path, kept: list[dict], said: list[dict], gone: set[str]) -> dict[tuple[str, str], tuple]:
+    """What each label's anchor rests on, by the label's key and the anchor: the whole id of the message the record
+    proves it was marked on; "" where the record cannot tell which of the messages its id names that was; and None
+    where none the archive still holds can be it. Beside it, 1 where a message struck by its whole id may be it.
+
+    An anchor names every message whose id is its eight characters, and a mark takes one only where the archive holds
+    one message so named; a second that came after is a twin. A twin said after the label was marked is not what it
+    rests on: the mark's moment is the one the log of what was pulled keeps for the label's key (see `_marked_at`),
+    and else the end of the day of the label's page (see `_page_ends`). A twin struck by its whole id has no time left
+    in the record, and may be it. Of those left, the one the archive holds is what it rests on; one struck leaves it
+    resting on what the archive no longer holds; several, or none, leave it on none of them: it is carried by its
+    sentence, and rests on neither twin, also once one of them is struck."""
+    by_id: dict[str, list[dict]] = {}
+    for row in said:
+        by_id.setdefault(row["id"], []).append(row)
+    struck_by: dict[str, list[str]] = {}  # the whole ids struck, by their first eight characters, found in one step
+    for whole in _struck_wholes(gone):
+        struck_by.setdefault(whole[:8], []).append(whole)
+    marked: dict | None = None  # read only where a twin asks for it
+    found: dict[tuple[str, str], tuple] = {}
+    for label in kept:
+        for anchor in label["anchors"]:
+            held = by_id.get(anchor, [])
+            base = anchor.partition("+")[0]
+            lost = [whole for whole in struck_by.get(base[:8], []) if whole.startswith(base) and whole != base]
+            if not held:
+                found[label["id"], anchor] = (None, int(bool(lost)))
+                continue
+            if len(held) == 1 and not lost:
+                found[label["id"], anchor] = (held[0]["uuid"], 0)
+                continue
+            if marked is None:
+                marked = _marked_at(folder)
+            bound = marked.get(label["id"]) or _page_ends(label["page"])
+            left = [row for row in held if not _said_after(row, bound)]
+            if len(left) + len(lost) == 1:
+                found[label["id"], anchor] = (left[0]["uuid"], 0) if left else (None, 1)
+            elif lost and not left:
+                found[label["id"], anchor] = (None, 1)
+            else:
+                found[label["id"], anchor] = ("", int(bool(lost)))
+    return found
+
+
+def _said_after(row: dict, bound) -> bool:
+    """Whether a message was said at or after this moment, as its own time shows; not where either is not known."""
+    at = off.moment(row.get("at"))
+    return bound is not None and at is not None and at >= bound
+
+
+def _marked_at(folder: Path) -> dict:
+    """The moment each label was marked by, by its key, as the log of what was pulled keeps it (see `reached`): the
+    first line of the verb `mark` that names the key first. The log keeps the second it was written in, after the
+    mark: the moment is the end of that second."""
+    found: dict = {}
+    try:
+        lines = record.lines_in(within(folder, "reached.jsonl"))
+    except OSError:
+        return found
+    for line in lines:
+        pull = _pull(line)
+        if pull is None or pull.get("verb") != "mark" or not pull["ids"]:
+            continue
+        at = off.moment(pull.get("at"))
+        if at is not None:
+            found.setdefault(pull["ids"][0], at + datetime.timedelta(seconds=1))
+    return found
+
+
+def _page_ends(page: str):
+    """The latest moment a label on the page of this day can have been marked: the day is the marking computer's own,
+    and ends at most 36 hours after it began in UTC. Nothing for a page named by no day (`hand-over.md`)."""
+    day = re.fullmatch(r"(\d{4})-(\d\d)-(\d\d)\.md", page)
+    try:
+        begun = datetime.datetime(*map(int, day.groups()), tzinfo=datetime.timezone.utc) if day else None
+    except ValueError:
+        return None
+    return begun + datetime.timedelta(hours=36) if begun else None
+
+
+def _struck_wholes(gone: set[str]) -> list[str]:
+    """The whole ids among what was struck: of a message struck by its whole id, and of every message of a session
+    struck whole. Each names a message the archive no longer holds, whose time is not kept."""
+    return sorted(
+        token
+        for token in gone
+        if len(token) > 8 and not token.lower().startswith("session:") and not KEY.fullmatch(token.upper())
+    )
+
+
+def _struck_eights(gone: set[str]) -> set[str]:
+    """The first eight characters of the messages struck by their whole ids (see `_struck_wholes`)."""
+    return {whole[:8] for whole in _struck_wholes(gone)}
+
+
+def outlived(folder: Path) -> set[str]:
+    """The ids of eight characters of the messages struck by their whole ids: where the archive still holds a message
+    of such an id, it is the twin of one struck, and an anchor of that id may have been marked on either (see
+    `_rested`). The frame quotes nothing under such an id, as under one two messages share."""
+    return _struck_eights(struck(folder))
 
 
 def _kin(found: list[dict]) -> tuple[dict[str, str], set[str]]:
@@ -2437,7 +2599,8 @@ def _index(folder: Path, db: sqlite3.Connection) -> None:
     newest = _order(said[-1]) if said else (None, None, None)
     said = [voiced for row in said for voiced in _voices(row)]
     kept = [label for label in labels(folder) if label["id"] not in gone]
-    parent, state = _stood(kept, {row["id"] for row in said})
+    rested = _rested(folder, kept, said, gone)
+    parent, state = _stood(kept, {row["id"] for row in said}, {pair for pair, on in rested.items() if on[0] is None})
     by = models(folder)
     db.executescript(f"""
         pragma journal_mode = off; pragma secure_delete = on; pragma user_version = {MADE};
@@ -2448,8 +2611,9 @@ def _index(folder: Path, db: sqlite3.Connection) -> None:
         create table label(n integer primary key, id text unique, kind text, whose text, text text, page text,
                            parent text, home text, state text, model text);
         create virtual table label_fts using fts5(text, tokenize='{TOKENS}');
-        create table anchor(label text, said text);
+        create table anchor(label text, said text, uuid text, gone integer);
         create index anchor_said on anchor(said);
+        create index anchor_uuid on anchor(uuid);
         create index anchor_label on anchor(label);
         create table beneath(stack text, line text, digest text);
         create index beneath_stack on beneath(stack);
@@ -2487,7 +2651,9 @@ def _index(folder: Path, db: sqlite3.Connection) -> None:
             ),
         )
         db.execute("insert into label_fts(rowid, text) values (?,?)", (n, label["text"]))
-        db.executemany("insert into anchor values (?,?)", [(label["id"], a) for a in label["anchors"]])
+        db.executemany(
+            "insert into anchor values (?,?,?,?)", [(label["id"], a, *rested[label["id"], a]) for a in label["anchors"]]
+        )
         db.executemany("insert into beneath values (?,?,?)", [(label["id"], key, was) for key, was in label["beneath"]])
     db.executemany("insert into word values (?,?)", sorted(words.items()))  # every word that is there, for a miss
     db.commit()
@@ -2559,15 +2725,23 @@ def _open(folder: Path) -> sqlite3.Connection:
     return db
 
 
-def _counted(db: sqlite3.Connection) -> dict[str, int]:
-    """How many labels are in each state: every state is named, at nought too."""
-    return {
+def _counted(db: sqlite3.Connection, model: str = "") -> dict[str, int]:
+    """How many labels are in each state: every state is named, at nought too. The labels of a family of refusals
+    are counted in the states they have for `model`, where it is known (see `_as_for`): a label that stands here,
+    which the index holds cooled beneath one that stands for another model alone, is counted carried."""
+    counted = {
         **dict.fromkeys(STATES, 0),
         **{r[0]: r[1] for r in db.execute("select state, count(*) from label group by state")},
     }
+    for here, index, _ in _standing_for(_family_rows(db), model):
+        if here is not None and here is not index:
+            counted["cooled"], counted["carried"] = counted["cooled"] - 1, counted["carried"] + 1
+    return counted
 
 
-def status(folder: Path) -> dict:
+def status(folder: Path, model: str = "") -> dict:
+    """What the store holds, in counts, for `status` and the frame's closing line; the states of the labels for
+    `model`, where it is known (see `_counted`)."""
     db = _open(folder)
     one = lambda sql: db.execute(sql).fetchone()[0]  # noqa: E731
     held = {
@@ -2579,7 +2753,7 @@ def status(folder: Path) -> dict:
         "to": one("select coalesce(max(substr(at, 1, 10)), '') from said"),
         "labels": one("select count(*) from label"),
         "struck": len(struck(folder)),
-        "states": _counted(db),
+        "states": _counted(db, model),
         # how many of each say which model wrote them; of the rest it is not known
         "models": {
             "labels": one("select count(*) from label where model != ''"),
@@ -3066,16 +3240,55 @@ def not_by(folder: Path, model: str) -> list[str]:
     return keys
 
 
-def _resting(db: sqlite3.Connection, ids: list[str]) -> dict[str, list[str]]:
-    """The labels that rest on each of these messages."""
+def _resting(db: sqlite3.Connection, wholes: list[str]) -> dict[str, list[str]]:
+    """The labels that rest on each of these messages, by their whole ids: an anchor rests on the one message the
+    build found it rests on (see `_rested`), so that one an id two messages share names rests on that one alone, or on
+    neither where the record cannot tell. They are given in the order of writing, as each label's number holds it."""
     found: dict[str, list[str]] = {}
-    for said in ids:
-        found[said] = [r[0] for r in db.execute("select label from anchor where said = ? order by label", (said,))]
+    for whole in wholes:
+        found[whole] = [
+            r[0]
+            for r in db.execute(
+                "select a.label from anchor a join label l on l.id = a.label where a.uuid = ? order by l.n", (whole,)
+            )
+        ]
     return found
 
 
 def _anchors(db: sqlite3.Connection, label: str) -> list[str]:
     return [r[0] for r in db.execute("select said from anchor where label = ?", (label,))]
+
+
+def _shown(db: sqlite3.Connection, label: str) -> dict[str, str]:
+    """How a label's brackets give an anchor whose id another message holds too, by the anchor as its row writes it:
+    with the name of the one it rests on, `a1b2c3d4 (a1b2c3d4-1)`; or, where the record cannot tell which it is, with
+    each one's name, `a1b2c3d4 (a1b2c3d4-0 or a1b2c3d4-1)`, and `one struck` for a message struck since that may be
+    it. An anchor that only one message holds, or none, is given as it is written, and is not here."""
+    found: dict[str, str] = {}
+    for said, whole, gone in db.execute("select said, uuid, gone from anchor where label = ?", (label,)).fetchall():
+        if whole:
+            shown = name(db, whole)
+            found.update({said: f"{said} ({shown})"} if shown != said else {})
+        elif whole is not None:
+            pasted = "+" in said
+            wholes = [
+                r[0]
+                for r in db.execute(
+                    f"select uuid from said where id = ? and voice {'=' if pasted else '!='} 'pasted' order by uuid",
+                    (said,),
+                )
+            ]
+            names = _all_named(db, wholes) + (["one struck"] if gone else [])  # every one of the id, in one pass
+            found[said] = f"{said} ({', '.join(names[:-1])} or {names[-1]})" if len(names) > 1 else said
+    return found
+
+
+def _show(db: sqlite3.Connection, label: dict) -> None:
+    """Give a label how its brackets show an anchor another message's id holds too (`shown`, see `_shown`), where it
+    has one such anchor: a label with none is as it was."""
+    shown = _shown(db, label["id"])
+    if shown:
+        label["shown"] = shown
 
 
 def _beneath(db: sqlite3.Connection, label: str) -> list[str]:
@@ -3099,23 +3312,24 @@ def _terms(words: str) -> list[tuple[str, str]]:
 
 
 def _part(text: str, runs: list[str]) -> str:
-    """The stretch of a text around the first of these runs of letters, with the run in brackets."""
+    """The stretch of a text around the first of these runs of letters, with the run in brackets (see `_parted`)."""
+    return _parted(text, runs)["part"]
+
+
+def _parted(text: str, runs: list[str]) -> dict:
+    """The stretch of a text around the first of these runs of letters, with the run in brackets and "…" where it is
+    cut (`part`), and whether it is the whole text, as the cut says it (`whole`)."""
     low = text.lower()
     at, run = min((low.find(run), run) for run in runs if run in low)
     start, end = max(0, at - 70), at + len(run)
-    return (
-        ("… " if start else "")
-        + text[start:at]
-        + "["
-        + text[at:end]
-        + "]"
-        + text[end : end + 110]
-        + (" …" if end + 110 < len(text) else "")
-    )
+    after = end + 110 < len(text)  # cut after the run
+    part = ("… " if start else "") + text[start:at] + "[" + text[at:end] + "]" + text[end : end + 110]
+    return {"part": part + (" …" if after else ""), "whole": not start and not after}
 
 
 def find(folder: Path, words: str, voice: str | None = None, limit: int = 8) -> dict:
-    """Messages and labels that hold these words: all of them, or failing that any of them.
+    """Messages and labels that hold these words: all of them, or failing that any of them. Each message is
+    given by a stretch of it around the words, and whether that stretch is the whole message (`whole`).
 
     Each is looked for on its own: where labels hold every word, a message that holds only
     some of them is still shown.
@@ -3124,6 +3338,7 @@ def find(folder: Path, words: str, voice: str | None = None, limit: int = 8) -> 
     that the door never finds less than a search of the files would: a word inside a longer
     one is no word to an index."""
     db = _open(folder)
+    voice = kept_as(voice) if voice else None  # the person's in either spelling, as the index keeps it
     out = {"asked": words, "all_words": True, "labels_all": True, "labels": [], "said": [], "nearest": []}
     terms = _terms(words)
     if not terms:
@@ -3135,14 +3350,15 @@ def find(folder: Path, words: str, voice: str | None = None, limit: int = 8) -> 
         rows = [
             dict(r) for r in db.execute(by_index, ((" " if every else " OR ").join(q for q, _ in terms), *more, limit))
         ]
-        have = {r["id"] for r in rows}
+        one = "uuid" if table == "said" else "id"  # a message is one by its whole id: twins share the eight of theirs
+        have = {r[one] for r in rows}
         letters = (" and " if every else " or ").join("instr(lower(text), ?)" for _ in runs)
         for r in db.execute(by_letters.format(letters), (*runs, *more, limit)):
-            if r["id"] not in have and len(rows) < limit:
+            if r[one] not in have and len(rows) < limit:
                 rows.append(
                     {
                         **{k: r[k] for k in r.keys() if k != "text"},
-                        **({"text": r["text"]} if table == "label" else {"part": _part(r["text"], runs)}),
+                        **({"text": r["text"]} if table == "label" else _parted(r["text"], runs)),
                     }
                 )
         return rows
@@ -3158,13 +3374,16 @@ def find(folder: Path, words: str, voice: str | None = None, limit: int = 8) -> 
 
     def said(every: bool) -> list[dict]:
         only = " and s.voice = ?" if voice else ""
+        # The index's stretch is cut where it puts "…" in; the same stretch with nothing put there in its place is
+        # another text exactly where it was cut, whatever marks the message holds of its own (`whole`).
         return held(
             every,
             "said",
-            "select s.id, s.voice, s.at, s.model, snippet(said_fts, 0, '[', ']', ' … ', 28) as part "
+            "select s.id, s.uuid, s.voice, s.at, s.model, snippet(said_fts, 0, '[', ']', ' … ', 28) as part, "
+            "snippet(said_fts, 0, '[', ']', ' … ', 28) = snippet(said_fts, 0, '[', ']', '', 28) as whole "
             "from said_fts f "
             "join said s on s.seq = f.rowid where said_fts match ?" + only + " order by bm25(said_fts) limit ?",
-            "select s.id, s.voice, s.at, s.model, s.text from said s where ({})"
+            "select s.id, s.uuid, s.voice, s.at, s.model, s.text from said s where ({})"
             + only
             + " order by s.seq desc limit ?",
             (voice,) if voice else (),
@@ -3189,54 +3408,43 @@ def find(folder: Path, words: str, voice: str | None = None, limit: int = 8) -> 
         out["nearest"] = [(w, known[w]) for w in dict.fromkeys(near)][:5]
     for label in out["labels"]:
         label["anchors"], label["beneath"] = _anchors(db, label["id"]), _beneath(db, label["id"])
-    resting = _resting(db, [r["id"] for r in out["said"]])
+        _show(db, label)
+    resting = _resting(db, [r["uuid"] for r in out["said"]])
     for row in out["said"]:
-        row["labels"] = resting[row["id"]]
+        row["labels"], row["name"] = resting[row["uuid"]], name(db, row["uuid"])
+        row["whole"] = bool(row["whole"])  # whether the stretch shown is the whole message, as its cut says it
     db.close()
     return out
 
 
 def thread(folder: Path, said_id: str, around: int = 2) -> dict:
-    """A message in its place: what stood before and after it, and the labels that rest on any of them.
-    An id of eight characters that two messages share is no one place: the whole ids of both are
-    given (`twins`), and either is threaded by its own. It reaches AROUND messages to either side
-    at most, however many are asked for."""
+    """A message in its place: what stood before and after it, and the labels that rest on any of them,
+    each message with the name it is printed by (`name`, see `name`). An id that names several messages
+    is no one place: each is given by its name (`twins`), and either is threaded by its own (see
+    `_named_row`). It reaches AROUND messages to either side at most, however many are asked for."""
     around = max(0, min(around, AROUND))
     db = _open(folder)
-    twins = (
-        [
-            r[0]
-            for r in db.execute(
-                "select distinct uuid from said where id = ? and voice != 'pasted' order by uuid", (said_id,)
-            )
-        ]
-        if re.fullmatch(r"[0-9a-f]{8}", said_id)
-        else []
-    )
-    if len(twins) > 1:
+    twins, centre = _named_row(db, said_id)
+    if twins:
         db.close()
         return {"asked": said_id, "found": False, "said": [], "labels": [], "twins": twins}
-    # An id's own characters are taken as themselves, never as a pattern: `%` and `_` name no message.
-    begun = said_id.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
-    centre = db.execute(
-        "select seq from said where id = ? or uuid like ? escape '\\' order by seq limit 1", (said_id, begun)
-    ).fetchone()
     if centre is None:
         db.close()
         return {"asked": said_id, "found": False, "said": [], "labels": []}
     rows = [
         dict(r)
         for r in db.execute(
-            "select seq, id, voice, at, text, model from said where seq between ? and ? order by seq",
+            "select seq, id, uuid, voice, at, text, model from said where seq between ? and ? order by seq",
             (centre["seq"] - around, centre["seq"] + around),
         )
     ]
     for row in rows:
+        row["name"] = name(db, row["uuid"])
         row["is_asked"] = row["seq"] == centre["seq"]
         most = WHOLE if row["is_asked"] else NEAR
         if len(row["text"]) > most:
             row["text"] = row["text"][:most].rstrip() + " […]"
-    resting = _resting(db, [r["id"] for r in rows])
+    resting = _resting(db, [r["uuid"] for r in rows])
     keys = sorted({k for ks in resting.values() for k in ks})
     held = (
         [
@@ -3252,10 +3460,212 @@ def thread(folder: Path, said_id: str, around: int = 2) -> dict:
     for label in held:
         label["beneath"] = _beneath(db, label["id"])
     for row in rows:
-        row["labels"] = resting[row["id"]]
+        row["labels"] = resting[row["uuid"]]
     gaps = _gaps(folder, db, rows[0]["seq"], rows[-1]["seq"])
     db.close()
     return {"asked": said_id, "found": True, "said": rows, "labels": held, "gaps": gaps}
+
+
+def name(db: sqlite3.Connection, whole: str) -> str:
+    """The name a message is printed by, from its whole id: its first eight characters, where no other message of the
+    home begins with them; else the shortest beginning of its whole id that no other message's whole id begins with,
+    never fewer than eight characters; and its whole id where even that begins another's, since a whole id always names
+    its own message (see `_named_row`). A text pasted into a message is named by the message's name and its number
+    (`<name>+<n>`). The messages it is told from are those of the index, found on the index of whole ids."""
+    base = whole.partition("+")[0]
+    return _named(_beginning(db, base[:8], base), whole)
+
+
+def _beginning(db: sqlite3.Connection, begun: str, whole: str | None = None) -> dict[str, str]:
+    """The name of every message whose whole id begins with these eight characters (see `name`), and of `whole`
+    among them, by their whole ids, made in one pass: of whole ids in their order, the longest beginning one shares
+    with any other is the one it shares with the one right before it or the one right after it."""
+    held = {
+        r[0]
+        for r in db.execute(
+            "select uuid from said where uuid >= ? and uuid < ? and voice != 'pasted'", (begun, begun + BEYOND)
+        )
+    }
+    ordered = sorted(held | ({whole} if whole is not None else set()))
+    shared = [len(os.path.commonprefix([one, other])) for one, other in zip(ordered, ordered[1:])]
+    found = {}
+    for at, each in enumerate(ordered):
+        longest = max(shared[at - 1] if at else 0, shared[at] if at < len(shared) else 0)
+        found[each] = each if longest >= len(each) else each[: max(8, longest + 1)]
+    return found
+
+
+def _named(names: dict[str, str], whole: str) -> str:
+    """The name of a message, or of a text pasted into one (`<name>+<n>`), by the names of its beginning (see
+    `_beginning`)."""
+    base, plus, number = whole.partition("+")
+    return names[base] + plus + number
+
+
+def _all_named(db: sqlite3.Connection, wholes: list[str]) -> list[str]:
+    """The names of these messages, each held, or of texts pasted into them (see `name`), in their order: those of
+    each beginning of eight characters made in one pass, however many messages it holds."""
+    names: dict[str, str] = {}
+    for begun in sorted({each.partition("+")[0][:8] for each in wholes}):
+        names.update(_beginning(db, begun))
+    return [_named(names, each) for each in wholes]
+
+
+# Past every character a whole id holds: a beginning of whole ids is searched for on their index, from the beginning
+# itself up to it.
+BEYOND = "\U0010ffff"
+# A message as `thread` and `tied` read the one an id names.
+NAMED = "select seq, uuid, id, session, voice, at, text, model from said"
+
+
+def _begun(db: sqlite3.Connection, begun: str) -> list[sqlite3.Row]:
+    """The messages a beginning of a whole id names, in the order of their whole ids: the one whose whole id it is,
+    where there is one; else every one whose whole id begins with it, where it holds eight characters at the least."""
+    exact = db.execute(f"{NAMED} where uuid = ? and voice != 'pasted'", (begun,)).fetchone()
+    if exact is not None:
+        return [exact]
+    if len(begun) < 8:
+        return []
+    return db.execute(
+        f"{NAMED} where uuid >= ? and uuid < ? and voice != 'pasted' order by uuid", (begun, begun + BEYOND)
+    ).fetchall()
+
+
+def _named_row(db: sqlite3.Connection, said_id: str) -> tuple[list[str], sqlite3.Row | None]:
+    """The message an id names, as `thread` and `tied` take it: the one whose whole id it is, else the one whose
+    whole id begins with it, eight characters of it at the least, as its name does (see `name`); or a text pasted into
+    such a message, by its message's id and its number (`<id>+<n>`). An id that names several is no one message: each
+    is given by its name, in the order of their whole ids, and no message; it is never answered with the first. Fewer
+    than eight characters that are no whole id name none, and nor does an id that is empty or blank once cleaned (see
+    `clean`): it is the beginning of every whole id. An id's own characters are taken as themselves, never as a
+    pattern: `%` and `_` stand for no character. It is a search on the index of whole ids, never a scan."""
+    if not clean(said_id).strip():
+        return [], None
+    base, plus, number = said_id.partition("+")
+    if plus and not (number.isascii() and number.isdigit()):
+        return [], None  # a pasted text is numbered, and its number is digits alone
+    found = _begun(db, base)
+    if plus:  # the text of that number pasted into each message the beginning names
+        found = [
+            paste
+            for each in found
+            for paste in db.execute(f"{NAMED} where uuid = ? and voice = 'pasted'", (f"{each['uuid']}+{number}",))
+        ]
+    if len(found) > 1:  # each by its name, all of one beginning, named in one pass
+        return _all_named(db, [each["uuid"] for each in found]), None
+    return [], found[0] if found else None
+
+
+def tied(folder: Path, said_id: str, voice: str) -> dict:
+    """The pair a message stands in that this voice's turn heads (`voice`: HIS or OWN), with the other voice's next
+    turn in the same session after it, in answer. A turn is every message one voice said in a row in one session,
+    until the other voice spoke; a text the person pasted is the person's message's it came in, and breaks no turn.
+    Named by a message of that voice's (or a text pasted into one), it is the pair the message's turn heads; named by
+    one of the other voice's, it is the pair the message's turn answers, headed by the turn right before it. So an id
+    and a voice give one pair at most, and every id of a pair's head or of its answer gives that same pair with that
+    voice. A message whose turn opens its session and is the other voice's answers no turn: there is no such pair
+    (`paired` false), and nothing more is given of it than the id named (`named`) and the voice asked (`voice`).
+
+    Given where there is a pair (`paired` true): which voice heads it (`voice`), the head's messages (`head`) and the
+    answer's (`answer`, empty where the other voice said nothing after it in that session), each in the order said,
+    its text whole (the door cuts it for showing), `is_asked` on the one named, the keys of the labels resting on it
+    (`labels`), and the texts the person pasted into it, by id and length in characters alone, in the order pasted
+    (`pastes`; `is_asked` on one named by its id), never a word of them, each with the keys of the labels resting on
+    it, in the order of writing (`labels`); each message and each paste with the name it is printed by (`name`, see
+    `name`); the id named (`named`); the first message of the turn before the head in that session, which begins the
+    pair before this one (`before`), and the first of the answer, which begins the pair after it (`after`), each by its
+    name, nothing where there is none, and each headed by the other voice's turn; the keys of the
+    labels resting on any message of the pair, in the order of writing (`labels`), and of those among them that are
+    lines left at the door, of the kind `next` by the label's own row in the index, in the same order (`left`); of the
+    labels resting on any text pasted into the pair, those that are lines left at the door, in the same order
+    (`pasted_left`); and the spans when the switch was off from the head's first message to the end of the pair, as
+    `thread` gives them (`gaps`, see `_gaps`).
+
+    A pasted text is no message of the pair: the labels resting on it are given with it and in `pasted_left` alone,
+    and are among `labels` and `left` only where they rest on a message of the pair too.
+
+    The id is taken as `thread` takes it (see `_named_row`): an id that names several messages gives each by its
+    name (`twins`), and one that names no message is not found. The pair is read off what the index
+    holds, so what it keeps out is kept out here as there, and no other rule is added."""
+    db = _open(folder)
+    try:
+        twins, centre = _named_row(db, said_id)
+        if twins:
+            return {"asked": said_id, "found": False, "twins": twins}
+        if centre is None:
+            return {"asked": said_id, "found": False}
+        session = centre["session"]
+        turns: list[list[tuple[int, str]]] = []  # the session's turns, each its messages by number and whole id
+        voices: list[str] = []
+        for seq, uid, whose in db.execute(
+            "select seq, uuid, voice from said where session = ? and voice != ? order by seq", (session, PASTED)
+        ):
+            if not voices or voices[-1] != whose:
+                turns.append([])
+                voices.append(whose)
+            turns[-1].append((seq, uid))
+        # The turn the named message stands in: a pasted text's is that of the message it came in, said just before.
+        at = max(n for n, turn in enumerate(turns) if turn[0][0] <= centre["seq"])
+        at = at if voices[at] == voice else at - 1  # the turn that heads the pair: its own, or the one it answers
+        if at < 0:  # the other voice's turn opens the session, and answers none of this voice's
+            return {"asked": said_id, "found": True, "paired": False, "named": centre["id"], "voice": voice}
+        answer = turns[at + 1] if at + 1 < len(turns) else []
+        beyond = turns[at + 2][0][0] if at + 2 < len(turns) else None  # where the pair after the answer begins
+        rows: list[dict] = []
+        wholes: list[str] = []  # the whole ids of the texts pasted into the pair, in the order pasted
+        last = centre["seq"]
+        for found in db.execute(
+            "select seq, id, uuid, voice, at, text, model from said where session = ? and seq >= ? "
+            "and (? is null or seq < ?) order by seq",
+            (session, turns[at][0][0], beyond, beyond),
+        ):
+            row, last = dict(found), found["seq"]
+            row["name"] = name(db, row["uuid"])
+            if row["voice"] == PASTED:  # beside the message it was pasted into, by its id and length alone
+                wholes.append(row["uuid"])
+                rows[-1]["pastes"].append(
+                    {
+                        "id": row["id"],
+                        "name": row["name"],
+                        "length": len(row["text"]),
+                        "is_asked": row["seq"] == centre["seq"],
+                    }
+                )
+                continue
+            row["is_asked"], row["pastes"] = row["seq"] == centre["seq"], []
+            rows.append(row)
+        pastes = [paste for row in rows for paste in row["pastes"]]
+        resting = _resting(db, [row["uuid"] for row in rows] + wholes)
+        for row in rows:
+            row["labels"] = resting[row["uuid"]]
+        keys = sorted({key for each in resting.values() for key in each})
+        held = [
+            (r[0], r[1])
+            for r in db.execute(
+                f"select id, kind from label where id in ({','.join('?' * len(keys))}) order by n", keys
+            )
+        ]
+        for paste, whole in zip(pastes, wholes):  # apart from the labels on the pair's own messages, in writing's order
+            paste["labels"] = [key for key, _ in held if key in resting[whole]]
+        own = {key for row in rows for key in row["labels"]}
+        pasted = {key for paste in pastes for key in paste["labels"]}
+        return {
+            "asked": said_id,
+            "found": True,
+            "paired": True,
+            "named": centre["id"],
+            "voice": voices[at],
+            "head": rows[: len(turns[at])],
+            "answer": rows[len(turns[at]) :],
+            "before": name(db, turns[at - 1][0][1]) if at else None,
+            "after": name(db, answer[0][1]) if answer else None,
+            "labels": [key for key, _ in held if key in own],
+            "left": [key for key, kind in held if kind == "next" and key in own],
+            "pasted_left": [key for key, kind in held if kind == "next" and key in pasted],
+            "gaps": _gaps(folder, db, turns[at][0][0], last),
+        }
+    finally:
+        db.close()
 
 
 def _gaps(folder: Path, db: sqlite3.Connection, first: int, last: int) -> list[dict]:
@@ -3276,7 +3686,7 @@ def _gaps(folder: Path, db: sqlite3.Connection, first: int, last: int) -> list[d
 # --- the room -------------------------------------------------------------------------------------
 
 
-def look(folder: Path, newest: int = 8) -> dict:
+def look(folder: Path, newest: int = 8, model: str = "") -> dict:
     """The store in outline, with no word needed: its days, its kinds of label, the newest
     labels about the work, and the line left at the door.
 
@@ -3285,7 +3695,8 @@ def look(folder: Path, newest: int = 8) -> dict:
     lines is as quiet as they are: how many stand beneath how many stacks is said, and what
     is misaligned or unresolved is named by its key. Of the work, the newest are those that
     are not cooled: a stack stands there for its lines. What the session declined is counted by
-    its families, those that stand apart from those that are silenced (see `refusals`)."""
+    its families, those that stand apart from those that are silenced, for `model` where it is known
+    (see `_refusals`)."""
     db = _open(folder)
     one = lambda sql: db.execute(sql).fetchone()[0]  # noqa: E731
     out = {
@@ -3298,7 +3709,7 @@ def look(folder: Path, newest: int = 8) -> dict:
         ],
         "standing": [r[0] for r in db.execute("select id from label where kind = 'relation' order by n")],
         "work": [r[0] for r in db.execute("select id from label where kind = 'work' order by n")],
-        "refusals": _refusals(db),
+        "refusals": _refusals(db, model),
         "labels": one("select count(*) from label"),  # every label, the lines left at the door too, as `status` counts
         "newest": [
             dict(r)
@@ -3310,7 +3721,7 @@ def look(folder: Path, newest: int = 8) -> dict:
         ],
         "left": None,
         "struck": len(struck(folder)),
-        "states": _counted(db),
+        "states": _counted(db, model),
         "stacks": {
             "lines": one("select count(*) from label where kind = 'relation' and state = 'cooled'"),
             "stacks": one("select count(distinct parent) from label where kind = 'relation' and state = 'cooled'"),
@@ -3336,33 +3747,100 @@ def look(folder: Path, newest: int = 8) -> dict:
             (left["id"],),
         ).fetchall()
         out["left"] = {**dict(left), "anchors": _anchors(db, left["id"]), "since": [r[0] for r in since]}
+        _show(db, out["left"])
     for label in out["newest"]:
         label["anchors"], label["beneath"] = _anchors(db, label["id"]), _beneath(db, label["id"])
+        _show(db, label)
     db.close()
     return out
 
 
-def _refusals(db: sqlite3.Connection) -> dict[str, list[str]]:
-    """The families of refusals by the label that stands in each: those that stand (a refusal or a judgment of
-    it), and those that are silenced (a silencing), each in the order of writing."""
-    return {
-        name: [
-            r[0] for r in db.execute("select id from label where kind = ? and state = 'carried' order by n", (kind,))
-        ]
+def _refusals(db: sqlite3.Connection, model: str = "") -> dict[str, list[str]]:
+    """The families of refusals by the label that stands in each for `model` (see `_standing_for`): those that stand (a
+    refusal or a judgment of it), and those that are silenced (a silencing), each in the order of writing. Where a
+    family stands here and is at rest for another model alone, or the other way about, it is named apart as well: by
+    the key that stands here among those at rest for another model alone (`rest`), and by the key that stands for
+    another model among those that stand for it alone (`stand`), each only where there is one. A family that is
+    another model's alone is neither standing nor silenced here: it is named by the key that stands in it for that
+    model, among those that stand for it alone where that is a refusal (`stand`), and among those at rest for it
+    alone where that is a silencing (`away`)."""
+    found = sorted(_standing_for(_family_rows(db), model), key=lambda each: (each[0] or each[1])["n"])
+    out = {
+        name: [here["id"] for here, _, _ in found if here is not None and here["kind"] == kind]
         for name, kind in (("standing", "refused"), ("silenced", "silenced"))
     }
+    rest, stand, away = [], [], []
+    for here, index, _ in found:
+        mine = here["kind"] if here is not None else None  # None: the family is another model's alone
+        if (mine, index["kind"]) == ("refused", "silenced"):
+            rest.append(here["id"])
+        elif index["kind"] == "refused" and mine in ("silenced", None):
+            stand.append(index["id"])
+        elif (mine, index["kind"]) == (None, "silenced"):
+            away.append(index["id"])
+    return {**out, **{name: keys for name, keys in (("rest", rest), ("stand", stand), ("away", away)) if keys}}
 
 
-def refusals(folder: Path) -> dict[str, list[str]]:
-    """What `status` says of the refusals, as `look` gives them: see `_refusals`."""
+def _family_rows(db: sqlite3.Connection) -> list[dict]:
+    """The labels of the kinds of a refusal's run as the index holds them, in the order of writing, each with the keys
+    of the lines its row names."""
+    asked = "select n, id, kind, whose, state, model from label where kind in (?, ?) order by n"
+    rows = [dict(r) for r in db.execute(asked, FAMILY)]
+    for row in rows:
+        row["beneath"] = _beneath(db, row["id"])
+    return rows
+
+
+def _standing_for(rows: list[dict], model: str) -> list[tuple[dict | None, dict, list[dict]]]:
+    """Of each family of refusals among these labels, as the index holds them in the order of writing, each with the
+    keys of the lines its row names: the label that stands in it for `model`, the newest sound one (carried or
+    cooled) that is of no other model's layer (see `foreign`), as a frame for that model takes it; the one the index
+    carries, the newest sound one of all; and the sound ones of no other model's layer. Where no model is known, the
+    one the index carries stands here too. Where every sound one is of another model's layer, none stands here
+    (None): the family is another model's alone, and a frame for this model carries nothing of it. A family with no
+    sound label is not among them."""
+    by_key = {row["id"]: row for row in rows}
+    found = []
+    for members in _members(families(rows)).values():
+        sound = [by_key[key] for key in members if by_key[key]["state"] in ("carried", "cooled")]
+        if sound:
+            here = [row for row in sound if not foreign(row, model)]
+            found.append((here[-1] if here else None, sound[-1], here))
+    return found
+
+
+def _as_for(rows: list[dict], model: str) -> None:
+    """Give the labels of each family of refusals among these (the index's rows, the newest first) the states they
+    have for `model` where its family stands otherwise than the index holds it (see `_standing_for`): the label that
+    stands here carried, and the other sound ones of no other model's layer cooled beneath it; those of another
+    model's layer as the index holds them. Where the family stands here and is at rest for another model alone, or
+    the other way about, the label that stands here names the one that stands for that model (`elsewhere`). Where
+    the family is another model's alone, every label of it is as the index holds it, and the one that stands for that
+    model says so (`alone`)."""
+    for here, index, counted in _standing_for(rows[::-1], model):
+        if here is None:
+            index["alone"] = True
+            continue
+        if here is index:
+            continue
+        here.update(state="carried", parent=None, elsewhere=index["id"] if here["kind"] != index["kind"] else "")
+        for row in counted:
+            if row is not here:
+                row.update(state="cooled", parent=here["id"])
+
+
+def refusals(folder: Path, model: str = "") -> dict[str, list[str]]:
+    """What `status` says of the refusals, as `look` gives them, for `model`: see `_refusals`."""
     db = _open(folder)
     try:
-        return _refusals(db)
+        return _refusals(db, model)
     finally:
         db.close()
 
 
-def listed(folder: Path, kind: str | None = None, day: str | None = None, ids: tuple = (), limit: int = 40) -> dict:
+def listed(
+    folder: Path, kind: str | None = None, day: str | None = None, ids: tuple = (), limit: int = 40, model: str = ""
+) -> dict:
     """The labels themselves, newest first: those named by id; or those of a kind, or of a day.
 
     A label's day is the day of the newest message it rests on; a stack's is also the day of
@@ -3375,19 +3853,22 @@ def listed(folder: Path, kind: str | None = None, day: str | None = None, ids: t
     A stack named by id is given with every line beneath it, right under it and one `depth`
     further in; a line named beside its stack is given once, there. A refusal named by id is
     given with its family (see `families`). By kind or by day each label is a row of its own; the
-    kind refused holds the silencings of refusals too."""
+    kind refused holds the silencings of refusals too. The labels of a family of refusals are given
+    with the states they have for `model`, where it is known (see `_as_for`)."""
     db = _open(folder)
     rows = [
         dict(r)
         for r in db.execute(
             "select l.id, l.kind, l.whose, l.text, l.state, l.parent, l.model, l.page, "
             "(select max(substr(s.at, 1, 10)) from anchor a "
-            "join said s on s.id = a.said where a.label = l.id) as day from label l order by l.n desc"
+            "join said s on s.uuid = a.uuid where a.label = l.id) as day from label l order by l.n desc"
         )
     ]
     for row in rows:
         row["anchors"], row["beneath"] = _anchors(db, row["id"]), _beneath(db, row["id"])
+        _show(db, row)
     db.close()
+    _as_for(rows, model)
     wanted = {i.upper() for i in ids}
     if wanted:
         by_key = {r["id"]: r for r in rows}
@@ -3436,8 +3917,9 @@ def listed(folder: Path, kind: str | None = None, day: str | None = None, ids: t
 
 def settled(kind: str, whose: str) -> str:
     """Whose a label of this kind is written as: a refusal (a first one or a judgment of it) is by its nature the
-    session's own (OWN), whatever is given; a label of any other kind, a silencing too, is as given."""
-    return OWN if kind == "refused" else whose
+    session's own (OWN), whatever is given; a label of any other kind, a silencing too, is as given, the person's side
+    in the word a home keeps for it (see `kept_as`)."""
+    return OWN if kind == "refused" else kept_as(whose)
 
 
 def mark(
@@ -3475,7 +3957,7 @@ def mark(
     `replaced` names it. Lines of it that the new stack did not take are carried again. That is
     all a mark ever strikes: a stack, never a message. Where the mark is not the person's own
     (`persons` false: a session's, through the door's server or a shell), a misaligned stack
-    whose `whose` is the person's (`his`) is not taken over, and the mark is refused.
+    whose `whose` is the person's (see `theirs`) is not taken over, and the mark is refused.
 
     `model` is the model that wrote the label, where whoever marks it knows (see `spoke`): it is
     kept beside the pages, in `models.txt`, and the row itself is written as it always was.
@@ -3620,19 +4102,19 @@ def _unmarked(
     why = _unstackable(KINDS[letter], beneath, deep, first) or _scoped(over, above, facing)
     if refused:
         return why, judged
-    theirs = (
+    owned = (  # the misaligned stacks of the person's it would take the place of
         []
         if persons
         else list(
             dict.fromkeys(
                 line["parent"]
                 for line in beneath.values()
-                if line is not None and line["parent"] and line["owner"] == HIS
+                if line is not None and line["parent"] and theirs(line["owner"])
             )
         )
     )
     return why or (
-        f"{theirs[0]} is a stack of the person's, and only the person writes it again" if theirs else ""
+        f"{owned[0]} is a stack of the person's, and only the person writes it again" if owned else ""
     ), beneath
 
 
@@ -3778,14 +4260,18 @@ def strike(folder: Path, token: str, why: str = "") -> dict:
     from its label page, from the hand-over's words, from the log of what was pulled, from the
     notes of what looked like a key, and from the database; a whole
     session also from the small files that name sessions (welcomed, told, there) and from the
-    markers of its transcripts. The
-    token stays in struck.txt so that a transcript which still holds the message cannot bring it
-    back; a whole session's strike also keeps there the whole id of every message it took, so that
-    a transcript of any other name that repeats them (a fork, a resume) brings none of them back.
+    markers of its transcripts. What
+    names it stays in struck.txt so that a transcript which still holds the message cannot bring it
+    back: a label's key or a session as it was given, and a message by its whole id, as
+    `<whole id>  # of <what was given>`, so that a later message whose first eight characters are the
+    same is kept; a whole session's strike also keeps there the whole id of every message it took, so
+    that a transcript of any other name that repeats them (a fork, a resume) brings none of them back.
+    A line of eight characters an earlier make wrote keeps hiding every message that begins so.
     An id that is no name (record.ident) is refused, and nothing is written. An id of eight
     characters that two messages share strikes neither: the answer names both whole ids, and
-    either is struck by its own. One strike at a time is made in a home, under the archive's lock
-    (see `_locked`); one that cannot have it within WAIT seconds strikes nothing, and says so.
+    either is struck by its own. What the other of two such messages has, its flag and the pulls
+    that name it, stays. One strike at a time is made in a home, under the archive's lock (see
+    `_locked`); one that cannot have it within WAIT seconds strikes nothing, and says so.
 
     What a strike cannot reach: the harness's own transcript, an earlier second copy or a backup,
     and the history of a repository that holds the home (see REACH)."""
@@ -3810,9 +4296,14 @@ def strike(folder: Path, token: str, why: str = "") -> dict:
             "matched": False,
             "why": f"nothing in this home is named {token}, so nothing was struck",
         }
+    gone = struck(folder)
+    message = not token.startswith("session:") and not KEY.fullmatch(token)
+    named = {row["uuid"] for row in _archived(folder) if message and not _is_struck(row, gone)}
     twins = (
-        sorted({row["uuid"] for row in _archived(folder) if row["id"] == token})
-        if re.fullmatch(r"[0-9a-f]{8}", token)
+        [token]
+        if token in named  # a whole id names its own message, also where it begins another's
+        else sorted(whole for whole in named if whole[:8] == token)
+        if len(token) == 8
         else []
     )
     if len(twins) > 1:
@@ -3827,15 +4318,38 @@ def strike(folder: Path, token: str, why: str = "") -> dict:
     if held is None:
         return {"struck": False, "why": BUSY.format("struck")}
     try:
-        out = _struck_out(folder, token, why)
+        db = _open(folder)  # what each label rested on before the strike: see `_resting_on`
+        try:
+            rested = {(r[0], r[1]): r[2] for r in db.execute("select label, said, uuid from anchor")}
+        finally:
+            db.close()
+        # A message is noted by its whole id, so that a later one that shares its eight characters is kept.
+        out = _struck_out(folder, twins[0], why, typed=token) if twins else _struck_out(folder, token, why)
         build(folder)
     finally:
         _unlocked(folder, held)
-    taken = out.pop("ids")
+    taken, wholes = out.pop("ids"), set(out.pop("wholes"))
     resting = [
-        label["id"] for label in labels(folder) if any(anchor.split("+")[0] in taken for anchor in label["anchors"])
+        label["id"] for label in labels(folder) if _resting_on(label, rested, taken, wholes)
     ]  # left as they are, and named
     return {"struck": True, "token": token, **out, "resting": resting}
+
+
+def _resting_on(label: dict, rested: dict, taken: set[str], wholes: set[str]) -> bool:
+    """Whether a label rests on a message a strike took, by what the index found each of its anchors to rest on before
+    the strike (`rested`): on one of the whole ids taken (`wholes`), or on none of two that share an id of eight
+    characters taken (`taken`), one of which may be it. An anchor the index did not hold (a row written by hand since
+    it was made) is taken by its eight characters alone."""
+    for anchor in label["anchors"]:
+        eight = anchor.split("+")[0]
+        if (label["id"], anchor) not in rested:
+            if eight in taken:
+                return True
+            continue
+        on = rested[label["id"], anchor]
+        if (on is not None and on.split("+")[0] in wholes) or (on == "" and eight in taken):
+            return True
+    return False
 
 
 def kept_form(token: str) -> str:
@@ -3908,7 +4422,7 @@ def worded(folder: Path, ids: set[str]) -> dict[str, str]:
         text = re.sub(r"\s*\n\s*", " ", row["text"]).strip()
         if len(text) > SAID_MOST:
             text = text[:SAID_MOST].rstrip() + " […]"
-        found[name] = f"- `{name}`, {'the person' if row['voice'] == HIS else 'the session'}: {text}"
+        found[name] = f"- `{name}`, {'the person' if theirs(row['voice']) else 'the session'}: {text}"
     return found
 
 
@@ -3985,12 +4499,18 @@ def _unworded(folder: Path, ids: set[str]) -> tuple[list[str], list[str]]:
     return mended, dropped
 
 
-def _struck_out(folder: Path, token: str, why: str = "") -> dict:
+def _struck_out(folder: Path, token: str, why: str = "", typed: str = "") -> dict:
     """Note a token among the struck and take what it names out of every plain file: how many
     lines left the archive and the label pages (`removed`), and the hand-over words pages mended
     (`mended`) and gone whole (`dropped`), or, for a whole session, every one of them gone whole
-    (`cleared`). The database is not built here: whoever strikes builds
-    it once, when the plain files stand as they are to stand.
+    (`cleared`); with the ids of eight characters of the messages it took (`ids`) and their whole
+    ids (`wholes`). The database is not built here: whoever strikes builds it once, when the plain
+    files stand as they are to stand. A message's whole id is noted with what was given for it
+    (`typed`) after it: `<whole id>  # of <what was given>`.
+
+    What another message still holds stays: a note that a message looks like it holds a key, by
+    an id of eight characters, goes only where no message of the person's still held under it
+    looks so; and a pull's id goes where it names a message struck and none still held.
 
     A line of the archive that is no message is left as it is, as a build passes over it: a
     strike that stopped there would have noted the token and left the words in the archive. A
@@ -3998,25 +4518,41 @@ def _struck_out(folder: Path, token: str, why: str = "") -> dict:
     where it is struck; one that is kept is written back as it was. Every file this rewrites is
     written whole beside itself and then put in its place (see `_replaced`): the caller holds the
     home's lock."""
-    record.add(within(folder, "struck.txt"), token + (f"  # {why}" if why else "") + "\n")
-    gone, removed, ids, wholes = struck(folder), 0, {token}, []
+    said_why = (f"  # of {typed}" + (f": {why}" if why else "")) if typed else (f"  # {why}" if why else "")
+    record.add(within(folder, "struck.txt"), token + said_why + "\n")
+    gone, removed, ids, wholes = struck(folder), 0, {token, typed} - {""}, []
+    eights: set[str] = set()  # the ids of eight characters of the messages taken
+    left: list[dict] = []  # the messages the archive still holds
 
-    def out(line: str) -> dict | None:
-        """The message on this line of the archive, if it is struck; else nothing."""
+    def message(line: str) -> dict | None:
+        """The message on this line of the archive; nothing for a line that is none."""
         try:
             row = json.loads(line)
         except ValueError:
             return None
-        return row if _said(row) and _is_struck(row, gone) else None
+        return row if _said(row) else None
 
     for page in said_pages(folder):
         lines = lines_of(_text(page))
-        taken = [out(line) for line in lines]
+        rows = [message(line) for line in lines]
+        taken = [row if row is not None and _is_struck(row, gone) else None for row in rows]
+        left += [row for row, was in zip(rows, taken) if row is not None and was is None]
         if any(taken):
             removed += sum(1 for was in taken if was)
-            ids |= {was["id"] for was in taken if was}
+            eights |= {was["id"] for was in taken if was}
             wholes += [was["uuid"] for was in taken if was]
             _replaced(folder, page, "".join(line + "\n" for line, was in zip(lines, taken) if not was))
+    held = {row["uuid"] for row in left}
+
+    def begins(begun: str, among) -> bool:
+        return any(whole == begun or (len(begun) >= 8 and whole.startswith(begun)) for whole in among)
+
+    def pulled_of(each: str) -> bool:
+        """Whether a pull's id names what was struck: what was given, or a beginning of a message's whole id taken,
+        eight characters at the least, that no message still held begins with."""
+        begun = each.split("+")[0]
+        return begun in ids or (begins(begun, wholes) and not begins(begun, held))
+
     if token.startswith("session:") and wholes:  # by each whole id: a transcript of another name brings none back
         record.add(
             within(folder, "struck.txt"),
@@ -4040,16 +4576,17 @@ def _struck_out(folder: Path, token: str, why: str = "") -> dict:
         for line in lines_of(_text(log)):
             pull = _pull(line) if _whole(line) else None
             if pull is None:  # a line that is no pull is left as it is, unless it names what was struck
-                kept += [line + "\n"] if line.strip() and not any(i in line for i in ids) else []
+                kept += [line + "\n"] if line.strip() and not any(i in line for i in ids | eights | set(wholes)) else []
                 continue
-            pull = {**pull, "ids": [i for i in pull["ids"] if i.split("+")[0] not in ids]}
+            pull = {**pull, "ids": [i for i in pull["ids"] if not pulled_of(i)]}
             kept += [json.dumps(pull) + "\n"] if pull["ids"] else []
         _replaced(folder, log, "".join(kept))
     # The ids of the messages struck, as a page of words or a note names them: eight characters.
-    said = {each[:8] for each in ids if re.match(r"[0-9a-f]{8}(?![0-9a-f])", each)}
-    _rewritten(folder, FLAGGED, lambda line: line.strip() in said)
+    said = {each for each in eights if re.fullmatch(r"[0-9a-f]{8}", each)}
+    keyed = {row["id"] for row in left if theirs(row["voice"]) and secret(row["text"])}  # still noted, of another
+    _rewritten(folder, FLAGGED, lambda line: line.strip() in said and line.strip() not in keyed)
     exact = set(wholes) | ({token} if not token.startswith("session:") else set())
-    _rewritten(folder, UNHELD, lambda line: line.strip() in exact or (len(token) == 8 and line.strip()[:8] == token))
+    _rewritten(folder, UNHELD, lambda line: line.strip() in exact)
     if token.startswith("session:"):  # a whole session: the lines that name it, and how far its transcripts were read
         session = token[len("session:") :]
         for name in BY_SESSION:
@@ -4057,7 +4594,14 @@ def _struck_out(folder: Path, token: str, why: str = "") -> dict:
         _rewritten(folder, MARKERS, lambda line: _marker_of(line, session))
     cleared = _cleared(folder) if token.startswith("session:") else []
     mended, dropped = _unworded(folder, said) if said and not cleared else ([], [])
-    return {"removed": removed, "mended": mended, "dropped": dropped, "cleared": cleared, "ids": said}
+    return {
+        "removed": removed,
+        "mended": mended,
+        "dropped": dropped,
+        "cleared": cleared,
+        "ids": said,
+        "wholes": list(dict.fromkeys(wholes)),
+    }
 
 
 def _cleared(folder: Path) -> list[str]:

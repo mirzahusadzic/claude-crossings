@@ -407,9 +407,9 @@ def test_a_database_of_the_make_before_models_is_built_again(tmp_path):
     store.build(crossings)
     db = sqlite3.connect(crossings / "store.db")
     assert (
-        db.execute("pragma user_version").fetchone()[0] == store.MADE == 8
-    )  # 4 counts the lines of the archive that are no message, 5 finds a label's anchors by an index, and 6 ends a
-    # paste at the closing tag of its own id
+        db.execute("pragma user_version").fetchone()[0] == store.MADE == 9
+    )  # 4 counts the lines of the archive that are no message, 5 finds a label's anchors by an index, 6 ends a
+    # paste at the closing tag of its own id, and 9 keeps with each anchor the message it rests on
     db.close()
 
 

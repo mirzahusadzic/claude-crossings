@@ -33,9 +33,9 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
 from test_edges import set_to  # noqa: E402
-from test_store import DATA, D, E, home, started_by  # noqa: E402  (and its data folder: nothing reaches the real home)
+from test_store import DATA, ROWS, A, B, D, E, home, row, started_by  # noqa: E402  (and its data folder: nothing reaches the real home)  # noqa: E402  (the made-up store's messages, and one made of a row)
 
-from crossing import door, frame, hook, off, serve, store  # noqa: E402
+from crossing import door, frame, hook, layer, off, serve, store  # noqa: E402
 
 DAY = "2026-11-12"  # the day of the made-up labels, so that the page is the same on every run
 
@@ -53,6 +53,20 @@ def module_said(name: str) -> str:
 def module_note() -> str:
     """The hooks module's own note for a hand-over page carried in a frame's place."""
     return module_said("NOTE")
+
+
+# What the hooks module hands the harness's summarizer as its instructions at a cut, and the line the page says it with.
+LEDGER_HEAD = "## As a cut is made: what the harness's summary is asked for"
+LEDGER_TOLD = (
+    "Told to the harness's summarizer, not to the session: as its instructions, wherever the harness makes a summary "
+    "in a project whose cuts Crossings answers (the mode `beside` or `own`), at the cut and ahead of it alike, and not "
+    "for a subagent's own cut. What the person typed after `/compact` follows it after an empty line, unchanged."
+)
+
+
+def ledger() -> str:
+    """The section of the page that says what the summary of a cut is asked for (`LEDGER` in hooks/crossings.ts)."""
+    return f"{LEDGER_HEAD}\n\n{LEDGER_TOLD}\n\n" + fenced(module_said("LEDGER"))
 
 
 # What the hooks module answers a session's call with as it refuses it: the archive's own files, the person's
@@ -96,6 +110,10 @@ def answered(project: Path) -> str:
         ("thread", {"id": ""}),
         ("thread", {"id": D}),
         ("thread", {"id": "ffffffff"}),
+        ("thread", {"id": D, "role": "pair:them"}),  # by the person's id: the pair the person's turn heads
+        ("thread", {"id": E, "role": "pair:me"}),  # by the session's id: the pair its turn heads, the session's last
+        ("thread", {"id": A, "role": "pair:me"}),  # the person's first turn answers no turn of the session's: no pair
+        ("thread", {"id": D, "role": "pair"}),  # a role that is neither of the two is refused
         ("labels", {"ids": ["W99"]}),
         ("leave", {"sentence": "The paint is the next thing to settle.", "anchors": [D]}),
         # the first label about the work marked after a line at the door: the answer says the line may be overtaken
@@ -114,6 +132,62 @@ def answered(project: Path) -> str:
 
 # The functions of the store that refuse a mark or a line left at the door, each with a sentence of its own.
 REFUSING = ("mark", "_unmarked", "_unstackable", "_scoped")
+
+
+# A long message of the person's, of the made-up store's kind, that `find` shows in part.
+LONG = (
+    "First the old paint comes off the hull, plank by plank, and the seams are looked at as it goes. " * 4
+    + "Then the keel is checked for the varnish. "
+    + "After that the hull is washed, left to dry for a week, and painted grey in two coats. " * 4
+)
+
+
+def excerpted() -> str:
+    """What `find` answers through the server where it shows a message in part: a long one, found by a word in its
+    middle."""
+    rows = [*ROWS, row("user", "f0f0f0f0", 9, LONG)]
+    crossings, _ = home(Path(tempfile.mkdtemp(prefix="told-", dir=DATA)), rows=rows)
+    with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)), started_by("cli"):
+        return serve.call("find", {"words": "varnish"})[0]
+
+
+def at_rest_elsewhere() -> str:
+    """What `look`, `labels` and `status` say through the server of a refusal that a session's own silencing, written
+    under another model, puts to rest for that model alone: it stands for the model that asks, and they say so."""
+    crossings, _ = home(Path(tempfile.mkdtemp(prefix="told-", dir=DATA)))
+    here, other = "a-made-up-model", "another-made-up-model"
+    store.mark(crossings, "refused", "session", "The mast is not stepped before the paint.", [D], day=DAY, model=here)
+    put_to_rest = "The paint is on, so the mast can go up."
+    store.mark(crossings, "silenced", "session", put_to_rest, ["X1", E], day=DAY, model=other)
+    layer.arrive(crossings, "session-", here)  # the session that spoke last, which the server asks for, runs `here`
+    with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)), started_by("cli"):
+        looked, listed, status = (serve.call(name, given)[0] for name, given in (
+            ("look", {}), ("labels", {"ids": ["X1"]}), ("status", {}),
+        ))  # fmt: skip
+    counted = next(line for line in looked.split("\n") if line.startswith("Labels: "))
+    return "\n\n".join(fenced(each) for each in (counted, listed, status))
+
+
+def alone_elsewhere() -> str:
+    """What `look`, `labels` and `status` say through the server of a refusal that is another model's alone, first
+    where it stands there, then where that model's session put it to rest: the frame for the model that asks
+    carries nothing of it, and they count it neither standing nor silenced."""
+    here, other = "a-made-up-model", "another-made-up-model"
+    shown = []
+    for at_rest in (False, True):
+        crossings, _ = home(Path(tempfile.mkdtemp(prefix="told-", dir=DATA)))
+        refused = "The mast is not stepped before the paint."
+        store.mark(crossings, "refused", "session", refused, [D], day=DAY, model=other)
+        if at_rest:
+            put_to_rest = "The paint is on, so the mast can go up."
+            store.mark(crossings, "silenced", "session", put_to_rest, ["X1", E], day=DAY, model=other)
+        layer.arrive(crossings, "session-", here)  # the session that spoke last, which the server asks for
+        with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)), started_by("cli"):
+            looked, listed, status = (serve.call(name, given)[0] for name, given in (
+                ("look", {}), ("labels", {"ids": ["X1"]}), ("status", {}),
+            ))  # fmt: skip
+        shown += [next(line for line in looked.split("\n") if line.startswith("Labels: ")), listed, status]
+    return "\n\n".join(fenced(each) for each in shown)
 
 
 def refusals() -> list[str]:
@@ -194,10 +268,10 @@ def below() -> str:
 
 
 def by_count() -> str:
-    """The frame a session is given where the keys of a page written by hand would take it past what a hook may
-    carry (frame.MOST): made again with the sentences that name labels outside their own lines saying how many
-    they are (see frame.compose). Shown at the least size, with a long line at the door, so that each of those
-    sentences is in it; made with the frame's own composition, as compose makes it in that case."""
+    """The frame a session is given where the keys of a page written by hand would take it past its size: made
+    again with the sentences that name labels outside their own lines saying how many they are (see
+    frame.compose). Shown at the least size, with a long line at the door, so that each of those sentences is in
+    it; made with the frame's own composition, as compose makes it in that case."""
     crossings, _ = home(Path(tempfile.mkdtemp(prefix="told-", dir=DATA)))
     line = "The paint is to be bought before the yard closes, and the hull scraped first. " * 20
     store.mark(crossings, "next", "session", line.strip(), [D], day=DAY)
@@ -209,6 +283,18 @@ def by_count() -> str:
     return frame._composed(crossings, frame.LEAST, False, "", by_count=True)
 
 
+def few_named() -> str:
+    """The frame a session is given at the least size where more models made lines than the frame has room to name:
+    the sentence about their lines says only how many they are (see frame._made). In a home of its own, the made-up
+    store with a line at the door and eight labels each marked by a made-up model of a long name."""
+    crossings, _ = home(Path(tempfile.mkdtemp(prefix="told-", dir=DATA)))
+    store.mark(crossings, "next", "session", "Find out whether the grey paint has been bought.", [D], day=DAY)
+    for n in range(1, 9):
+        name = f"made-up-model-{n}-of-a-long-name-" + "x" * 40
+        store.mark(crossings, "work", "session", f"The paint for coat {n} is mixed.", [E], day=DAY, model=name)
+    return frame.compose(crossings, frame.LEAST, model="a-made-up-model")
+
+
 def cut_session(crossings: Path) -> str:
     """The made-up home's one session, as the archive names it: a cut's frame is asked for by session, and it is
     that frame that is laid out with each sentence of the person's packed with what was told of it."""
@@ -217,6 +303,37 @@ def cut_session(crossings: Path) -> str:
         return db.execute("select session from said where session != '' order by seq limit 1").fetchone()[0]
     finally:
         db.close()
+
+
+def nesting() -> str:
+    """What `crossing` gives where the line at the door rests on both ends of a sentence of the person's: the cut's
+    frame, with the session's turns set beside that sentence, and after it, apart, the sentence of what those turns
+    take. In a home of its own, the made-up store with a line at the door on the person's message (D) and on the
+    session's message on each side of it (B, E); no other file is written."""
+    crossings, _ = home(Path(tempfile.mkdtemp(prefix="told-", dir=DATA)))
+    store.mark(crossings, "next", "session", "Find out whether the grey paint has been bought.", [B, D, E], day=DAY)
+    with started_by("cli"), set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)):
+        text, _ = serve.call("crossing", {})
+    return text
+
+
+def standing() -> str:
+    """What `crossing` gives where a standing line carried in the frame, not the person's, rests on both ends of a
+    sentence of the person's, and where a stack does through a line beneath it: the cut's frame, with those turns set
+    beside the sentences, keyed by the line and by the stack, and after it, apart, the sentence of what they take. In
+    a home of its own, the made-up store with a line at the door on the person's message (D) alone; a standing line on
+    D and the session's answer to it (E); and a line on the person's first message (A) and the session's answer (B),
+    beneath a stack. The store's own standing line of the person's on A and B sets nothing; no other file is
+    written."""
+    crossings, _ = home(Path(tempfile.mkdtemp(prefix="told-", dir=DATA)))
+    store.mark(crossings, "next", "session", "Find out whether the grey paint has been bought.", [D], day=DAY)
+    store.mark(crossings, "relation", "both", "The person plans the boat's work by the seasons.", [D, E], day=DAY)
+    name = "The boat's name and mooring are kept to hand."
+    kept = store.mark(crossings, "relation", "session", name, [A, B], day=DAY)
+    store.mark(crossings, "relation", "session", "What the session holds of the boat.", [kept["id"]], day=DAY)
+    with started_by("cli"), set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)):
+        text, _ = serve.call("crossing", {})
+    return text
 
 
 def page() -> str:
@@ -254,18 +371,27 @@ def page() -> str:
         + fenced(hook.welcome()),
         "## A session started new, in a home that holds labels: its frame\n\n"
         + fenced(frame.compose(crossings, new=True)),
+        ledger(),
         "## After a cut: the waking note\n\n" + fenced(hook.waking({"cut": 2})),
         "## After a cut: the frame\n\n" + fenced(frame.compose(crossings)),
         "## After a cut, for the session that was cut: the person's sentences, each with what was told of it\n\n"
         + fenced(frame.compose(crossings, session=cut_session(crossings))),
+        "## After a cut, where the line at the door rests on both ends of a sentence: the session's turns beside it, "
+        "as `crossing` gives the frame, with the sentence it says after the frame and apart from it\n\n"
+        + fenced(nesting()),
+        "## After a cut, where a standing line rests on both ends of a sentence, or a stack through a line beneath it: "
+        "the session's turns beside it, as `crossing` gives the frame, with the sentence it says after the frame and "
+        "apart from it\n\n" + fenced(standing()),
         "## After a cut, the frame at the least size a home may set\n\n"
         + fenced(frame.compose(crossings, frame.LEAST)),
-        "## After a cut, where a page written by hand holds keys that would take the frame past what a hook may "
-        "carry: the frame names labels by count\n\n" + fenced(by_count()),
+        "## After a cut, where a page written by hand holds keys that would take the frame past its size: the frame "
+        "names labels by count\n\n" + fenced(by_count()),
         "## After a cut where no frame can be made: the hooks module's note before the hand-over page\n\n"
         + fenced(module_note()),
         "## After a cut, in a home where other models made lines\n\n"
         + fenced(frame.compose(crossings, model="a-made-up-model")),
+        "## After a cut, at the least size, where more models made lines than the frame has room to name: the "
+        "sentence says how many they are\n\n" + fenced(few_named()),
         "## As the person switches Crossings off during a session, and on again\n\n"
         + fenced(hook.unkept())
         + "\n\n"
@@ -274,6 +400,11 @@ def page() -> str:
         "## A session resumed where another worked since it last spoke\n\n" + fenced(hook.moved_on()),
         "## A session that starts in a folder below another home's folder\n\n" + fenced(below()),
         "## What the door's tools answer, from the made-up store\n\n" + answered(project),
+        "## What `find` answers where it shows a message in part\n\n" + fenced(excerpted()),
+        "## What `look`, `labels` and `status` say of a refusal put to rest for another model alone: it stands for the "
+        "model that asks, the one of the session that spoke last\n\n" + at_rest_elsewhere(),
+        "## What they say of a refusal that is another model's alone, standing there and then at rest there: it is "
+        "counted for no family of the model that asks\n\n" + alone_elsewhere(),
         "## What a mark, or a line left at the door, can be refused with\n\n"
         "Each follows `not marked: `; an ellipsis stands where the sentence names a key, an id or a model.\n\n"
         + fenced("\n".join(refusals())),
@@ -303,7 +434,8 @@ def page() -> str:
     ]
     # Then what the session declined, marked once every other part is made, so that each of those is as it was: a
     # refusal judged again once, packed for the session that was cut; then three more, laid out as before, where
-    # the family the frame does not carry is named in a sentence.
+    # every family that stands is carried; and the sentence that names the oldest families where they would take a
+    # frame past the most a hook can carry.
     hull = store.mark(
         crossings, "refused", "session", "The hull is not painted: the old paint comes off first.", [E], day=DAY
     )
@@ -320,8 +452,12 @@ def page() -> str:
     parts[at:at] = [
         "## After a cut, for the session that was cut, where it declined something: each refusal first, under the "
         "sentences of the person's that asked\n\n" + fenced(packed),
-        "## After a cut, where more refusals stand than a frame carries, laid out as before\n\n"
-        + fenced(frame.compose(crossings)),
+        "## After a cut, where four refusals stand, laid out as before\n\n" + fenced(frame.compose(crossings)),
+        "## Where the refusals that stand would take a frame past the most a hook can carry: the oldest, in a "
+        "sentence in their place\n\n"
+        + fenced(frame._beyond([{"standing": {"id": "X2", "n": 2}}, {"standing": {"id": "X3", "n": 3}}], False))
+        + "\n\n"
+        + fenced(frame._beyond([{"standing": {"id": "X2", "n": 2}}], True)),
     ]
     return "\n\n".join(parts) + "\n"
 

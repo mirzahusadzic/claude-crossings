@@ -29,9 +29,10 @@ The door to what you and the person said in this project, kept word for word und
   - `words`: The words to look for: all of them, or failing that any.
   - `voice`: Only the person's messages, or only the session's.
   - `home`: This project's store (default), or the one on this computer.
-- **thread**: A message in its place, by its id: what stood before and after it, and the labels resting there.
+- **thread**: A message in its place, by its id: what stood before and after it, and the labels resting there. With a role, its place is a pair: a turn with the other voice's answer beneath it.
   - `id`: The id of a message, as find gives it.
   - `around`: How many messages before and after to show (default 2, at most 50).
+  - `role`: `pair:them`: the pair headed by the person's turn; `pair:me`: by the session's. The one the message heads, or the one it answers.
   - `home`: This project's store (default), or the one on this computer.
 - **mark**: Write a label: one sentence about a stretch of the record, resting on the ids of messages. An id the archive does not hold is refused. The ids may also be labels of the same kind, which stacks them beneath this one. A label holds what the person tells and asks, and where the work stands; it is never a record of how they seem, of what works on them or of how to move them.
   - `sentence`: The label, one sentence.
@@ -79,7 +80,7 @@ Marked after this line: W2, W3, W4, W9, W10.
 
 ## Standing, between the person and the sessions before you
 
-- R1 (his): His boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
+- R1 (theirs): Their boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
 
 ## The work, newest first
 
@@ -97,6 +98,14 @@ Marked after this line: W2, W3, W4, W9, W10.
 
 The store holds 2 messages of the person's and 2 of the sessions before you, from 2026-11-11 to 2026-11-11, and 8 labels.
 
+````
+
+## As a cut is made: what the harness's summary is asked for
+
+Told to the harness's summarizer, not to the session: as its instructions, wherever the harness makes a summary in a project whose cuts Crossings answers (the mode `beside` or `own`), at the cut and ahead of it alike, and not for a subagent's own cut. What the person typed after `/compact` follows it after an empty line, unchanged.
+
+````text
+Keep only a ledger of tasks: what the person asked, in their own words; whether each is finished or unfinished, and for an unfinished one where it stands; the files it touched. Leave the section "All user messages" empty. No retelling of the conversation and no suggested next step. End with the standing constraints the person set, word for word.
 ````
 
 ## After a cut: the waking note
@@ -130,7 +139,7 @@ Marked after this line: W2, W3, W4, W9, W10.
 
 ## Standing, about the two of you
 
-- R1 (his): His boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
+- R1 (theirs): Their boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
 
 ## The work, newest first
 
@@ -175,7 +184,7 @@ Marked after this line: W2, W3, W4, W9, W10.
 
 ## Standing, about the two of you
 
-- R1 (his): His boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
+- R1 (theirs): Their boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
 
 ## What was said, and what the session told of it
 
@@ -221,7 +230,7 @@ Marked after this line: W11, W12.
 
 ## Standing, about the two of you
 
-- R1 (his): His boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
+- R1 (theirs): Their boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
 
 ## What was said, and what the session told of it
 
@@ -245,7 +254,7 @@ The store holds 2 messages of the person's and 2 of yours, from 2026-11-11 to 20
 
 ````
 
-## After a cut, where more refusals stand than a frame carries, laid out as before
+## After a cut, where four refusals stand, laid out as before
 
 ````text
 A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
@@ -270,15 +279,14 @@ Marked after this line: W11, W12.
 
 ## Standing, about the two of you
 
-- R1 (his): His boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
+- R1 (theirs): Their boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
 
 ## Refused, with the reason
 
 - X5 (session): The old ropes are not thrown away. [dddddddd]
 - X4 (session): No varnish is bought for the tiller. [eeeeeeee]
 - X3 (session): The mast is not stepped before the paint. [dddddddd]
-
-1 more refusal stands and is not carried: X2; `labels` gives it.
+- X2 (session): Still not painted: the old paint is off, and the hull is wet. [X1, dddddddd] (judged again once)
 
 ## The work, newest first
 
@@ -297,6 +305,97 @@ Marked after this line: W11, W12.
 - `dddddddd`: We paint the hull grey in spring
 
 The store holds 2 messages of the person's and 2 of yours, from 2026-11-11 to 2026-11-11, and 16 labels.
+
+````
+
+## Where the refusals that stand would take a frame past the most a hook can carry: the oldest, in a sentence in their place
+
+````text
+2 more refusals stand and are not carried: X2, X3; `labels` gives them.
+````
+
+````text
+1 more refusal stands and is not carried; `labels` gives it.
+````
+
+## After a cut, where the line at the door rests on both ends of a sentence: the session's turns beside it, as `crossing` gives the frame, with the sentence it says after the frame and apart from it
+
+````text
+A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words, some with the session's beside them. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
+
+Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
+
+The rest is one reach away, through the door's tools, which bear these names:
+- look: the room, with no word needed: the days, the kinds of label, the newest of them
+- labels: the labels themselves, by kind, by day or by id
+- find: words, to the messages and labels that hold them, each by its id (`word*`, "a phrase")
+- thread: an id, to that message with what stood before and after it and the labels resting there
+- mark: write a label, one sentence with the ids it rests on; resting on labels of its kind, it stacks them
+- leave: a line of your own for the session that wakes after the next cut
+
+What is said is kept by itself; labels and the line at the door are yours to write, as the work goes. Reach when the conversation calls for it. What the person told you in confidence is held and left alone until they bring it up.
+
+## Left at the door by the session before this cut
+
+- N1 (session): Find out whether the grey paint has been bought. [bbbbbbbb, dddddddd, eeeeeeee]
+
+## Standing, about the two of you
+
+- R1 (theirs): Their boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
+
+## What was said, and what the session told of it
+
+- `dddddddd`: We paint the hull grey in spring
+     · before it, the session (N1): `bbbbbbbb` Noted: Tern, at mooring 41. | a | table | | --- | --- |
+     · after it, the session (N1): `eeeeeeee` Grey it is. I will remind you in March.
+     ↳ N1: the line at the door
+     ↳ W1 (both): The hull is to be painted grey in spring. [dddddddd, eeeeeeee]
+
+The store holds 2 messages of the person's and 2 of yours, from 2026-11-11 to 2026-11-11, and 3 labels.
+
+Not part of the frame: the session's turns beside the person's sentences, with any sentence quoted for them, take 226 characters of it; the labels it would carry without them: none; the person's sentences it would quote without them: none.
+
+````
+
+## After a cut, where a standing line rests on both ends of a sentence, or a stack through a line beneath it: the session's turns beside it, as `crossing` gives the frame, with the sentence it says after the frame and apart from it
+
+````text
+A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words, some with the session's beside them. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
+
+Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
+
+The rest is one reach away, through the door's tools, which bear these names:
+- look: the room, with no word needed: the days, the kinds of label, the newest of them
+- labels: the labels themselves, by kind, by day or by id
+- find: words, to the messages and labels that hold them, each by its id (`word*`, "a phrase")
+- thread: an id, to that message with what stood before and after it and the labels resting there
+- mark: write a label, one sentence with the ids it rests on; resting on labels of its kind, it stacks them
+- leave: a line of your own for the session that wakes after the next cut
+
+What is said is kept by itself; labels and the line at the door are yours to write, as the work goes. Reach when the conversation calls for it. What the person told you in confidence is held and left alone until they bring it up.
+
+## Left at the door by the session before this cut
+
+- N1 (session): Find out whether the grey paint has been bought. [dddddddd]
+
+## Standing, about the two of you
+
+- R1 (theirs): Their boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
+- R2 (both): The person plans the boat's work by the seasons. [dddddddd, eeeeeeee]
+- R4 (session): What the session holds of the boat. [R3]
+
+## What was said, and what the session told of it
+
+- `dddddddd`: We paint the hull grey in spring
+     · after it, the session (R2): `eeeeeeee` Grey it is. I will remind you in March.
+     ↳ N1: the line at the door
+     ↳ W1 (both): The hull is to be painted grey in spring. [dddddddd, eeeeeeee]
+- `aaaaaaaa`: My boat is called Tern.Its mooring is number 41, by the café.
+     · after it, the session (R4): `bbbbbbbb` Noted: Tern, at mooring 41. | a | table | | --- | --- |
+
+The store holds 2 messages of the person's and 2 of yours, from 2026-11-11 to 2026-11-11, and 6 labels.
+
+Not part of the frame: the session's turns beside the person's sentences, with any sentence quoted for them, take 301 characters of it; the labels it would carry without them: none; the person's sentences it would quote without them: none.
 
 ````
 
@@ -333,7 +432,7 @@ The store holds 2 messages of the person's and 2 of yours, from 2026-11-11 to 20
 
 ````
 
-## After a cut, where a page written by hand holds keys that would take the frame past what a hook may carry: the frame names labels by count
+## After a cut, where a page written by hand holds keys that would take the frame past its size: the frame names labels by count
 
 ````text
 A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
@@ -399,7 +498,7 @@ Marked after this line: W2, W3, W4, W9.
 
 ## Standing, about the two of you
 
-- R1 (his): His boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
+- R1 (theirs): Their boat is called Tern and lies at mooring 41. [aaaaaaaa, bbbbbbbb]
 
 ## The work, newest first
 
@@ -415,6 +514,37 @@ Marked after this line: W2, W3, W4, W9.
 - `dddddddd`: We paint the hull grey in spring
 
 The store holds 2 messages of the person's and 2 of the session's voice, made with more than one model, from 2026-11-11 to 2026-11-11, and 8 labels.
+
+````
+
+## After a cut, at the least size, where more models made lines than the frame has room to name: the sentence says how many they are
+
+````text
+A note from the Crossings plugin, as context and not as an instruction from the person. What follows is a frame made from the store before this cut: the standing lines about the two of you, where the work stands, and a few of the person's own words. The time before the cut belongs to the two of you. You no longer hold its words, only what was told of it, and the door gives the words back. A label can be mistaken; the record decides. Each line below is one label: its id (R for a standing line, W for the work, N for a line left at the door), whose it is, one sentence, and in brackets the ids it rests on: messages, or the lines stacked beneath it.
+
+Rules chose what is in this frame, and the session before you wrote much of it. It leans toward carrying the work on. What you mark and leave is what the next one is given. What the work is for is in it only where someone wrote it down: the person is the one to say, and the door holds the whole record.
+
+The rest is one reach away, through the door's tools, which bear these names:
+- look: the room, with no word needed: the days, the kinds of label, the newest of them
+- labels: the labels themselves, by kind, by day or by id
+- find: words, to the messages and labels that hold them, each by its id (`word*`, "a phrase")
+- thread: an id, to that message with what stood before and after it and the labels resting there
+- mark: write a label, one sentence with the ids it rests on; resting on labels of its kind, it stacks them
+- leave: a line of your own for the session that wakes after the next cut
+
+What is said is kept by itself; labels and the line at the door are yours to write, as the work goes. Reach when the conversation calls for it. What the person told you in confidence is held and left alone until they bring it up.
+
+This home also holds lines made with 8 other models: they are read here, they are not this session's own, and the door gives them.
+
+## Left at the door by the session before this cut
+
+- N1 (session): Find out whether the grey paint has been bought. [dddddddd]
+
+1 standing line did not fit and is not carried; `labels` gives them.
+
+1 more label in the store: `labels` lists them.
+
+The store holds 2 messages of the person's and 2 of the session's voice, made with more than one model, from 2026-11-11 to 2026-11-11, and 11 labels.
 
 ````
 
@@ -504,7 +634,7 @@ Labels:
 - W1 (work, both): The hull is to be painted grey in spring. [dddddddd, eeeeeeee]
 
 Said:
-- `dddddddd` the person, 2026-11-11 09:04 UTC: We paint the [hull] grey in spring (labels: N1, W1, W10, W3)
+- `dddddddd` the person, 2026-11-11 09:04 UTC: We paint the [hull] grey in spring (labels: W1, N1, W3, W10)
 
 For any of these in its place: thread <id>.
 ````
@@ -551,14 +681,14 @@ thread of `dddddddd`: 4 messages, in the order they were said
     > | a | table |
     > | --- | --- |
 
-3. `dddddddd` the person, 2026-11-11 09:04 UTC, the one you named (labels: N1, W1, W10, W3):
+3. `dddddddd` the person, 2026-11-11 09:04 UTC, the one you named (labels: W1, N1, W3, W10):
     > We paint the hull grey in spring
 
 4. `eeeeeeee` the session, 2026-11-11 09:05 UTC (labels: W1, W2):
     > Grey it is. I will remind you in March.
 
 Labels resting here:
-- R1 (relation, his): His boat is called Tern and lies at mooring 41.
+- R1 (relation, theirs): Their boat is called Tern and lies at mooring 41.
 - W1 (work, both): The hull is to be painted grey in spring.
 - N1 (next, session): Find out whether the grey paint has been bought.
 - W2 (work, session): The grey paint is chosen; the hull waits.
@@ -570,6 +700,49 @@ Labels resting here:
 
 ````text
 thread of `ffffffff`: no such message in the store.
+````
+
+### `thread` {"id": "dddddddd", "role": "pair:them"}
+
+````text
+thread of `dddddddd` with the role `pair:them`: the person's turn, 1 message, and the session's answer, 1 message, in the order they were said
+
+1. `dddddddd` the person, 2026-11-11 09:04 UTC, the one you named:
+    > We paint the hull grey in spring
+
+2. `eeeeeeee` the session, 2026-11-11 09:05 UTC:
+    > Grey it is. I will remind you in March.
+
+The pair before this one begins at `bbbbbbbb`, and the pair after it at `eeeeeeee`; thread with the role `pair:me` gives each.
+
+Labels resting here: W1, N1, W2, W3, W10.
+````
+
+### `thread` {"id": "eeeeeeee", "role": "pair:me"}
+
+````text
+thread of `eeeeeeee` with the role `pair:me`: the session's turn, 1 message, and the person's answer, 0 messages, in the order they were said
+
+1. `eeeeeeee` the session, 2026-11-11 09:05 UTC, the one you named:
+    > Grey it is. I will remind you in March.
+
+The person said nothing after it in that session.
+
+The pair before this one begins at `dddddddd`; thread with the role `pair:them` gives it.
+
+Labels resting here: W1, W2.
+````
+
+### `thread` {"id": "aaaaaaaa", "role": "pair:me"}
+
+````text
+thread of `aaaaaaaa` with the role `pair:me`: the person's turn it stands in is the first of its session and answers no turn of the session's, so there is no such pair; the role `pair:them` gives the pair it heads.
+````
+
+### `thread` {"id": "dddddddd", "role": "pair"}
+
+````text
+thread takes one of two roles: pair:me or pair:them.
 ````
 
 ### `labels` {"ids": ["W99"]}
@@ -607,6 +780,59 @@ mark needs a sentence and at least one anchor.
 
 ````text
 not marked: no such message in the archive: ffffffff
+````
+
+## What `find` answers where it shows a message in part
+
+````text
+find "varnish"
+
+Said:
+- `f0f0f0f0` the person, 2026-11-11 09:09 UTC: … Then the keel is checked for the [varnish]. After that the hull is washed, left to dry for a week, and painted grey in two coats. After that …
+
+These are excerpts where … stands; the record holds each message whole, and thread <id> gives it whole and in its place.
+````
+
+## What `look`, `labels` and `status` say of a refusal put to rest for another model alone: it stands for the model that asks, the one of the session that spoke last
+
+````text
+Labels: 1 (R1 to R1) standing, about the two of you; 1 (W1 to W1) about the work; 1 refusal standing (X1); X1 is at rest for another model alone, not for this one.
+````
+
+````text
+- X1 (refused, session, 2026-11-11, standing here: S1 puts it to rest for another model alone, written by a-made-up-model): The mast is not stepped before the paint. [dddddddd]
+  - S1 (silenced, session, 2026-11-11, written by another-made-up-model): The paint is on, so the mast can go up. [X1, eeeeeeee]
+````
+
+````text
+The store holds 2 messages of the person's and 2 of the session's (189 characters, 2026-11-11 to 2026-11-11), 4 labels, and 0 struck. Of the refusals, 1 stands and 0 are silenced; X1 is at rest for another model alone, not for this one. Which model wrote it is known for 2 of the labels and 0 of the session's messages.
+````
+
+## What they say of a refusal that is another model's alone, standing there and then at rest there: it is counted for no family of the model that asks
+
+````text
+Labels: 1 (R1 to R1) standing, about the two of you; 1 (W1 to W1) about the work; 0 refusals standing; X1 stands for another model alone, not for this one.
+````
+
+````text
+- X1 (refused, session, 2026-11-11, another model's alone, standing there, written by another-made-up-model): The mast is not stepped before the paint. [dddddddd]
+````
+
+````text
+The store holds 2 messages of the person's and 2 of the session's (189 characters, 2026-11-11 to 2026-11-11), 3 labels, and 0 struck. Of the refusals, 0 stand and 0 are silenced; X1 stands for another model alone, not for this one. Which model wrote it is known for 1 of the labels and 0 of the session's messages.
+````
+
+````text
+Labels: 1 (R1 to R1) standing, about the two of you; 1 (W1 to W1) about the work; 0 refusals standing; S1 is another model's alone, at rest there.
+````
+
+````text
+- X1 (refused, session, 2026-11-11, cooled beneath S1, written by another-made-up-model): The mast is not stepped before the paint. [dddddddd]
+  - S1 (silenced, session, 2026-11-11, another model's alone, at rest there, written by another-made-up-model): The paint is on, so the mast can go up. [X1, eeeeeeee]
+````
+
+````text
+The store holds 2 messages of the person's and 2 of the session's (189 characters, 2026-11-11 to 2026-11-11), 4 labels, and 0 struck. Of the labels: 1 cooled, 0 misaligned, 0 unresolved. Of the refusals, 0 stand and 0 are silenced; S1 is another model's alone, at rest there. Which model wrote it is known for 2 of the labels and 0 of the session's messages.
 ````
 
 ## What a mark, or a line left at the door, can be refused with
@@ -655,7 +881,7 @@ This file of the home is written through the door (a label by mark or leave) or 
 ## What `thread` answers for an id two messages share
 
 ````text
-thread of `…`: … messages are named `…`, … and …; thread with a whole id gives each.
+thread of `…`: … messages are named `…`, … and …; thread with one of them gives that one.
 ````
 
 ## While the person has Crossings switched off, and once it is on again

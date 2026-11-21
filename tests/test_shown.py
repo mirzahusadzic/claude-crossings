@@ -81,8 +81,8 @@ def test_a_silencing_that_speaks_for_the_person_is_shown_as_a_work_label_that_do
         both = through(project, "mark", {"kind": "silenced", "whose": "both", "sentence": put, "anchors": ["X2", b(3)]})
         through(project, "mark", {"kind": "refused", "sentence": "Nor that.", "anchors": [b(1)]})  # X3
         own = through(project, "mark", {"kind": "silenced", "sentence": "Pushed by hand.", "anchors": ["X3", b(3)]})
-    assert work == ("marked W1", shows("W1", "his", "The wabe is the person's."))  # as a work label that does is
-    assert his == ("marked S1", shows("S1", "his", DROPPED))
+    assert work == ("marked W1", shows("W1", "theirs", "The wabe is the person's."))  # as a work label that does is
+    assert his == ("marked S1", shows("S1", "theirs", DROPPED))
     assert both == ("marked S2", shows("S2", "both", put))
     assert refused == ("marked X1", None) and theirs == ("marked X2", None) and own == ("marked S3", None)
 
