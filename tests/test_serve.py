@@ -416,6 +416,30 @@ def test_a_line_left_at_the_door_is_to_say_what_the_work_is_for(tmp_path):
     assert f"- `{D}`: We paint the hull grey in spring" in carried  # their words, beside the line that rests on them
 
 
+def test_mark_and_leave_ask_for_short_writing_and_say_why_where_the_text_is_typed_within_the_sizes_held():
+    """Guard: sessions wrote labels of 1,000 to 2,500 characters where a frame holds about 9,000, and the tools said
+    "one sentence" and "a few sentences" and nothing of the room. `mark` asks now for a sentence or two, and where the
+    text is typed, its `sentence`, for a short one, since a long label may not fit (crossing/frame.py fits a row only
+    where it fits); `leave`'s `sentence` asks for a few short sentences, since a long line takes room from what the
+    frame fits after it: the standing lines, the work and the person's own words. Each description stays under the
+    400 it is held to, and the listing under its cap."""
+    tools = {each["name"]: each for each in serve.TOOLS}
+    mark, leave = tools["mark"]["description"], tools["leave"]["description"]
+    typed = {name: tools[name]["inputSchema"]["properties"]["sentence"]["description"] for name in ("mark", "leave")}
+    assert mark == (
+        "Write a label: a sentence or two about a stretch of the record, resting on the ids of messages. An id the "
+        "archive does not hold is refused. The ids may also be labels of the same kind, which stacks them beneath this "
+        "one. " + store.FOR
+    )
+    assert typed["mark"] == "The label: short, a sentence or two. A long one may not fit in a frame."
+    assert leave.startswith("Leave a line for the session after the next cut: a few sentences on where things stand")
+    assert typed["leave"] == (
+        "The line, in your own words: a few short sentences. A long one takes room from the standing lines, the work "
+        "and the person's own words."
+    )
+    assert len(mark) < 400 and len(leave) < 400 and len(json.dumps(serve.TOOLS)) < 5900
+
+
 if __name__ == "__main__":
     for name, test in sorted(globals().items()):
         if name.startswith("test_"):

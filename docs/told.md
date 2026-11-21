@@ -34,14 +34,14 @@ The door to what you and the person said in this project, kept word for word und
   - `around`: How many messages before and after to show (default 2, at most 50).
   - `role`: `pair:them`: the pair headed by the person's turn; `pair:me`: by the session's. The one the message heads, or the one it answers.
   - `home`: This project's store (default), or the one on this computer.
-- **mark**: Write a label: one sentence about a stretch of the record, resting on the ids of messages. An id the archive does not hold is refused. The ids may also be labels of the same kind, which stacks them beneath this one. A label holds what the person tells and asks, and where the work stands; it is never a record of how they seem, of what works on them or of how to move them.
-  - `sentence`: The label, one sentence.
+- **mark**: Write a label: a sentence or two about a stretch of the record, resting on the ids of messages. An id the archive does not hold is refused. The ids may also be labels of the same kind, which stacks them beneath this one. A label holds what the person tells and asks, and where the work stands; it is never a record of how they seem, of what works on them or of how to move them.
+  - `sentence`: The label: short, a sentence or two. A long one may not fit in a frame.
   - `anchors`: The ids it rests on: messages, or labels of its kind.
   - `kind`: relation (the two of you), work (default), refused (rests on what was asked; its sentence is your reason) or silenced (rests on a refusal that stands no longer; its sentence says why).
   - `whose`: Whose the labelled thing is (default: the session's).
   - `home`: This project's store (default), or the one on this computer.
 - **leave**: Leave a line for the session after the next cut: a few sentences on where things stand, what is open and what the work is for. It rests on ids like a label, among them the message where the person said what for. Only the newest is carried. A label holds what the person tells and asks, and where the work stands; it is never a record of how they seem, of what works on them or of how to move them.
-  - `sentence`: The line, in your own words.
+  - `sentence`: The line, in your own words: a few short sentences. A long one takes room from the standing lines, the work and the person's own words.
   - `anchors`: The ids of the messages it rests on.
   - `home`: This project's store (default), or the one on this computer.
 - **status**: What the store holds, in one line.
@@ -791,6 +791,34 @@ Said:
 - `f0f0f0f0` the person, 2026-11-11 09:09 UTC: … Then the keel is checked for the [varnish]. After that the hull is washed, left to dry for a week, and painted grey in two coats. After that …
 
 These are excerpts where … stands; the record holds each message whole, and thread <id> gives it whole and in its place.
+````
+
+## What `leave` and `mark` answer where a line or a label comes in long
+
+Through the server the plugin started, whose hook after the call shows the person, under the turn, a standing line, a label that speaks for them and every line left at the door, each cut at 160 characters.
+
+### `leave`, with a line of 1,079 characters
+
+````text
+marked N1. This line is 1,079 characters long: it takes room from the standing lines, the work and the person's own words. A shorter one can be left in its place.
+````
+
+### `mark`, with a label of 331 characters
+
+````text
+marked W2. This label is 331 characters long: a list shows 240 of one, and a frame may have no room for it. The line at the door was left before this label: where it no longer holds, a new one can be left.
+````
+
+### `mark`, with a standing line of 179 characters
+
+````text
+marked R2. This label is 179 characters long: the person is shown 160 of one.
+````
+
+### `mark`, with a label of the person's of 269 characters
+
+````text
+marked W3. This label is 269 characters long: the person is shown 160 of one, a list shows 240, and a frame may have no room for it.
 ````
 
 ## What `look`, `labels` and `status` say of a refusal put to rest for another model alone: it stands for the model that asks, the one of the session that spoke last

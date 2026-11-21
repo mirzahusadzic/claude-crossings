@@ -148,11 +148,14 @@ TOOLS = [
     ),
     tool(
         "mark",
-        "Write a label: one sentence about a stretch of the record, resting on the ids of messages. An id "
+        "Write a label: a sentence or two about a stretch of the record, resting on the ids of messages. An id "
         "the archive does not hold is refused. The ids may also be labels of the same kind, which stacks "
         "them beneath this one. " + store.FOR,
         ("sentence", "anchors"),
-        sentence={"type": "string", "description": "The label, one sentence."},
+        sentence={
+            "type": "string",
+            "description": "The label: short, a sentence or two. A long one may not fit in a frame.",
+        },
         anchors={**IDS, "description": "The ids it rests on: messages, or labels of its kind."},
         kind={
             "type": "string",
@@ -172,7 +175,11 @@ TOOLS = [
         "and what the work is for. It rests on ids like a label, among them the message where the person said "
         "what for. Only the newest is carried. " + store.FOR,
         ("sentence", "anchors"),
-        sentence={"type": "string", "description": "The line, in your own words."},
+        sentence={
+            "type": "string",
+            "description": "The line, in your own words: a few short sentences. A long one takes room from the "
+            "standing lines, the work and the person's own words.",
+        },
         anchors={**IDS, "description": "The ids of the messages it rests on."},
     ),
     tool("status", "What the store holds, in one line."),

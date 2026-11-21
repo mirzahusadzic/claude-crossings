@@ -4120,6 +4120,9 @@ def _unmarked(
 
 UNTEXT = "a label's sentence and its anchors are to be text, and this holds a character that is none"
 LONGEST = 4000  # characters of a label's sentence, at most: a frame has room for the line left at the door
+# characters of a label's sentence shown to the person under the turn (crossing/hook.py), and the point from which the
+# door's answer says so (crossing/door.py)
+SHOWN = 160
 BUSY = "another act was writing this home, so nothing was {}: try again in a moment"
 
 

@@ -151,6 +151,40 @@ def excerpted() -> str:
         return serve.call("find", {"words": "varnish"})[0]
 
 
+# What the section of long lines and labels says before its calls.
+LONG_TOLD = (
+    "Through the server the plugin started, whose hook after the call shows the person, under the turn, a standing "
+    "line, a label that speaks for them and every line left at the door, each cut at 160 characters."
+)
+
+
+def long_marked() -> str:
+    """What the server answers where a line left at the door, and then a label about the work, come in long: each is
+    written whole, and the answer says how long it is, before the sentence it adds otherwise; and where a standing
+    line and a label of the person's do, which the person is shown, from 160 characters (store.SHOWN). In a home of
+    its own, the made-up store, with a line of over 900 characters, a label of the session's of over 240 (door.TENTH,
+    door.SHORT), a standing line of between 160 and 240, and a label of the person's of over 240."""
+    crossings, _ = home(Path(tempfile.mkdtemp(prefix="told-", dir=DATA)))
+    line = (
+        "The hull is scraped plank by plank, the seams are looked at as it goes, and the paint waits for a dry week. "
+    )
+    label = "The grey paint is chosen for the hull, two coats of it, once the old paint is off. "
+    standing = "The person keeps the boat's papers in the chart table and wants them left where they are. "
+    theirs = "The person wants the mast stepped only once the paint is dry, whatever the forecast says. "
+    calls = (
+        ("leave", "a line", line * 10, {}),
+        ("mark", "a label", label * 4, {}),
+        ("mark", "a standing line", standing * 2, {"kind": "relation"}),
+        ("mark", "a label of the person's", theirs * 3, {"whose": "their"}),
+    )
+    out = [LONG_TOLD]
+    with started_by("cli"), set_to(CLAUDE_PROJECT_DIR=str(crossings.parent), CLAUDE_PLUGIN_ROOT=str(ROOT)):
+        for name, what, sentence, more in calls:
+            text, _ = serve.call(name, {"sentence": sentence.strip(), "anchors": [D], **more})
+            out.append(f"### `{name}`, with {what} of {len(sentence.strip()):,} characters\n\n{fenced(text)}")
+    return "\n\n".join(out)
+
+
 def at_rest_elsewhere() -> str:
     """What `look`, `labels` and `status` say through the server of a refusal that a session's own silencing, written
     under another model, puts to rest for that model alone: it stands for the model that asks, and they say so."""
@@ -401,6 +435,7 @@ def page() -> str:
         "## A session that starts in a folder below another home's folder\n\n" + fenced(below()),
         "## What the door's tools answer, from the made-up store\n\n" + answered(project),
         "## What `find` answers where it shows a message in part\n\n" + fenced(excerpted()),
+        "## What `leave` and `mark` answer where a line or a label comes in long\n\n" + long_marked(),
         "## What `look`, `labels` and `status` say of a refusal put to rest for another model alone: it stands for the "
         "model that asks, the one of the session that spoke last\n\n" + at_rest_elsewhere(),
         "## What they say of a refusal that is another model's alone, standing there and then at rest there: it is "

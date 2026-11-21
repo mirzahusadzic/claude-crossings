@@ -185,6 +185,41 @@ def test_the_page_holds_a_frame_where_a_standing_line_and_a_stack_set_the_sessio
     assert any(line.startswith("Not part of the frame: ") for line in lines)
 
 
+def test_the_page_shows_a_long_line_and_a_long_label_answered_with_their_lengths():
+    """Guard: a line left at the door longer than 900 characters, and a label about the work longer than 240, are
+    answered with their lengths after their keys, and the page held neither sentence. It holds both now, in a worked
+    example as the server gives it: the line, and then the first label after it, whose length stands before the
+    sentence that the line at the door is older."""
+    part = PAGE.split("## What `leave` and `mark` answer where a line or a label comes in long\n\n", 1)[1]
+    assert part.startswith(told.LONG_TOLD + "\n\n### `leave`, with a line of 1,079 characters\n\n````text\nmarked N1. ")
+    assert (
+        "marked N1. This line is 1,079 characters long: it takes room from the standing lines, the work and the "
+        "person's own words. A shorter one can be left in its place.\n````" in part
+    )
+    assert (
+        "marked W2. This label is 331 characters long: a list shows 240 of one, and a frame may have no room for it. "
+        "The line at the door was left before this label: where it no longer holds, a new one can be left.\n````"
+        in part
+    )
+    for run in (*door.LONG_LABEL.split("{}"), *door.LONG_LINE.split("{}")):  # each sentence as the door writes it
+        assert run in PAGE, run
+
+
+def test_the_page_shows_a_standing_line_and_a_label_of_the_persons_answered_from_what_the_person_is_shown():
+    """Guard: the person is shown a standing line and a label that speaks for them cut at 160 characters, and the
+    session is told so where they are longer, through the server the plugin started; the page held neither sentence.
+    It holds both now, in the same worked example: a standing line of 179 characters, and a label of the person's of
+    269."""
+    part = PAGE.split("## What `leave` and `mark` answer where a line or a label comes in long\n\n", 1)[1]
+    assert "\n````text\nmarked R2. This label is 179 characters long: the person is shown 160 of one.\n````" in part
+    assert (
+        "\n````text\nmarked W3. This label is 269 characters long: the person is shown 160 of one, a list shows 240, and "
+        "a frame may have no room for it.\n````" in part
+    )
+    for run in (*door.LONG_SHOWN.split("{}"), *door.LONG_SHOWN_LISTED.split("{}")):
+        assert run in PAGE, run
+
+
 def test_the_modules_own_note_is_on_the_page():
     note = told.module_note()
     assert note.startswith(OPENS) and "hand-over written before this cut" in note and note in PAGE

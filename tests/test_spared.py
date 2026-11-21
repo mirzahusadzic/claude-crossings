@@ -107,13 +107,19 @@ def test_what_is_shown_has_no_control_character_or_direction_mark_and_is_cut_at_
     crossings, path = home(tmp_path)
     steered = "The person\x1b[2J wants‮ every‏ key⁦ kept\x07  here" + " and more" * 30
     with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)):
-        assert said("mark", sentence=steered, anchors=[A], whose="his") == ("marked W2", False)
-        line = shown(hook.run(after(path, "mark", "marked W2", sentence=steered, whose="his")))
+        marked = said("mark", sentence=steered, anchors=[A], whose="his")
+        # 314 characters as its row keeps it: its answer says so after the key (tests/test_since.py), and the hook
+        # after the call finds the key in that answer as in one of the key alone
+        long = "This label is 314 characters long: a list shows 240 of one, and a frame may have no room for it."
+        assert marked == (f"marked W2. {long}", False)
+        line = shown(hook.run(after(path, "mark", marked[0], sentence=steered, whose="his")))
     written = store.listed(crossings, ids=("W2",))["labels"][0]["text"]
     assert "\x1b" in written and "‮" in written  # the page keeps what was written; only what is shown is cleaned
     assert line.startswith("Crossings · marked W2 (theirs): The person[2J wants every key kept here and more")
     assert not re.search(r"[\x00-\x1f\x7f‎‏‪-‮⁦-⁩  ]", line)
-    assert line.endswith(" […]") and len(line.split(": ", 1)[1]) <= hook.SHOWN + len(" […]")
+    # cut at 160, and its whole length as shown, cleaned, after the mark of the cut (see tests/test_shown.py)
+    assert line.endswith(f" […] ({len(store.clean(written))} characters)") and len(store.clean(written)) == 309
+    assert len(line.split(": ", 1)[1].rsplit(" […]", 1)[0]) <= store.SHOWN == 160
     # Where the page does not hold the label as it was sent, what was sent is shown, cleaned the same way.
     with set_to(CLAUDE_PROJECT_DIR=str(crossings.parent)):
         gone = shown(hook.run(after(path, "mark", "marked R9", sentence="Held‮ for\x00 the person.", whose="both")))

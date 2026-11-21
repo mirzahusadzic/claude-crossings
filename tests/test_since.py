@@ -18,11 +18,20 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
-from test_store import A, D, E, at_terminal, home, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
+from test_edges import set_to  # noqa: E402
+from test_store import A, D, E, at_terminal, home, started_by, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import door, frame, store  # noqa: E402
+from crossing import door, frame, serve, store  # noqa: E402
 
 DAY = "2026-11-12"
+# What a mark is answered with after its key, word for word: where a label or a line comes in long, by its length as
+# its row keeps it; and once a line, where the line at the door is older than the label.
+LONG_LABEL = "This label is {} characters long: a list shows 240 of one, and a frame may have no room for it."
+LONG_LINE = (
+    "This line is {} characters long: it takes room from the standing lines, the work and the person's own words. "
+    "A shorter one can be left in its place."
+)
+OVERTAKEN = "The line at the door was left before this label: where it no longer holds, a new one can be left."
 
 
 def run(project: str, *argv: str) -> tuple[int, str]:
@@ -132,6 +141,123 @@ def test_a_struck_work_label_is_no_label_after_the_line(tmp_path):
         assert store.strike(crossings, "W2", "a test")["struck"]
     assert store.look(crossings)["left"]["since"] == []
     assert door.OVERTAKEN in mark(project, "work", "Both calls are settled, again."), "the struck one is none"
+
+
+def of(length: int) -> str:
+    """A sentence of so many characters, as a label's row keeps it (store.plain): words, and dots to the length."""
+    words = ("The keel is checked plank by plank before the paint " * 90)[: length - 1].rstrip()
+    return words + "." * (length - len(words))
+
+
+def served(project: str, name: str, **given) -> str:
+    """What the door's server answers a call with, for a session a person sits in."""
+    with started_by("cli"), set_to(CLAUDE_PROJECT_DIR=project):
+        return serve.call(name, given)[0]
+
+
+def first(answer: str) -> str:
+    """An answer of `leave` up to what the record weighs, which may follow it apart (see tests/test_unmarked.py)."""
+    return answer.split("\n\n")[0]
+
+
+def test_a_label_longer_than_a_list_shows_is_marked_whole_and_its_answer_says_how_long_it_is(tmp_path):
+    """Guard: sessions wrote labels of 1,000 to 2,500 characters, a list shows 240 of one and a frame holds about
+    9,000 in all, and the answer was "marked W2" at every length up to the 4,000 a mark takes. A label about the work
+    or about the two of you that is longer than 240 characters is written whole, as before, and its answer adds one
+    sentence of its length, counted as its row keeps it and with a thousands comma; one of 240 adds nothing."""
+    crossings, _ = home(tmp_path)
+    project = str(crossings.parent)
+    assert served(project, "mark", sentence=of(240), anchors=[D]) == "marked W2"
+    assert served(project, "mark", sentence=of(241), anchors=[D]) == "marked W3. " + LONG_LABEL.format("241")
+    assert served(project, "mark", sentence=of(240), anchors=[A], kind="relation") == "marked R2"
+    relation = served(project, "mark", sentence=of(241), anchors=[A], kind="relation")
+    assert relation == "marked R3. " + LONG_LABEL.format("241")
+    given = of(240).replace(" ", "   ", 1)  # 242 characters given, 240 kept: a row holds one space for a run of them
+    assert len(given) == 242 and served(project, "mark", sentence=given, anchors=[D]) == "marked W4"
+    assert served(project, "mark", sentence=of(2500), anchors=[D]) == "marked W5. " + LONG_LABEL.format("2,500")
+    rows = store.listed(crossings, ids=("W3", "R3", "W4", "W5"))["labels"]
+    assert {row["id"]: row["text"] for row in rows} == {"W3": of(241), "R3": of(241), "W4": of(240), "W5": of(2500)}
+    assert door.SHORT == 240  # what a list shows of one, and the point the sentence is said from
+
+
+def test_a_long_stack_is_answered_as_a_long_label(tmp_path):
+    """Guard: a stack is a label of its kind over the lines beneath it, and the frame carries it in their place: one
+    longer than a list shows is answered with its length as any label is, about the work or about the two of you."""
+    crossings, _ = home(tmp_path)
+    project = str(crossings.parent)
+    served(project, "mark", sentence="The hull is scraped.", anchors=[D])  # W2
+    served(project, "mark", sentence="The hull is painted.", anchors=[E])  # W3
+    assert served(project, "mark", sentence=of(612), anchors=["W2", "W3"]) == "marked W4. " + LONG_LABEL.format("612")
+    assert served(project, "mark", sentence=of(240), anchors=["W4"]) == "marked W5"  # a stack over it, not long
+    served(project, "mark", sentence="The boat is called Tern.", anchors=[A], kind="relation")  # R2
+    served(project, "mark", sentence="Its mooring is 41.", anchors=[A], kind="relation")  # R3
+    stack = served(project, "mark", sentence=of(300), anchors=["R2", "R3"], kind="relation")
+    assert stack == "marked R4. " + LONG_LABEL.format("300")
+    assert store.listed(crossings, ids=("W4",))["labels"][0]["beneath"]  # a stack, with its lines beneath it
+
+
+def test_a_line_at_the_door_longer_than_a_tenth_of_a_frame_is_left_whole_and_its_answer_says_what_it_takes(tmp_path):
+    """Guard: a line left at the door is fitted first and takes the room of what the frame fits after it (see
+    frame._composed), and a line of 2,500 characters was answered "marked N1" as one of twenty was. A line longer than
+    900 characters, a tenth of a frame of the usual size, is left whole, as before, and its answer adds what it takes
+    and that a shorter one can be left in its place; one of 900 adds nothing."""
+    crossings, _ = home(tmp_path)
+    project = str(crossings.parent)
+    assert first(served(project, "leave", sentence=of(900), anchors=[D])) == "marked N1"
+    assert first(served(project, "leave", sentence=of(901), anchors=[D])) == "marked N2. " + LONG_LINE.format("901")
+    assert first(served(project, "leave", sentence=of(2140), anchors=[D])) == "marked N3. " + LONG_LINE.format("2,140")
+    longest = served(project, "leave", sentence=of(store.LONGEST), anchors=[D])
+    assert first(longest) == "marked N4. " + LONG_LINE.format("4,000")
+    rows = store.listed(crossings, ids=("N2", "N4"))["labels"]
+    assert {row["id"]: row["text"] for row in rows} == {"N2": of(901), "N4": of(4000)}  # left whole, nothing cut
+    assert door.TENTH == frame.SIZE // 10 == 900
+
+
+def test_a_refusal_and_a_silencing_of_any_length_are_answered_with_their_key_alone(tmp_path):
+    """Guard: a refusal's sentence is its reason and crosses whole by rule, and a silencing's says why a refusal
+    stands no longer: neither is said to be long, at any length a mark takes, where a label about the work as long
+    is."""
+    crossings, _ = home(tmp_path)
+    project = str(crossings.parent)
+    assert served(project, "mark", sentence=of(901), anchors=[D]) == "marked W2. " + LONG_LABEL.format("901")
+    for n, length in enumerate((241, 901, store.LONGEST), 1):
+        assert served(project, "mark", sentence=of(length), anchors=[D], kind="refused") == f"marked X{n}", length
+    for n, length in enumerate((241, 901, store.LONGEST), 1):
+        silenced = served(project, "mark", sentence=of(length), anchors=[f"X{n}", E], kind="silenced")
+        assert silenced == f"marked S{n}", length
+    code, said = run(project, "mark", "--kind", "refused", "--anchors", D, "--bare", *of(store.LONGEST).split())
+    assert code == 0 and said == "marked X4\n"  # nor from the person's own terminal
+
+
+def test_the_length_is_said_before_the_line_at_the_door_and_that_sentence_is_as_it_was(tmp_path):
+    """Guard: the answer of the first work label marked after the newest line left at the door said, after its key,
+    that the line is older than it. A long one says its length first, and then that sentence, byte for byte; a short
+    one says that sentence alone, as before."""
+    crossings, _ = home(tmp_path)
+    project = str(crossings.parent)
+    served(project, "leave", sentence="Two calls are open.", anchors=[A])
+    long = served(project, "mark", sentence=of(612), anchors=[D])
+    assert long == f"marked W2. {LONG_LABEL.format('612')} {OVERTAKEN}" and OVERTAKEN == door.OVERTAKEN
+    assert served(project, "mark", sentence=of(612), anchors=[D]) == "marked W3. " + LONG_LABEL.format("612")
+    served(project, "leave", sentence="All is pushed.", anchors=[A])
+    assert served(project, "mark", sentence="Both calls are settled.", anchors=[D]) == f"marked W4. {OVERTAKEN}"
+
+
+def test_the_persons_own_verb_and_a_sessions_shell_are_answered_as_the_server_is(tmp_path):
+    """Guard: the sentence is the door's, so the person's own `door.py mark` at their terminal and a session's shell
+    are told it as the server is, after the key and where the answer names the page."""
+    crossings, _ = home(tmp_path)
+    project = str(crossings.parent)
+    label, line = of(612), of(2140)
+    assert served(project, "mark", sentence=label, anchors=[D]) == "marked W2. " + LONG_LABEL.format("612")
+    code, said = run(project, "mark", "--kind", "work", "--anchors", D, *label.split())  # names the page
+    assert code == 0 and said.startswith("marked W3 in ") and said.endswith(f".md. {LONG_LABEL.format('612')}\n")
+    code, said = run(project, "mark", "--kind", "next", "--anchors", D, "--bare", *line.split())
+    assert code == 0 and said == f"marked N1. {LONG_LINE.format('2,140')}\n"
+    out = io.StringIO()
+    with at_terminal(False), contextlib.redirect_stdout(out):  # a session's shell: the door stands at no terminal
+        code = door.main(["mark", "--kind", "relation", "--anchors", A, "--bare", "--cwd", project, *label.split()])
+    assert code == 0 and out.getvalue() == f"marked R2. {LONG_LABEL.format('612')}\n"
 
 
 if __name__ == "__main__":

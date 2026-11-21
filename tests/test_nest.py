@@ -259,9 +259,10 @@ def test_the_count_of_labels_carried_takes_no_nested_line_for_a_label(tmp_path):
 
 
 def test_the_tools_a_session_is_shown_are_as_they_were_and_name_nothing_of_the_turns(tmp_path):
-    """Pin: the listing keeps its size, and no tool takes or names a setting of the turns."""
+    """Pin: the listing keeps its size (5,661 before `mark` and `leave` asked for short writing), and no tool takes or
+    names a setting of the turns."""
     listed = json.dumps(serve.TOOLS)
-    assert len(listed) == 5661 and "nest" not in listed and serve.NAMES == [
+    assert len(listed) == 5820 and "nest" not in listed and serve.NAMES == [
         "look", "labels", "find", "thread", "mark", "leave", "status", "crossing",
     ]  # fmt: skip
 

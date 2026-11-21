@@ -65,6 +65,23 @@ def test_a_line_left_through_the_server_is_answered_with_the_unlabelled_in_the_c
     assert told in crossed.split("\n\n")  # and the served `crossing` gives the frame that carries it
 
 
+def test_a_long_line_is_said_to_be_long_after_its_key_and_what_the_record_weighs_follows_as_it_was(tmp_path):
+    """Guard: a line left at the door longer than 900 characters is answered with its length right after its key;
+    the sentence of what the record weighs follows it, apart, byte for byte as it follows a short one."""
+    folder, project = homes(tmp_path)
+    long = " ".join([LINE] * 30)
+    with kept_home(folder, *[b(k) for k in range(1, 7)]), served(folder, project):
+        store.mark(folder, "work", "session", "The wabe is mapped.", [b(2)], day=DAY)  # W1: b2 is labelled
+        pulls(folder, b(1), b(1), b(1))
+        text, failed = serve.call("leave", {"sentence": long, "anchors": [b(6)]})
+    length = (
+        "This line is 1,079 characters long: it takes room from the standing lines, the work and the person's own "
+        "words. A shorter one can be left in its place."
+    )
+    told = MANY.format(named(b(1), b(5), b(4), b(3)))  # as for the short line above
+    assert len(long) == 1079 and not failed and text == f"marked N1. {length}\n\n{told}"
+
+
 def test_with_none_unlabelled_the_answer_of_leave_is_as_before_and_a_mark_or_the_persons_own_line_says_nothing(
     tmp_path,
 ):

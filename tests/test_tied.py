@@ -1010,8 +1010,9 @@ def test_the_server_lists_eight_tools_none_named_pair_and_a_call_of_pair_is_answ
 def test_the_listing_is_pinned_at_its_size_with_the_role_on_thread(tmp_path):
     """The tools a session is shown, measured with `thread`'s role and without `pair`: smaller than with `pair`
     (5,846), and under the cap the tests hold. The person's side spelled `their` and `pair:them` took six characters
-    more than `his` and `pair:him` (5,655)."""
-    assert len(json.dumps(serve.TOOLS)) == 5661 < 5846 < 5900
+    more than `his` and `pair:him` (5,655). Asking `mark` and `leave` for short writing, and saying why, took 159
+    more than that (5,661)."""
+    assert len(json.dumps(serve.TOOLS)) == 5820 < 5846 < 5900
 
 
 def test_a_served_pair_answers_with_the_pair_and_names_no_file_or_folder(tmp_path):

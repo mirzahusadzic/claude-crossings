@@ -280,9 +280,6 @@ def signed(event: dict, folder: Path, path: Path) -> None:
     store.sign(target, found.group(1), given["sentence"], layer.current(folder, named(event, path)))
 
 
-SHOWN = 160  # characters of a label's sentence shown to the person under the turn
-
-
 def unmarked(text: str) -> str:
     """A text as it may be shown to the person on one line: no control character, no direction
     mark or other invisible format character, no line or paragraph separator (store.clean, the one
@@ -297,7 +294,8 @@ def shown(event: dict, folder: Path) -> str | None:
     line), and for every line left at the door. Text a session read can steer it to mark such a
     label, and it crosses every cut as standing. A work label of the session's own is not shown.
     The label is shown as its page holds it, by the key the door's answer names; nothing is
-    blocked."""
+    blocked. A text longer than store.SHOWN is cut there, and the line then ends with its whole
+    length, as it is shown before the cut: a long label does not look like a short one."""
     given = event.get("tool_input") if isinstance(event.get("tool_input"), dict) else {}
     found = re.search(r"\bmarked ([RWNXS]\d+)\b", json.dumps(event.get("tool_response"), ensure_ascii=False))
     if found is None:
@@ -310,7 +308,8 @@ def shown(event: dict, folder: Path) -> str | None:
         whose = store.kept_as(given["whose"]) if given.get("whose") in (*store.SIDE, "both") else "session"
         label = {"kind": store.KINDS[key[0]], "whose": whose, "text": sentence}
     text = unmarked(label["text"])
-    text = text if len(text) <= SHOWN else text[:SHOWN].rstrip() + " […]"
+    if len(text) > store.SHOWN:
+        text = text[: store.SHOWN].rstrip() + f" […] ({record.many(len(text), 'character', grouped=True)})"
     if label["kind"] == "next":
         return f"Crossings · left at the door: {text}"
     if label["kind"] == "relation" or store.theirs(label["whose"]) or label["whose"] == "both":

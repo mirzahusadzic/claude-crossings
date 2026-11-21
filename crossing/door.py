@@ -479,6 +479,40 @@ QUOTED = "    > "  # before each line of a message in a thread: no line of the d
 
 # Said once a line, as the first work label is marked after the newest line left at the door.
 OVERTAKEN = "The line at the door was left before this label: where it no longer holds, a new one can be left."
+# Said where a label about the work or the two of you (a stack too) is longer than a list shows of one (SHORT), or a
+# line left at the door is longer than TENTH, by the length of its sentence as it is kept (store.plain): the label is
+# written all the same, and nothing is cut. Never of a refusal or a silencing: its sentence is the reason, and crosses
+# whole.
+TENTH = 900  # characters of a line left at the door: a tenth of a frame of the usual size (frame.SIZE)
+LONG_LABEL = "This label is {} long: a list shows {} of one, and a frame may have no room for it."
+LONG_LINE = (
+    "This line is {} long: it takes room from the standing lines, the work and the person's own words. A shorter "
+    "one can be left in its place."
+)
+# Said in their place where the person is shown the label under the turn (see hook.shown), cut at store.SHOWN: from
+# there, and past what a list shows too.
+LONG_SHOWN = "This label is {} long: the person is shown {} of one."
+LONG_SHOWN_LISTED = (
+    "This label is {} long: the person is shown {} of one, a list shows {}, and a frame may have no room for it."
+)
+
+
+def long_said(kind: str, said: str, shown: bool = False) -> str:
+    """The sentence a mark's answer adds where what it wrote is long (see LONG_LABEL and LONG_LINE), or nothing; for a
+    label the person is shown under the turn (`shown`), from store.SHOWN (see LONG_SHOWN)."""
+    length = len(store.plain(said))
+    counted = many(length, "character", grouped=True)
+    if kind in ("work", "relation") and shown and length > store.SHOWN:
+        return (
+            LONG_SHOWN_LISTED.format(counted, store.SHOWN, SHORT)
+            if length > SHORT
+            else LONG_SHOWN.format(counted, store.SHOWN)
+        )
+    if kind in ("work", "relation") and length > SHORT:
+        return LONG_LABEL.format(counted, SHORT)
+    if kind == "next" and length > TENTH:
+        return LONG_LINE.format(counted)
+    return ""
 
 
 def show_thread(out: dict, named: bool = False) -> str:
@@ -948,13 +982,20 @@ def answer(args: argparse.Namespace, served: bool = False) -> int:
             print(f"not marked: {out['why']}")
             return 1
         written = store.settled(out_kind(args), args.whose)  # whose it was written as
-        if not served and (out_kind(args) == "relation" or store.theirs(written) or written == "both"):
+        theirs = out_kind(args) == "relation" or store.theirs(written) or written == "both"  # as hook.shown asks
+        if not served and theirs:
             store.shell_marked(folder, out["id"])  # no hook shows it to the person: their status will
+        # The hook after the call shows it to the person under the turn: through the server the plugin started, whose
+        # hook is wired to the door's own tools alone.
+        shown = served and theirs and record.from_plugin()
+        # after the key, how long it is where it is long, and then, once a line, that the line at the door is older
+        overtaken = out_kind(args) == "work" and store.overtaken(folder, out["id"])
+        added = [each for each in (long_said(out_kind(args), said, shown), OVERTAKEN if overtaken else "") if each]
         print(
             f"marked {out['id']}"
             + (f", in place of {' and '.join(out['replaced'])}" if out["replaced"] else "")
             + ("" if args.bare else f" in {out['page']}")
-            + (f". {OVERTAKEN}" if (args.kind or "work") == "work" and store.overtaken(folder, out["id"]) else "")
+            + ("." + "".join(f" {each}" for each in added) if added else "")
         )
         if served and args.kind == "next":
             # A line left at the door through the server, while the session still holds what was said: the person's

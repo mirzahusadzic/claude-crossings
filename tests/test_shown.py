@@ -6,6 +6,8 @@ server writes, with made-up ids and a made-up word; every home is a temporary fo
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import sys
 import tempfile
@@ -15,11 +17,13 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
+from test_edges import set_to  # noqa: E402
 from test_refused import BRANCH, DROPPED, kept_home, served  # noqa: E402
 from test_sample_join import b  # noqa: E402
-from test_store import sweep  # noqa: E402  (and its data folder: no test reaches the real home)
+from test_since import of  # noqa: E402
+from test_store import at_terminal, sweep  # noqa: E402  (and its data folder: no test reaches the real home)
 
-from crossing import hook, serve, store  # noqa: E402
+from crossing import door, hook, serve, store  # noqa: E402
 
 MODEL = "m-test"  # the model of the session's own newest message, as the hand-made index holds it
 SAID = (b(1), b(2), b(3), f"c0000004@s1@{MODEL}")  # three of the person's, and one of the session's, in session s1
@@ -108,6 +112,83 @@ def test_the_hook_after_a_call_signs_a_label_of_every_kind_the_server_wrote_with
     assert keys == ["R1", "W1", "N1", "X1", "S1"] and {key[0] for key in keys} == set(store.KINDS)
     assert before == dict.fromkeys(keys, "")
     assert {key: signed_by(folder, key) for key in keys} == dict.fromkeys(keys, MODEL)
+
+
+def test_a_line_the_person_is_shown_cut_at_160_ends_with_its_whole_length_and_one_not_cut_is_as_before(tmp_path):
+    """Guard: the line the person is shown under the turn stopped at 160 characters with " […]" alone, so a label of
+    2,140 characters looked to them like one of 200. Cut, it now ends with the whole length of the text as it is shown,
+    after the mark of the cut, with a thousands comma; at 160 it is shown as before, byte for byte. So for every line
+    the hook shows: a standing line, a label of the person's or of both, a silencing that speaks for the person, and a
+    line left at the door."""
+    folder, project = homes(tmp_path)
+
+    def line(key: str, whose: str, text: str) -> str:  # as the hook writes it, for the person
+        if key[0] == "N":
+            return f"Crossings · left at the door: {text}"
+        return f"Crossings · marked {key} ({whose}): {text}"
+
+    with kept_home(folder, *SAID), served(folder, project):
+        for n, length in enumerate((160, 2140), 1):
+            refused = {"kind": "refused", "sentence": f"Not that, {n}.", "anchors": [b(1)]}
+            refusal = through(project, "mark", refused)[0].split()[1]
+            for tool, more, whose in (
+                ("mark", {"kind": "relation"}, "session"),
+                ("mark", {"whose": "his"}, "theirs"),
+                ("mark", {"whose": "both"}, "both"),
+                ("mark", {"kind": "silenced", "whose": "his", "anchors": [refusal, b(3)]}, "theirs"),
+                ("leave", {}, ""),
+            ):
+                sentence = of(length)
+                answer, out = through(project, tool, {"sentence": sentence, "anchors": [b(1)], **more})
+                key = answer.split()[1].rstrip(".")
+                text = sentence if length == 160 else f"{sentence[:160].rstrip()} […] (2,140 characters)"
+                assert json.loads(out)["systemMessage"] == line(key, whose, text), (key, length)
+
+
+def test_a_label_the_person_is_shown_is_said_long_from_160_as_the_person_sees_it_cut(tmp_path):
+    """Guard: the person is shown a standing line and a label that speaks for them cut at 160 characters, and the
+    session was told nothing below 240. Through the server the plugin started, whose hook after the call shows the
+    line, such a label longer than 160 is answered with its length and that the person is shown 160 of one, and past
+    240 also what a list shows and that a frame may have no room for it, as the person sees it cut. A work label of
+    the session's own is answered from 240, as before; a refusal and a silencing with nothing; a line at the door from
+    900. Where no hook shows the line (a server given alone to a harness without the plugin's hooks, a session's
+    shell), the answer says nothing of what the person is shown."""
+    folder, project = homes(tmp_path)
+    shown = "This label is {} characters long: the person is shown 160 of one."
+    listed = (
+        "This label is {} characters long: the person is shown 160 of one, a list shows 240, and a frame may have no "
+        "room for it."
+    )
+    own = "This label is {} characters long: a list shows 240 of one, and a frame may have no room for it."
+
+    def mark(**given) -> tuple[str, str | None]:
+        return through(project, "mark", {"anchors": [b(1)], **given})
+
+    with kept_home(folder, *SAID), served(folder, project), set_to(CLAUDE_PLUGIN_ROOT=str(ROOT)):
+        assert mark(kind="relation", sentence=of(160)) == ("marked R1", shows("R1", "session", of(160)))
+        answer, out = mark(kind="relation", sentence=of(161))
+        assert answer == "marked R2. " + shown.format("161")
+        assert json.loads(out)["systemMessage"].endswith(" […] (161 characters)")  # the same moment, the same length
+        assert mark(kind="relation", sentence=of(240))[0] == "marked R3. " + shown.format("240")
+        assert mark(kind="relation", sentence=of(241))[0] == "marked R4. " + listed.format("241")
+        assert mark(whose="his", sentence=of(212))[0] == "marked W1. " + shown.format("212")
+        assert mark(whose="both", sentence=of(2500))[0] == "marked W2. " + listed.format("2,500")
+        assert mark(sentence=of(241))[0] == "marked W3. " + own.format("241")  # the session's own: not shown
+        assert mark(sentence=of(240)) == ("marked W4", None)
+        assert mark(kind="refused", sentence=of(612)) == ("marked X1", None)
+        answer, out = mark(kind="silenced", whose="his", sentence=of(612), anchors=["X1", b(3)])
+        assert answer == "marked S1" and json.loads(out)["systemMessage"].endswith(" […] (612 characters)")
+        assert through(project, "leave", {"sentence": of(612), "anchors": [b(1)]})[0].split("\n\n")[0] == "marked N1"
+    with kept_home(folder, *SAID), served(folder, project):  # a server given alone to a harness: no hook shows it
+        alone, _ = serve.call("mark", {"kind": "relation", "sentence": of(612), "anchors": [b(1)]})
+        out = io.StringIO()
+        with set_to(CLAUDE_PLUGIN_ROOT=str(ROOT)), at_terminal(False), contextlib.redirect_stdout(out):
+            # a session's shell, as the plugin's own session would run it: no hook after it shows the person anything
+            words = of(612).split()
+            code = door.main(["mark", "--kind", "relation", "--anchors", b(1), "--bare", "--cwd", str(project), *words])
+    assert alone == "marked R5. " + own.format("612")
+    assert code == 0 and out.getvalue() == "marked R6. " + own.format("612") + "\n"
+    assert store.SHOWN == 160 and not hasattr(hook, "SHOWN")  # one number, one home, read by the hook and the door
 
 
 if __name__ == "__main__":
